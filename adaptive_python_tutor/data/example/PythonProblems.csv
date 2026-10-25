@@ -1,0 +1,674 @@
+problem_id,Problem Body,Problem Type,Multiple Choice Options,Multiple Choice Answers,Fill-in Answers,difficulty,primary_skill_id,secondary_skill_ids,misconception_tags,reference_solution,explanation,starter_code,test_cases_json,expected_output,answer_key_json,estimated_time_seconds,generation_source,trace_code,function_name,response_templates_json
+PY000079,"Predict the exact standard output of this Python code.
+```python
+original = [3, 5]
+alias = original
+alias.append(9)
+print(original)
+```",code_trace,[],[],[],advanced,SK025,"[""SK013"",""SK024""]","[""mutable_aliasing"",""shallow_copy""]","original = [3, 5]
+alias = original
+alias.append(9)
+print(original)",No copy is made: original and alias refer to the same list object.,,"[{""kind"":""stdout"",""expected"":""[3, 5, 9]""}]","[3, 5, 9]","{""expected_output"":""[3, 5, 9]""}",120,template,"original = [3, 5]
+alias = original
+alias.append(9)
+print(original)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""original = [3, 5]\nalias = original\nalias.append(9)\nprint(original)"",""fixed_code"":""original = [3, 5]\nalias = original.copy()\nalias.append(9)\nprint(original)"",""fixed_line"":""alias = original.copy()"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000010,"Predict the exact standard output of this Python code.
+```python
+total = 0
+for i in range(6):
+    total += i
+print(total)
+```",code_trace,[],[],[],intermediate,SK010,"[""SK001"",""SK005""]","[""off_by_one"",""loop_accumulator""]","total = 0
+for i in range(6):
+    total += i
+print(total)",range(n) yields 0 through n-1; total accumulates those values.,,"[{""kind"":""stdout"",""expected"":""15""}]",15,"{""expected_output"":""15""}",105,template,"total = 0
+for i in range(6):
+    total += i
+print(total)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""total = 0\nfor i in range(7):\n    total += i\nprint(total)"",""fixed_code"":""total = 0\nfor i in range(6):\n    total += i\nprint(total)"",""fixed_line"":""for i in range(6):"",""buggy_solution"":""def sum_even(numbers):\n    total = 0\n    for value in numbers:\n        if value % 2 == 1:\n            total += value\n    return total\n""}"
+PY000028,Select all correct statements about variables and assignment.,mcq_multi,"[{""id"":""A"",""text"":""A later assignment can rebind an existing name.""},{""id"":""B"",""text"":""An assignment binds a name to a value.""},{""id"":""C"",""text"":""A variable's value can never change.""},{""id"":""D"",""text"":""Assignment uses == to bind a value.""},{""id"":""E"",""text"":""Every name is global.""}]","[""A"",""B""]",[],beginner,SK001,[],"[""assignment_rebinding"",""variable_value_confusion""]","An assignment binds a name to a value.
+A later assignment can rebind an existing name.","The second assignment reads the current x, adds delta, and rebinds x.",,[],,"{""correct_option_ids"":[""A"",""B""]}",90,template,"x = 6
+x = x + 3
+print(x)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000038,"Identify and correct the bug in this code. Submit the corrected line.
+```python
+count = 0
+while count < 7:
+    count -= 1
+print(count)
+```",debugging,[],[],"[""count += 1""]",intermediate,SK011,"[""SK008"",""SK009""]","[""loop_termination"",""while_condition""]","count = 0
+while count < 7:
+    count += 1
+print(count)",The count increases until count < limit becomes false.,,[],,"{""accepted_answers"":[""count += 1""]}",105,template,"count = 0
+while count < 7:
+    count += 1
+print(count)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""count = 0\nwhile count < 7:\n    count -= 1\nprint(count)"",""fixed_code"":""count = 0\nwhile count < 7:\n    count += 1\nprint(count)"",""fixed_line"":""count += 1"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000063,Which branch executes when the condition is evaluated?,short_answer,[],[],"[""An if statement executes the first branch whose condition is true; else runs if none is true.""]",beginner,SK009,"[""SK008""]","[""conditional_boundary"",""branch_selection""]",An if statement executes the first branch whose condition is true; else runs if none is true.,"The condition 92 >= 60 is True, so the 'pass' branch runs.",,[],,"{""accepted_answers"":[""An if statement executes the first branch whose condition is true; else runs if none is true.""]}",90,template,"score = 92
+if score >= 60:
+    print('pass')
+else:
+    print('retry')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""score = 92\nif score = 60:\n    print('pass')\nelse:\n    print('retry')"",""fixed_code"":""score = 92\nif score >= 60:\n    print('pass')\nelse:\n    print('retry')"",""fixed_line"":""if score >= 60:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000070,"Implement get_score(scores, name), returning the score or 0 if the name is absent.",coding,[],[],[],intermediate,SK016,"[""SK002""]","[""dictionary_key_lookup"",""missing_key""]","def get_score(scores, name):
+    return scores.get(name, 0)
+",The key maps directly to the stored score.,"def get_score(scores, name):
+    pass
+","[{""args"":[{""Ada"":9,""Lin"":8},""Ada""],""expected"":9},{""args"":[{""Ada"":9},""Noor""],""expected"":0}]",,"{""function_name"":""get_score"",""test_cases"":[{""args"":[{""Ada"":9,""Lin"":8},""Ada""],""expected"":9},{""args"":[{""Ada"":9},""Noor""],""expected"":0}]}",105,template,,get_score,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def get_score(scores, name):\n    return scores[name]\n""}"
+PY000066,"Complete the blank so the code behaves as intended.
+```python
+print(list(range(0, 9, ____)))
+```",fill_blank,[],[],"[""3""]",intermediate,SK012,"[""SK010""]","[""range_stop_exclusive"",""range_step""]","print(list(range(0, 9, 3)))",Construct the sequence from start by step increments strictly before stop.,,"[{""kind"":""stdout"",""expected"":""[0, 3, 6]""}]","[0, 3, 6]","{""accepted_answers"":[""3""]}",105,template,"print(list(range(0, 9, 3)))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000051,What does this example illustrate about mutation?,short_answer,[],[],"[""append mutates a list in place; assigning a new string creates a new string value because strings are immutable.""]",advanced,SK024,"[""SK013"",""SK015""]","[""mutable_immutable"",""in_place_mutation""]",append mutates a list in place; assigning a new string creates a new string value because strings are immutable.,append changes the existing list by adding the new element.,,[],,"{""accepted_answers"":[""append mutates a list in place; assigning a new string creates a new string value because strings are immutable.""]}",120,template,"items = [3, 4]
+items.append(8)
+print(items)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000059,Select all correct statements about comparison and logical operators.,mcq_multi,"[{""id"":""A"",""text"":""not adds two numeric values.""},{""id"":""B"",""text"":""Comparisons such as x > y produce booleans.""},{""id"":""C"",""text"":""and is true only when both operands are truthy.""},{""id"":""D"",""text"":""or is true only when both operands are true.""},{""id"":""E"",""text"":""= and == have the same meaning in expressions.""}]","[""B"",""C""]",[],beginner,SK005,"[""SK002"",""SK004""]","[""comparison_logic"",""and_or_confusion""]","Comparisons such as x > y produce booleans.
+and is true only when both operands are truthy.",Both comparisons are evaluated according to and semantics; the result is a Boolean.,,[],,"{""correct_option_ids"":[""B"",""C""]}",90,template,"x = 8
+y = 5
+print(x > y and x % 2 == 0)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000044,"Implement clamp(value, lower, upper), returning value constrained to the inclusive interval [lower, upper].",coding,[],[],[],intermediate,SK017,"[""SK001"",""SK004""]","[""parameter_order"",""function_call""]","def clamp(value, lower, upper):
+    return max(lower, min(value, upper))
+","The call binds left to a and right to b, then returns their sum.","def clamp(value, lower, upper):
+    pass
+","[{""args"":[5,0,10],""expected"":5},{""args"":[-2,0,10],""expected"":0},{""args"":[14,0,10],""expected"":10}]",,"{""function_name"":""clamp"",""test_cases"":[{""args"":[5,0,10],""expected"":5},{""args"":[-2,0,10],""expected"":0},{""args"":[14,0,10],""expected"":10}]}",105,template,,clamp,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def clamp(value, lower, upper):\n    return value\n""}"
+PY000025,"What is printed by this Python code?
+```python
+original = [3, 2]
+alias = original
+alias.append(12)
+print(original)
+```",mcq_single,"[{""id"":""A"",""text"":""[12]""},{""id"":""B"",""text"":""[3, 2, 12]""},{""id"":""C"",""text"":""[3, 2, 12, 12]""},{""id"":""D"",""text"":""[3, 2]""}]","[""B""]",[],advanced,SK025,"[""SK013"",""SK024""]","[""mutable_aliasing"",""shallow_copy""]","original = [3, 2]
+alias = original
+alias.append(12)
+print(original)",No copy is made: original and alias refer to the same list object.,,[],"[3, 2, 12]","{""correct_option_ids"":[""B""]}",120,template,"original = [3, 2]
+alias = original
+alias.append(12)
+print(original)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""original = [3, 2]\nalias = original\nalias.append(12)\nprint(original)"",""fixed_code"":""original = [3, 2]\nalias = original.copy()\nalias.append(12)\nprint(original)"",""fixed_line"":""alias = original.copy()"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000042,"What is printed by this Python code?
+```python
+items = [8, 8, 8, 5]
+print(len(set(items)))
+```",mcq_single,"[{""id"":""A"",""text"":""4""},{""id"":""B"",""text"":""0""},{""id"":""C"",""text"":""2""},{""id"":""D"",""text"":""3""}]","[""C""]",[],intermediate,SK015,"[""SK002"",""SK013""]","[""tuple_immutability"",""set_uniqueness""]","items = [8, 8, 8, 5]
+print(len(set(items)))",Converting the list to a set retains one copy of each distinct integer.,,[],2,"{""correct_option_ids"":[""C""]}",105,template,"items = [8, 8, 8, 5]
+print(len(set(items)))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000036,"Complete the blank so the code behaves as intended.
+```python
+score = 66
+if score >= ____:
+    print('pass')
+else:
+    print('retry')
+```",fill_blank,[],[],"[""60""]",beginner,SK009,"[""SK008""]","[""conditional_boundary"",""branch_selection""]","score = 66
+if score >= 60:
+    print('pass')
+else:
+    print('retry')","The condition 66 >= 60 is True, so the 'pass' branch runs.",,"[{""kind"":""stdout"",""expected"":""pass""}]",pass,"{""accepted_answers"":[""60""]}",90,template,"score = 66
+if score >= 60:
+    print('pass')
+else:
+    print('retry')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""score = 66\nif score = 60:\n    print('pass')\nelse:\n    print('retry')"",""fixed_code"":""score = 66\nif score >= 60:\n    print('pass')\nelse:\n    print('retry')"",""fixed_line"":""if score >= 60:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000049,Why is a context manager useful when working with files?,short_answer,[],[],"[""A with statement manages resource cleanup, and line processing should account for blank lines and newline characters.""]",advanced,SK022,"[""SK007"",""SK020""]","[""file_context_manager"",""line_processing""]","A with statement manages resource cleanup, and line processing should account for blank lines and newline characters.",StringIO provides a file-like stream; strip removes newline whitespace from the first line.,,[],,"{""accepted_answers"":[""A with statement manages resource cleanup, and line processing should account for blank lines and newline characters.""]}",120,template,"from io import StringIO
+text = 'first line\n\nthird line'
+with StringIO(text) as handle:
+    print(handle.readline().strip())
+    print(handle.readline().strip() == '')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def count_nonempty_lines(text):\n    return len(text.splitlines())\n""}"
+PY000034,"Predict the exact standard output of this Python code.
+```python
+name = 'Ari'
+print('Hello, ' + name)
+```",code_trace,[],[],[],beginner,SK007,"[""SK001"",""SK003""]","[""input_is_string"",""print_vs_return""]","name = 'Ari'
+print('Hello, ' + name)","The string expression is passed to print, which displays it.",,"[{""kind"":""stdout"",""expected"":""Hello, Ari""}]","Hello, Ari","{""expected_output"":""Hello, Ari""}",90,template,"name = 'Ari'
+print('Hello, ' + name)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000027,Select all correct statements about time complexity fundamentals.,mcq_multi,"[{""id"":""A"",""text"":""Two nested loops over n items often lead to O(n^2) work.""},{""id"":""B"",""text"":""O(n) is constant time.""},{""id"":""C"",""text"":""A single pass with constant work per item is O(n).""},{""id"":""D"",""text"":""Big-O gives exact wall-clock runtime.""},{""id"":""E"",""text"":""Every loop is O(1), regardless of its number of iterations.""}]","[""A"",""C""]",[],advanced,SK027,"[""SK010"",""SK026""]","[""linear_complexity"",""nested_loop_complexity""]","A single pass with constant work per item is O(n).
+Two nested loops over n items often lead to O(n^2) work.",The loop body executes n times with constant work per iteration; the growth is linear.,,[],,"{""correct_option_ids"":[""A"",""C""]}",120,template,"n = 11
+for i in range(n):
+    pass
+print('done')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000009,"Predict the exact standard output of this Python code.
+```python
+score = 47
+if score >= 60:
+    print('pass')
+else:
+    print('retry')
+```",code_trace,[],[],[],beginner,SK009,"[""SK008""]","[""conditional_boundary"",""branch_selection""]","score = 47
+if score >= 60:
+    print('pass')
+else:
+    print('retry')","The condition 47 >= 60 is False, so the 'retry' branch runs.",,"[{""kind"":""stdout"",""expected"":""retry""}]",retry,"{""expected_output"":""retry""}",90,template,"score = 47
+if score >= 60:
+    print('pass')
+else:
+    print('retry')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""score = 47\nif score = 60:\n    print('pass')\nelse:\n    print('retry')"",""fixed_code"":""score = 47\nif score >= 60:\n    print('pass')\nelse:\n    print('retry')"",""fixed_line"":""if score >= 60:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000077,What does self refer to inside an instance method?,short_answer,[],[],"[""self conventionally refers to the instance on which the method was called.""]",advanced,SK023,"[""SK017"",""SK002""]","[""instance_attribute"",""self_reference""]",self conventionally refers to the instance on which the method was called.,"The constructor stores size on the Box instance, and box.size reads it.",,[],,"{""accepted_answers"":[""self conventionally refers to the instance on which the method was called.""]}",120,template,"class Box:
+    def __init__(self, size):
+        self.size = size
+
+box = Box(8)
+print(box.size)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000062,What does the Boolean expression evaluate to?,short_answer,[],[],"[""A Boolean expression evaluates to True or False based on the truth values of its parts.""]",beginner,SK008,"[""SK005""]","[""truthiness"",""boolean_logic""]",A Boolean expression evaluates to True or False based on the truth values of its parts.,"Evaluate each comparison, then combine them using and.",,[],,"{""accepted_answers"":[""A Boolean expression evaluates to True or False based on the truth values of its parts.""]}",90,template,"value = 2
+print(value >= 6 and value < 10)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000046,How does the list comprehension construct its result?,short_answer,[],[],"[""A list comprehension evaluates an expression for each item and can optionally filter items with if.""]",intermediate,SK019,"[""SK010"",""SK013""]","[""comprehension_expression"",""comprehension_filter""]",A list comprehension evaluates an expression for each item and can optionally filter items with if.,range(upper) yields 0 through upper-1 and each item is squared.,,[],,"{""accepted_answers"":[""A list comprehension evaluates an expression for each item and can optionally filter items with if.""]}",105,template,"squares = [x * x for x in range(5)]
+print(squares)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000004,"Complete the blank so the code behaves as intended.
+```python
+print(4 ____ 3)
+```",fill_blank,[],[],"[""*""]",beginner,SK004,"[""SK001"",""SK002""]","[""operator_precedence"",""integer_division_confusion""]",print(4 * 3),Applying '*' to 4 and 3 gives 12.,,"[{""kind"":""stdout"",""expected"":""12""}]",12,"{""accepted_answers"":[""*""]}",90,template,print(4 * 3),,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000058,"What is printed by this Python code?
+```python
+print(4 // 7)
+```",mcq_single,"[{""id"":""A"",""text"":""11""},{""id"":""B"",""text"":""28""},{""id"":""C"",""text"":""0""},{""id"":""D"",""text"":""-3""}]","[""C""]",[],beginner,SK004,"[""SK001"",""SK002""]","[""operator_precedence"",""integer_division_confusion""]",print(4 // 7),Applying '//' to 4 and 7 gives 0.,,[],0,"{""correct_option_ids"":[""C""]}",90,template,print(4 // 7),,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000053,"Predict the exact standard output of this Python code.
+```python
+values = [8, 1, 4, 2, 8]
+target = 8
+count = 0
+for value in values:
+    if value == target:
+        count += 1
+print(count)
+```",code_trace,[],[],[],advanced,SK026,"[""SK010"",""SK013""]","[""algorithm_state"",""loop_invariant""]","values = [8, 1, 4, 2, 8]
+target = 8
+count = 0
+for value in values:
+    if value == target:
+        count += 1
+print(count)",The counter increases once for each element equal to target.,,"[{""kind"":""stdout"",""expected"":""2""}]",2,"{""expected_output"":""2""}",120,template,"values = [8, 1, 4, 2, 8]
+target = 8
+count = 0
+for value in values:
+    if value == target:
+        count += 1
+print(count)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def count_occurrences(values, target):\n    return len(values)\n""}"
+PY000018,"Identify and correct the bug in this code. Submit the corrected line.
+```python
+def add_one(value):
+    result = value + 1
+    print(result)
+
+answer = add_one(5)
+print(answer)
+```",debugging,[],[],"[""return result""]",intermediate,SK018,"[""SK017""]","[""return_vs_print"",""local_scope""]","def add_one(value):
+    result = value + 1
+    return result
+
+answer = add_one(5)
+print(answer)",The function returns value + 1; the caller stores and prints it.,,[],,"{""accepted_answers"":[""return result""]}",105,template,"def add_one(value):
+    result = value + 1
+    return result
+
+answer = add_one(5)
+print(answer)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""def add_one(value):\n    result = value + 1\n    print(result)\n\nanswer = add_one(5)\nprint(answer)"",""fixed_code"":""def add_one(value):\n    result = value + 1\n    return result\n\nanswer = add_one(5)\nprint(answer)"",""fixed_line"":""return result"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000045,"What is printed by this Python code?
+```python
+def add_one(value):
+    result = value + 1
+    return result
+
+answer = add_one(4)
+print(answer)
+```",mcq_single,"[{""id"":""A"",""text"":""4""},{""id"":""B"",""text"":""5""},{""id"":""C"",""text"":""None""},{""id"":""D"",""text"":""6""}]","[""B""]",[],intermediate,SK018,"[""SK017""]","[""return_vs_print"",""local_scope""]","def add_one(value):
+    result = value + 1
+    return result
+
+answer = add_one(4)
+print(answer)",The function returns value + 1; the caller stores and prints it.,,[],5,"{""correct_option_ids"":[""B""]}",105,template,"def add_one(value):
+    result = value + 1
+    return result
+
+answer = add_one(4)
+print(answer)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""def add_one(value):\n    result = value + 1\n    print(result)\n\nanswer = add_one(4)\nprint(answer)"",""fixed_code"":""def add_one(value):\n    result = value + 1\n    return result\n\nanswer = add_one(4)\nprint(answer)"",""fixed_line"":""return result"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000068,"What is printed by this Python code?
+```python
+items = ['a', 'b', 'c', 'd', 'e']
+print(items[1:5])
+```",mcq_single,"[{""id"":""A"",""text"":""['b', 'c', 'd', 'e']""},{""id"":""B"",""text"":""['a', 'b', 'c', 'd', 'e']""},{""id"":""C"",""text"":""No output (3)""},{""id"":""D"",""text"":""[]""}]","[""A""]",[],intermediate,SK014,"[""SK006"",""SK013""]","[""slice_stop_exclusive"",""slice_bounds""]","items = ['a', 'b', 'c', 'd', 'e']
+print(items[1:5])",items[1:stop] selects indices 1 up to but not including stop.,,[],"['b', 'c', 'd', 'e']","{""correct_option_ids"":[""A""]}",105,template,"items = ['a', 'b', 'c', 'd', 'e']
+print(items[1:5])",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000067,"What is printed by this Python code?
+```python
+values = [2, 4, 2, 5]
+print(values[0])
+```",mcq_single,"[{""id"":""A"",""text"":""No output (3)""},{""id"":""B"",""text"":""5""},{""id"":""C"",""text"":""4""},{""id"":""D"",""text"":""2""}]","[""D""]",[],intermediate,SK013,"[""SK002"",""SK010""]","[""zero_based_indexing"",""index_out_of_range""]","values = [2, 4, 2, 5]
+print(values[0])",The requested zero-based index is {index}; the element there is {values[index]}.,,[],2,"{""correct_option_ids"":[""D""]}",105,template,"values = [2, 4, 2, 5]
+print(values[0])",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""values = [2, 4, 2, 5]\nprint(values[1])"",""fixed_code"":""values = [2, 4, 2, 5]\nprint(values[0])"",""fixed_line"":""print(values[0])"",""buggy_solution"":""def second_or_none(values):\n    return values[0] if len(values) > 1 else None\n""}"
+PY000020,Select all correct statements about exceptions and debugging.,mcq_multi,"[{""id"":""A"",""text"":""Catching a specific exception makes the intended recovery clearer.""},{""id"":""B"",""text"":""Every exception should be silently ignored.""},{""id"":""C"",""text"":""except must always appear before try.""},{""id"":""D"",""text"":""A try block can be paired with except handlers.""},{""id"":""E"",""text"":""ValueError means a variable name is undefined.""}]","[""A"",""D""]",[],intermediate,SK020,"[""SK002"",""SK009""]","[""exception_type"",""debugging_cause""]","A try block can be paired with except handlers.
+Catching a specific exception makes the intended recovery clearer.","int cannot parse this input as an integer, so the ValueError handler runs.",,[],,"{""correct_option_ids"":[""A"",""D""]}",105,template,"text = '--'
+try:
+    number = int(text)
+    print(number)
+except ValueError:
+    print('invalid')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""text = '--'\ntry:\n    number = int(text)\nexcept KeyError:\n    number = 0\nprint(number)"",""fixed_code"":""text = '--'\ntry:\n    number = int(text)\nexcept ValueError:\n    number = 0\nprint(number)"",""fixed_line"":""except ValueError:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000011,What condition controls how long the while loop repeats?,short_answer,[],[],"[""A while loop repeats while its condition is true; its state must change to reach termination when needed.""]",intermediate,SK011,"[""SK008"",""SK009""]","[""loop_termination"",""while_condition""]",A while loop repeats while its condition is true; its state must change to reach termination when needed.,The count increases until count < limit becomes false.,,[],,"{""accepted_answers"":[""A while loop repeats while its condition is true; its state must change to reach termination when needed.""]}",105,template,"count = 0
+while count < 7:
+    count += 1
+print(count)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""count = 0\nwhile count < 7:\n    count -= 1\nprint(count)"",""fixed_code"":""count = 0\nwhile count < 7:\n    count += 1\nprint(count)"",""fixed_line"":""count += 1"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000056,"Complete the blank so the code behaves as intended.
+```python
+value = 'garden'
+print(type(value).____)
+```",fill_blank,[],[],"[""__name__""]",beginner,SK002,"[""SK001""]","[""type_confusion"",""bool_int_confusion""]","value = 'garden'
+print(type(value).__name__)",type(value).__name__ returns the built-in type's name.,,"[{""kind"":""stdout"",""expected"":""str""}]",str,"{""accepted_answers"":[""__name__""]}",90,template,"value = 'garden'
+print(type(value).__name__)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000065,"What is printed by this Python code?
+```python
+count = 0
+while count < 4:
+    count += 1
+print(count)
+```",mcq_single,"[{""id"":""A"",""text"":""4""},{""id"":""B"",""text"":""3""},{""id"":""C"",""text"":""5""},{""id"":""D"",""text"":""0""}]","[""A""]",[],intermediate,SK011,"[""SK008"",""SK009""]","[""loop_termination"",""while_condition""]","count = 0
+while count < 4:
+    count += 1
+print(count)",The count increases until count < limit becomes false.,,[],4,"{""correct_option_ids"":[""A""]}",105,template,"count = 0
+while count < 4:
+    count += 1
+print(count)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""count = 0\nwhile count < 4:\n    count -= 1\nprint(count)"",""fixed_code"":""count = 0\nwhile count < 4:\n    count += 1\nprint(count)"",""fixed_line"":""count += 1"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000026,Select all correct statements about algorithmic reasoning.,mcq_multi,"[{""id"":""A"",""text"":""An algorithm must use recursion.""},{""id"":""B"",""text"":""A loop invariant can describe what the counter represents after each iteration.""},{""id"":""C"",""text"":""A counter can summarize how many matches have been seen.""},{""id"":""D"",""text"":""An algorithm cannot use loops.""},{""id"":""E"",""text"":""A counter should increment on every item regardless of the condition.""}]","[""B"",""C""]",[],advanced,SK026,"[""SK010"",""SK013""]","[""algorithm_state"",""loop_invariant""]","A counter can summarize how many matches have been seen.
+A loop invariant can describe what the counter represents after each iteration.",The counter increases once for each element equal to target.,,[],,"{""correct_option_ids"":[""B"",""C""]}",120,template,"values = [1, 2, 4, 3, 7]
+target = 7
+count = 0
+for value in values:
+    if value == target:
+        count += 1
+print(count)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def count_occurrences(values, target):\n    return len(values)\n""}"
+PY000006,"Implement normalize_word(text), returning text with surrounding whitespace removed and letters lowercased.",coding,[],[],[],beginner,SK006,"[""SK001"",""SK002""]","[""string_immutability"",""string_indexing""]","def normalize_word(text):
+    return text.strip().lower()
+","lower() returns lowercase text; [1:4] selects indices 1, 2, and 3.","def normalize_word(text):
+    pass
+","[{""args"":[""  PyThOn  ""],""expected"":""python""},{""args"":[""Speech""],""expected"":""speech""},{""args"":[""  ""],""expected"":""""}]",,"{""function_name"":""normalize_word"",""test_cases"":[{""args"":[""  PyThOn  ""],""expected"":""python""},{""args"":[""Speech""],""expected"":""speech""},{""args"":[""  ""],""expected"":""""}]}",90,template,,normalize_word,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def normalize_word(text):\n    return text.upper()\n""}"
+PY000037,"Complete the blank so the code behaves as intended.
+```python
+total = 0
+for i in range(____):
+    total += i
+print(total)
+```",fill_blank,[],[],"[""7""]",intermediate,SK010,"[""SK001"",""SK005""]","[""off_by_one"",""loop_accumulator""]","total = 0
+for i in range(7):
+    total += i
+print(total)",range(n) yields 0 through n-1; total accumulates those values.,,"[{""kind"":""stdout"",""expected"":""21""}]",21,"{""accepted_answers"":[""7""]}",105,template,"total = 0
+for i in range(7):
+    total += i
+print(total)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""total = 0\nfor i in range(8):\n    total += i\nprint(total)"",""fixed_code"":""total = 0\nfor i in range(7):\n    total += i\nprint(total)"",""fixed_line"":""for i in range(7):"",""buggy_solution"":""def sum_even(numbers):\n    total = 0\n    for value in numbers:\n        if value % 2 == 1:\n            total += value\n    return total\n""}"
+PY000021,Implement factorial(n) recursively for non-negative integers.,coding,[],[],[],advanced,SK021,"[""SK017"",""SK018""]","[""recursion_base_case"",""recursive_step""]","def factorial(n):
+    if n < 0:
+        raise ValueError('n must be non-negative')
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+","Each call reduces n by one until n <= 1, then the products unwind.","def factorial(n):
+    pass
+","[{""args"":[0],""expected"":1},{""args"":[1],""expected"":1},{""args"":[5],""expected"":120}]",,"{""function_name"":""factorial"",""test_cases"":[{""args"":[0],""expected"":1},{""args"":[1],""expected"":1},{""args"":[5],""expected"":120}]}",120,template,,factorial,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n)\n\nprint(factorial(3))"",""fixed_code"":""def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n\nprint(factorial(3))"",""fixed_line"":""return n * factorial(n - 1)"",""buggy_solution"":""def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n)\n""}"
+PY000064,How does the loop update the accumulator?,short_answer,[],[],"[""A for loop visits each value in the iterable once; the accumulator keeps the running total.""]",intermediate,SK010,"[""SK001"",""SK005""]","[""off_by_one"",""loop_accumulator""]",A for loop visits each value in the iterable once; the accumulator keeps the running total.,range(n) yields 0 through n-1; total accumulates those values.,,[],,"{""accepted_answers"":[""A for loop visits each value in the iterable once; the accumulator keeps the running total.""]}",105,template,"total = 0
+for i in range(4):
+    total += i
+print(total)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""total = 0\nfor i in range(5):\n    total += i\nprint(total)"",""fixed_code"":""total = 0\nfor i in range(4):\n    total += i\nprint(total)"",""fixed_line"":""for i in range(4):"",""buggy_solution"":""def sum_even(numbers):\n    total = 0\n    for value in numbers:\n        if value % 2 == 1:\n            total += value\n    return total\n""}"
+PY000080,"Complete the blank so the code behaves as intended.
+```python
+values = [8, 5, 7, 5, 1]
+target = 5
+count = 0
+for value in values:
+    if value == target:
+        count ____ 1
+print(count)
+```",fill_blank,[],[],"[""+=""]",advanced,SK026,"[""SK010"",""SK013""]","[""algorithm_state"",""loop_invariant""]","values = [8, 5, 7, 5, 1]
+target = 5
+count = 0
+for value in values:
+    if value == target:
+        count += 1
+print(count)",The counter increases once for each element equal to target.,,"[{""kind"":""stdout"",""expected"":""2""}]",2,"{""accepted_answers"":[""+=""]}",120,template,"values = [8, 5, 7, 5, 1]
+target = 5
+count = 0
+for value in values:
+    if value == target:
+        count += 1
+print(count)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def count_occurrences(values, target):\n    return len(values)\n""}"
+PY000001,"What is printed by this Python code?
+```python
+x = 3
+x = x + 2
+print(x)
+```",mcq_single,"[{""id"":""A"",""text"":""2""},{""id"":""B"",""text"":""3""},{""id"":""C"",""text"":""6""},{""id"":""D"",""text"":""5""}]","[""D""]",[],beginner,SK001,[],"[""assignment_rebinding"",""variable_value_confusion""]","x = 3
+x = x + 2
+print(x)","The second assignment reads the current x, adds delta, and rebinds x.",,[],5,"{""correct_option_ids"":[""D""]}",90,template,"x = 3
+x = x + 2
+print(x)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000024,"Complete the blank so the code behaves as intended.
+```python
+items = [3, 2]
+items.____(5)
+print(items)
+```",fill_blank,[],[],"[""append""]",advanced,SK024,"[""SK013"",""SK015""]","[""mutable_immutable"",""in_place_mutation""]","items = [3, 2]
+items.append(5)
+print(items)",append changes the existing list by adding the new element.,,"[{""kind"":""stdout"",""expected"":""[3, 2, 5]""}]","[3, 2, 5]","{""accepted_answers"":[""append""]}",120,template,"items = [3, 2]
+items.append(5)
+print(items)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000071,"What is printed by this Python code?
+```python
+def combine(left, right):
+    return left + right
+
+print(combine(4, 5))
+```",mcq_single,"[{""id"":""A"",""text"":""4""},{""id"":""B"",""text"":""9""},{""id"":""C"",""text"":""10""},{""id"":""D"",""text"":""20""}]","[""B""]",[],intermediate,SK017,"[""SK001"",""SK004""]","[""parameter_order"",""function_call""]","def combine(left, right):
+    return left + right
+
+print(combine(4, 5))","The call binds left to a and right to b, then returns their sum.",,[],9,"{""correct_option_ids"":[""B""]}",105,template,"def combine(left, right):
+    return left + right
+
+print(combine(4, 5))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def clamp(value, lower, upper):\n    return value\n""}"
+PY000074,"Complete the blank so the code behaves as intended.
+```python
+text = '--'
+try:
+    number = int(text)
+except ____:
+    number = 0
+```",fill_blank,[],[],"[""ValueError""]",intermediate,SK020,"[""SK002"",""SK009""]","[""exception_type"",""debugging_cause""]","text = '--'
+try:
+    number = int(text)
+except ValueError:
+    number = 0","int cannot parse this input as an integer, so the ValueError handler runs.",,"[{""kind"":""stdout"",""expected"":""""}]",,"{""accepted_answers"":[""ValueError""]}",105,template,"text = '--'
+try:
+    number = int(text)
+    print(number)
+except ValueError:
+    print('invalid')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""text = '--'\ntry:\n    number = int(text)\nexcept KeyError:\n    number = 0\nprint(number)"",""fixed_code"":""text = '--'\ntry:\n    number = int(text)\nexcept ValueError:\n    number = 0\nprint(number)"",""fixed_line"":""except ValueError:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000029,"Predict the exact standard output of this Python code.
+```python
+value = 2
+print(type(value).__name__)
+```",code_trace,[],[],[],beginner,SK002,"[""SK001""]","[""type_confusion"",""bool_int_confusion""]","value = 2
+print(type(value).__name__)",type(value).__name__ returns the built-in type's name.,,"[{""kind"":""stdout"",""expected"":""int""}]",int,"{""expected_output"":""int""}",90,template,"value = 2
+print(type(value).__name__)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000047,"Predict the exact standard output of this Python code.
+```python
+text = '4.2'
+try:
+    number = int(text)
+    print(number)
+except ValueError:
+    print('invalid')
+```",code_trace,[],[],[],intermediate,SK020,"[""SK002"",""SK009""]","[""exception_type"",""debugging_cause""]","text = '4.2'
+try:
+    number = int(text)
+    print(number)
+except ValueError:
+    print('invalid')","int cannot parse this input as an integer, so the ValueError handler runs.",,"[{""kind"":""stdout"",""expected"":""invalid""}]",invalid,"{""expected_output"":""invalid""}",105,template,"text = '4.2'
+try:
+    number = int(text)
+    print(number)
+except ValueError:
+    print('invalid')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""text = '4.2'\ntry:\n    number = int(text)\nexcept KeyError:\n    number = 0\nprint(number)"",""fixed_code"":""text = '4.2'\ntry:\n    number = int(text)\nexcept ValueError:\n    number = 0\nprint(number)"",""fixed_line"":""except ValueError:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000043,How does a dictionary retrieve the value associated with a key?,short_answer,[],[],"[""Dictionary lookup uses a key; an absent key raises KeyError unless get or a default is used.""]",intermediate,SK016,"[""SK002""]","[""dictionary_key_lookup"",""missing_key""]",Dictionary lookup uses a key; an absent key raises KeyError unless get or a default is used.,The key maps directly to the stored score.,,[],,"{""accepted_answers"":[""Dictionary lookup uses a key; an absent key raises KeyError unless get or a default is used.""]}",105,template,"scores = {'speech': 91, 'other': 86}
+print(scores['speech'])",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def get_score(scores, name):\n    return scores[name]\n""}"
+PY000014,"Complete the blank so the code behaves as intended.
+```python
+items = ['a', 'b', 'c', 'd', 'e']
+print(items[1:____])
+```",fill_blank,[],[],"[""3""]",intermediate,SK014,"[""SK006"",""SK013""]","[""slice_stop_exclusive"",""slice_bounds""]","items = ['a', 'b', 'c', 'd', 'e']
+print(items[1:3])",items[1:stop] selects indices 1 up to but not including stop.,,"[{""kind"":""stdout"",""expected"":""['b', 'c']""}]","['b', 'c']","{""accepted_answers"":[""3""]}",105,template,"items = ['a', 'b', 'c', 'd', 'e']
+print(items[1:3])",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000013,"Identify and correct the bug in this code. Submit the corrected line.
+```python
+values = [7, 7, 8, 9]
+print(values[1])
+```",debugging,[],[],"[""print(values[0])""]",intermediate,SK013,"[""SK002"",""SK010""]","[""zero_based_indexing"",""index_out_of_range""]","values = [7, 7, 8, 9]
+print(values[0])",The requested zero-based index is {index}; the element there is {values[index]}.,,[],,"{""accepted_answers"":[""print(values[0])""]}",105,template,"values = [7, 7, 8, 9]
+print(values[0])",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""values = [7, 7, 8, 9]\nprint(values[1])"",""fixed_code"":""values = [7, 7, 8, 9]\nprint(values[0])"",""fixed_line"":""print(values[0])"",""buggy_solution"":""def second_or_none(values):\n    return values[0] if len(values) > 1 else None\n""}"
+PY000057,Why is explicit type conversion useful here?,short_answer,[],[],"[""int converts a string containing a valid integer representation into an integer.""]",beginner,SK003,"[""SK002""]","[""type_conversion"",""string_number_confusion""]",int converts a string containing a valid integer representation into an integer.,The text is converted to an integer before arithmetic is performed.,,[],,"{""accepted_answers"":[""int converts a string containing a valid integer representation into an integer.""]}",90,template,"raw = '74'
+value = int(raw) + 4
+print(value)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000039,"Predict the exact standard output of this Python code.
+```python
+print(list(range(0, 8, 2)))
+```",code_trace,[],[],[],intermediate,SK012,"[""SK010""]","[""range_stop_exclusive"",""range_step""]","print(list(range(0, 8, 2)))",Construct the sequence from start by step increments strictly before stop.,,"[{""kind"":""stdout"",""expected"":""[0, 2, 4, 6]""}]","[0, 2, 4, 6]","{""expected_output"":""[0, 2, 4, 6]""}",105,template,"print(list(range(0, 8, 2)))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000050,"Complete the blank so the code behaves as intended.
+```python
+class Box:
+    def __init__(self, size):
+        self.____ = size
+
+box = Box(7)
+print(box.size)
+```",fill_blank,[],[],"[""size""]",advanced,SK023,"[""SK017"",""SK002""]","[""instance_attribute"",""self_reference""]","class Box:
+    def __init__(self, size):
+        self.size = size
+
+box = Box(7)
+print(box.size)","The constructor stores size on the Box instance, and box.size reads it.",,"[{""kind"":""stdout"",""expected"":""7""}]",7,"{""accepted_answers"":[""size""]}",120,template,"class Box:
+    def __init__(self, size):
+        self.size = size
+
+box = Box(7)
+print(box.size)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000032,"What is printed by this Python code?
+```python
+x = 9
+y = 4
+print(x > y and x % 2 == 0)
+```",mcq_single,"[{""id"":""A"",""text"":""False""},{""id"":""B"",""text"":""No output (3)""},{""id"":""C"",""text"":""No output (2)""},{""id"":""D"",""text"":""True""}]","[""A""]",[],beginner,SK005,"[""SK002"",""SK004""]","[""comparison_logic"",""and_or_confusion""]","x = 9
+y = 4
+print(x > y and x % 2 == 0)",Both comparisons are evaluated according to and semantics; the result is a Boolean.,,[],False,"{""correct_option_ids"":[""A""]}",90,template,"x = 9
+y = 4
+print(x > y and x % 2 == 0)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000019,"Complete the blank so the code behaves as intended.
+```python
+squares = [x * x for x in ____(7)]
+print(squares)
+```",fill_blank,[],[],"[""range""]",intermediate,SK019,"[""SK010"",""SK013""]","[""comprehension_expression"",""comprehension_filter""]","squares = [x * x for x in range(7)]
+print(squares)",range(upper) yields 0 through upper-1 and each item is squared.,,"[{""kind"":""stdout"",""expected"":""[0, 1, 4, 9, 16, 25, 36]""}]","[0, 1, 4, 9, 16, 25, 36]","{""accepted_answers"":[""range""]}",105,template,"squares = [x * x for x in range(7)]
+print(squares)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000061,"Complete the blank so the code behaves as intended.
+```python
+name = 'Ari'
+____('Hello, ' + name)
+```",fill_blank,[],[],"[""print""]",beginner,SK007,"[""SK001"",""SK003""]","[""input_is_string"",""print_vs_return""]","name = 'Ari'
+print('Hello, ' + name)","The string expression is passed to print, which displays it.",,"[{""kind"":""stdout"",""expected"":""Hello, Ari""}]","Hello, Ari","{""accepted_answers"":[""print""]}",90,template,"name = 'Ari'
+print('Hello, ' + name)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000005,How do comparison and logical operators combine in this expression?,short_answer,[],[],"[""Comparison expressions produce booleans, and and combines them using short-circuit Boolean logic.""]",beginner,SK005,"[""SK002"",""SK004""]","[""comparison_logic"",""and_or_confusion""]","Comparison expressions produce booleans, and and combines them using short-circuit Boolean logic.",Both comparisons are evaluated according to and semantics; the result is a Boolean.,,[],,"{""accepted_answers"":[""Comparison expressions produce booleans, and and combines them using short-circuit Boolean logic.""]}",90,template,"x = 7
+y = 6
+print(x > y and x % 2 == 0)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000022,"Complete the blank so the code behaves as intended.
+```python
+from io import StringIO
+text = 'first line\n\nthird line'
+with StringIO(text) as handle:
+    print(handle.readline().____())
+```",fill_blank,[],[],"[""strip""]",advanced,SK022,"[""SK007"",""SK020""]","[""file_context_manager"",""line_processing""]","from io import StringIO
+text = 'first line\n\nthird line'
+with StringIO(text) as handle:
+    print(handle.readline().strip())",StringIO provides a file-like stream; strip removes newline whitespace from the first line.,,"[{""kind"":""stdout"",""expected"":""first line""}]",first line,"{""accepted_answers"":[""strip""]}",120,template,"from io import StringIO
+text = 'first line\n\nthird line'
+with StringIO(text) as handle:
+    print(handle.readline().strip())
+    print(handle.readline().strip() == '')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def count_nonempty_lines(text):\n    return len(text.splitlines())\n""}"
+PY000069,Select all correct statements about tuples and sets.,mcq_multi,"[{""id"":""A"",""text"":""Set elements may be mutable lists.""},{""id"":""B"",""text"":""A set removes duplicate values.""},{""id"":""C"",""text"":""A tuple does not support item assignment.""},{""id"":""D"",""text"":""A set preserves every duplicate.""},{""id"":""E"",""text"":""Tuples can always be changed in place.""}]","[""B"",""C""]",[],intermediate,SK015,"[""SK002"",""SK013""]","[""tuple_immutability"",""set_uniqueness""]","A set removes duplicate values.
+A tuple does not support item assignment.",Converting the list to a set retains one copy of each distinct integer.,,[],,"{""correct_option_ids"":[""B"",""C""]}",105,template,"items = [4, 5, 4, 6]
+print(len(set(items)))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000052,Select all correct statements about references and aliasing.,mcq_multi,"[{""id"":""A"",""text"":""alias = original always clones the list.""},{""id"":""B"",""text"":""Assignment can make two names refer to the same list.""},{""id"":""C"",""text"":""A shallow copy can separate the outer list object.""},{""id"":""D"",""text"":""Lists are immutable.""},{""id"":""E"",""text"":""append changes only the name alias.""}]","[""B"",""C""]",[],advanced,SK025,"[""SK013"",""SK024""]","[""mutable_aliasing"",""shallow_copy""]","Assignment can make two names refer to the same list.
+A shallow copy can separate the outer list object.",No copy is made: original and alias refer to the same list object.,,[],,"{""correct_option_ids"":[""B"",""C""]}",120,template,"original = [4, 2]
+alias = original
+alias.append(8)
+print(original)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""original = [4, 2]\nalias = original\nalias.append(8)\nprint(original)"",""fixed_code"":""original = [4, 2]\nalias = original.copy()\nalias.append(8)\nprint(original)"",""fixed_line"":""alias = original.copy()"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000078,"What is printed by this Python code?
+```python
+items = [2, 6]
+items.append(5)
+print(items)
+```",mcq_single,"[{""id"":""A"",""text"":""[2, 6, 5, 5]""},{""id"":""B"",""text"":""[2, 6, 5]""},{""id"":""C"",""text"":""[2, 6]""},{""id"":""D"",""text"":""[5, 2, 6]""}]","[""B""]",[],advanced,SK024,"[""SK013"",""SK015""]","[""mutable_immutable"",""in_place_mutation""]","items = [2, 6]
+items.append(5)
+print(items)",append changes the existing list by adding the new element.,,[],"[2, 6, 5]","{""correct_option_ids"":[""B""]}",120,template,"items = [2, 6]
+items.append(5)
+print(items)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000054,"Predict the exact standard output of this Python code.
+```python
+n = 11
+for i in range(n):
+    pass
+print('done')
+```",code_trace,[],[],[],advanced,SK027,"[""SK010"",""SK026""]","[""linear_complexity"",""nested_loop_complexity""]","n = 11
+for i in range(n):
+    pass
+print('done')",The loop body executes n times with constant work per iteration; the growth is linear.,,"[{""kind"":""stdout"",""expected"":""done""}]",done,"{""expected_output"":""done""}",120,template,"n = 11
+for i in range(n):
+    pass
+print('done')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000072,Select all correct statements about return values and scope.,mcq_multi,"[{""id"":""A"",""text"":""return passes a value back to the caller.""},{""id"":""B"",""text"":""print returns the displayed text by default.""},{""id"":""C"",""text"":""A local name is normally available only in its scope.""},{""id"":""D"",""text"":""A function can return only integers.""},{""id"":""E"",""text"":""A local variable is automatically global.""}]","[""A"",""C""]",[],intermediate,SK018,"[""SK017""]","[""return_vs_print"",""local_scope""]","A local name is normally available only in its scope.
+return passes a value back to the caller.",The function returns value + 1; the caller stores and prints it.,,[],,"{""correct_option_ids"":[""A"",""C""]}",105,template,"def add_one(value):
+    result = value + 1
+    return result
+
+answer = add_one(5)
+print(answer)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""def add_one(value):\n    result = value + 1\n    print(result)\n\nanswer = add_one(5)\nprint(answer)"",""fixed_code"":""def add_one(value):\n    result = value + 1\n    return result\n\nanswer = add_one(5)\nprint(answer)"",""fixed_line"":""return result"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000017,What is the purpose of a function parameter?,short_answer,[],[],"[""A parameter is a local name that receives an argument when a function is called.""]",intermediate,SK017,"[""SK001"",""SK004""]","[""parameter_order"",""function_call""]",A parameter is a local name that receives an argument when a function is called.,"The call binds left to a and right to b, then returns their sum.",,[],,"{""accepted_answers"":[""A parameter is a local name that receives an argument when a function is called.""]}",105,template,"def combine(left, right):
+    return left + right
+
+print(combine(7, 5))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def clamp(value, lower, upper):\n    return value\n""}"
+PY000060,Select all correct statements about strings and string operations.,mcq_multi,"[{""id"":""A"",""text"":""lower() changes the original string in place.""},{""id"":""B"",""text"":""Strings are immutable sequences.""},{""id"":""C"",""text"":""String indices start at one.""},{""id"":""D"",""text"":""The stop index in a slice is excluded.""},{""id"":""E"",""text"":""A string slice always includes its stop index.""}]","[""B"",""D""]",[],beginner,SK006,"[""SK001"",""SK002""]","[""string_immutability"",""string_indexing""]","Strings are immutable sequences.
+The stop index in a slice is excluded.","lower() returns lowercase text; [1:4] selects indices 1, 2, and 3.",,[],,"{""correct_option_ids"":[""B"",""D""]}",90,template,"text = 'speech'
+print(text.lower())
+print(text[1:4])",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def normalize_word(text):\n    return text.upper()\n""}"
+PY000002,Select all correct statements about primitive data types.,mcq_multi,"[{""id"":""A"",""text"":""A float can only represent whole numbers.""},{""id"":""B"",""text"":""A str represents text.""},{""id"":""C"",""text"":""An int represents an integer value.""},{""id"":""D"",""text"":""bool has no relationship to True and False.""},{""id"":""E"",""text"":""A variable's type is determined only by its name.""}]","[""B"",""C""]",[],beginner,SK002,"[""SK001""]","[""type_confusion"",""bool_int_confusion""]","An int represents an integer value.
+A str represents text.",type(value).__name__ returns the built-in type's name.,,[],,"{""correct_option_ids"":[""B"",""C""]}",90,template,"value = 2.5
+print(type(value).__name__)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000076,"Implement count_nonempty_lines(text), counting lines that contain non-whitespace characters.",coding,[],[],[],advanced,SK022,"[""SK007"",""SK020""]","[""file_context_manager"",""line_processing""]","def count_nonempty_lines(text):
+    return sum(1 for line in text.splitlines() if line.strip())
+",StringIO provides a file-like stream; strip removes newline whitespace from the first line.,"def count_nonempty_lines(text):
+    pass
+","[{""args"":[""one\n\nthree\n""],""expected"":2},{""args"":[""  \n\t\n""],""expected"":0},{""args"":[""single""],""expected"":1}]",,"{""function_name"":""count_nonempty_lines"",""test_cases"":[{""args"":[""one\n\nthree\n""],""expected"":2},{""args"":[""  \n\t\n""],""expected"":0},{""args"":[""single""],""expected"":1}]}",120,template,,count_nonempty_lines,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def count_nonempty_lines(text):\n    return len(text.splitlines())\n""}"
+PY000023,"Predict the exact standard output of this Python code.
+```python
+class Box:
+    def __init__(self, size):
+        self.size = size
+
+box = Box(3)
+print(box.size)
+```",code_trace,[],[],[],advanced,SK023,"[""SK017"",""SK002""]","[""instance_attribute"",""self_reference""]","class Box:
+    def __init__(self, size):
+        self.size = size
+
+box = Box(3)
+print(box.size)","The constructor stores size on the Box instance, and box.size reads it.",,"[{""kind"":""stdout"",""expected"":""3""}]",3,"{""expected_output"":""3""}",120,template,"class Box:
+    def __init__(self, size):
+        self.size = size
+
+box = Box(3)
+print(box.size)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000041,Which subsequence does the slice select?,short_answer,[],[],"[""A slice includes its start index and excludes its stop index.""]",intermediate,SK014,"[""SK006"",""SK013""]","[""slice_stop_exclusive"",""slice_bounds""]",A slice includes its start index and excludes its stop index.,items[1:stop] selects indices 1 up to but not including stop.,,[],,"{""accepted_answers"":[""A slice includes its start index and excludes its stop index.""]}",105,template,"items = ['a', 'b', 'c', 'd', 'e']
+print(items[1:2])",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000075,Select all correct statements about recursion.,mcq_multi,"[{""id"":""A"",""text"":""The recursive argument should approach the base case.""},{""id"":""B"",""text"":""A base case is optional when using return.""},{""id"":""C"",""text"":""A base case stops recursive calls.""},{""id"":""D"",""text"":""Every recursive function must call itself forever.""},{""id"":""E"",""text"":""Recursion cannot return a value.""}]","[""A"",""C""]",[],advanced,SK021,"[""SK017"",""SK018""]","[""recursion_base_case"",""recursive_step""]","A base case stops recursive calls.
+The recursive argument should approach the base case.","Each call reduces n by one until n <= 1, then the products unwind.",,[],,"{""correct_option_ids"":[""A"",""C""]}",120,template,"def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+print(factorial(5))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n)\n\nprint(factorial(5))"",""fixed_code"":""def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n\nprint(factorial(5))"",""fixed_line"":""return n * factorial(n - 1)"",""buggy_solution"":""def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n)\n""}"
+PY000015,Why can a set have fewer elements than the source list?,short_answer,[],[],"[""Sets contain unique hashable elements; tuples are immutable sequences.""]",intermediate,SK015,"[""SK002"",""SK013""]","[""tuple_immutability"",""set_uniqueness""]",Sets contain unique hashable elements; tuples are immutable sequences.,Converting the list to a set retains one copy of each distinct integer.,,[],,"{""accepted_answers"":[""Sets contain unique hashable elements; tuples are immutable sequences.""]}",105,template,"items = [9, 2, 9, 3]
+print(len(set(items)))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000012,Select all correct statements about range and iteration.,mcq_multi,"[{""id"":""A"",""text"":""The step controls the difference between successive values.""},{""id"":""B"",""text"":""range always includes stop.""},{""id"":""C"",""text"":""range(5, 1) counts down by default.""},{""id"":""D"",""text"":""The step must be a float.""},{""id"":""E"",""text"":""The stop value is excluded.""}]","[""A"",""E""]",[],intermediate,SK012,"[""SK010""]","[""range_stop_exclusive"",""range_step""]","The stop value is excluded.
+The step controls the difference between successive values.",Construct the sequence from start by step increments strictly before stop.,,[],,"{""correct_option_ids"":[""A"",""E""]}",105,template,"print(list(range(2, 10, 2)))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000016,"Complete the blank so the code behaves as intended.
+```python
+scores = {'math': 88, 'other': 83}
+print(scores[____])
+```",fill_blank,[],[],"[""'math'""]",intermediate,SK016,"[""SK002""]","[""dictionary_key_lookup"",""missing_key""]","scores = {'math': 88, 'other': 83}
+print(scores['math'])",The key maps directly to the stored score.,,"[{""kind"":""stdout"",""expected"":""88""}]",88,"{""accepted_answers"":[""'math'""]}",105,template,"scores = {'math': 88, 'other': 83}
+print(scores['math'])",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def get_score(scores, name):\n    return scores[name]\n""}"
+PY000030,"Complete the blank so the code behaves as intended.
+```python
+raw = '56'
+value = ____(raw) + 6
+print(value)
+```",fill_blank,[],[],"[""int""]",beginner,SK003,"[""SK002""]","[""type_conversion"",""string_number_confusion""]","raw = '56'
+value = int(raw) + 6
+print(value)",The text is converted to an integer before arithmetic is performed.,,"[{""kind"":""stdout"",""expected"":""62""}]",62,"{""accepted_answers"":[""int""]}",90,template,"raw = '56'
+value = int(raw) + 6
+print(value)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000055,"Predict the exact standard output of this Python code.
+```python
+x = 9
+x = x + 3
+print(x)
+```",code_trace,[],[],[],beginner,SK001,[],"[""assignment_rebinding"",""variable_value_confusion""]","x = 9
+x = x + 3
+print(x)","The second assignment reads the current x, adds delta, and rebinds x.",,"[{""kind"":""stdout"",""expected"":""12""}]",12,"{""expected_output"":""12""}",90,template,"x = 9
+x = x + 3
+print(x)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000003,"Predict the exact standard output of this Python code.
+```python
+raw = '68'
+value = int(raw) + 8
+print(value)
+```",code_trace,[],[],[],beginner,SK003,"[""SK002""]","[""type_conversion"",""string_number_confusion""]","raw = '68'
+value = int(raw) + 8
+print(value)",The text is converted to an integer before arithmetic is performed.,,"[{""kind"":""stdout"",""expected"":""76""}]",76,"{""expected_output"":""76""}",90,template,"raw = '68'
+value = int(raw) + 8
+print(value)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000007,Select all correct statements about input and output.,mcq_multi,"[{""id"":""A"",""text"":""print returns the displayed string.""},{""id"":""B"",""text"":""print writes output to standard output.""},{""id"":""C"",""text"":""Output is stored in a variable named stdout by default.""},{""id"":""D"",""text"":""input automatically converts every response to int.""},{""id"":""E"",""text"":""input normally returns a str.""}]","[""B"",""E""]",[],beginner,SK007,"[""SK001"",""SK003""]","[""input_is_string"",""print_vs_return""]","print writes output to standard output.
+input normally returns a str.","The string expression is passed to print, which displays it.",,[],,"{""correct_option_ids"":[""B"",""E""]}",90,template,"name = 'Sam'
+print('Hello, ' + name)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000081,"Complete the blank so the code behaves as intended.
+```python
+# A single pass through n items takes ____ time
+print('done')
+```",fill_blank,[],[],"[""O(n)""]",advanced,SK027,"[""SK010"",""SK026""]","[""linear_complexity"",""nested_loop_complexity""]","# A single pass through n items takes O(n) time
+print('done')",The loop body executes n times with constant work per iteration; the growth is linear.,,"[{""kind"":""stdout"",""expected"":""done""}]",done,"{""accepted_answers"":[""O(n)""]}",120,template,"n = 7
+for i in range(n):
+    pass
+print('done')",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000008,"Predict the exact standard output of this Python code.
+```python
+value = 6
+print(value >= 6 and value < 10)
+```",code_trace,[],[],[],beginner,SK008,"[""SK005""]","[""truthiness"",""boolean_logic""]","value = 6
+print(value >= 6 and value < 10)","Evaluate each comparison, then combine them using and.",,"[{""kind"":""stdout"",""expected"":""True""}]",True,"{""expected_output"":""True""}",90,template,"value = 6
+print(value >= 6 and value < 10)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000048,"What is printed by this Python code?
+```python
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+print(factorial(6))
+```",mcq_single,"[{""id"":""A"",""text"":""720""},{""id"":""B"",""text"":""RecursionError""},{""id"":""C"",""text"":""120""},{""id"":""D"",""text"":""6""}]","[""A""]",[],advanced,SK021,"[""SK017"",""SK018""]","[""recursion_base_case"",""recursive_step""]","def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+print(factorial(6))","Each call reduces n by one until n <= 1, then the products unwind.",,[],720,"{""correct_option_ids"":[""A""]}",120,template,"def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+print(factorial(6))",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n)\n\nprint(factorial(6))"",""fixed_code"":""def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n\nprint(factorial(6))"",""fixed_line"":""return n * factorial(n - 1)"",""buggy_solution"":""def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n)\n""}"
+PY000035,"Complete the blank so the code behaves as intended.
+```python
+value = 6
+print(value >= 6 ____ value < 10)
+```",fill_blank,[],[],"[""and""]",beginner,SK008,"[""SK005""]","[""truthiness"",""boolean_logic""]","value = 6
+print(value >= 6 and value < 10)","Evaluate each comparison, then combine them using and.",,"[{""kind"":""stdout"",""expected"":""True""}]",True,"{""accepted_answers"":[""and""]}",90,template,"value = 6
+print(value >= 6 and value < 10)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000073,"What is printed by this Python code?
+```python
+squares = [x * x for x in range(6)]
+print(squares)
+```",mcq_single,"[{""id"":""A"",""text"":""[0, 1, 4, 9, 16, 25]""},{""id"":""B"",""text"":""[0, 1, 2, 3, 4, 5]""},{""id"":""C"",""text"":""[0, 1, 4, 9, 16, 25, 36]""},{""id"":""D"",""text"":""[1, 4, 9, 16, 25]""}]","[""A""]",[],intermediate,SK019,"[""SK010"",""SK013""]","[""comprehension_expression"",""comprehension_filter""]","squares = [x * x for x in range(6)]
+print(squares)",range(upper) yields 0 through upper-1 and each item is squared.,,[],"[0, 1, 4, 9, 16, 25]","{""correct_option_ids"":[""A""]}",105,template,"squares = [x * x for x in range(6)]
+print(squares)",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"
+PY000040,"Implement second_or_none(values), returning the second element or None if fewer than two elements exist.",coding,[],[],[],intermediate,SK013,"[""SK002"",""SK010""]","[""zero_based_indexing"",""index_out_of_range""]","def second_or_none(values):
+    return values[1] if len(values) > 1 else None
+",The requested zero-based index is {index}; the element there is {values[index]}.,"def second_or_none(values):
+    pass
+","[{""args"":[[4,7,9]],""expected"":7},{""args"":[[5]],""expected"":null},{""args"":[[]],""expected"":null}]",,"{""function_name"":""second_or_none"",""test_cases"":[{""args"":[[4,7,9]],""expected"":7},{""args"":[[5]],""expected"":null},{""args"":[[]],""expected"":null}]}",105,template,,second_or_none,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""values = [7, 3, 4, 3]\nprint(values[3])"",""fixed_code"":""values = [7, 3, 4, 3]\nprint(values[3])"",""fixed_line"":""print(values[3])"",""buggy_solution"":""def second_or_none(values):\n    return values[0] if len(values) > 1 else None\n""}"
+PY000033,"What is printed by this Python code?
+```python
+text = 'Python'
+print(text.lower())
+print(text[1:4])
+```",mcq_single,"[{""id"":""A"",""text"":""PYTHON\nyth""},{""id"":""B"",""text"":""python\nyth""},{""id"":""C"",""text"":""Python\nyth""},{""id"":""D"",""text"":""python\nython""}]","[""B""]",[],beginner,SK006,"[""SK001"",""SK002""]","[""string_immutability"",""string_indexing""]","text = 'Python'
+print(text.lower())
+print(text[1:4])","lower() returns lowercase text; [1:4] selects indices 1, 2, and 3.",,[],"python
+yth","{""correct_option_ids"":[""B""]}",90,template,"text = 'Python'
+print(text.lower())
+print(text[1:4])",,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def normalize_word(text):\n    return text.upper()\n""}"
+PY000031,What does the '*' arithmetic operator do in this expression?,short_answer,[],[],"[""It multiplies the operands.""]",beginner,SK004,"[""SK001"",""SK002""]","[""operator_precedence"",""integer_division_confusion""]",It multiplies the operands.,Applying '*' to 6 and 3 gives 18.,,[],,"{""accepted_answers"":[""It multiplies the operands.""]}",90,template,print(6 * 3),,"{""wrong_answers"":[""It always evaluates to None."",""Python converts every value to a string automatically.""],""buggy_code"":""value = 3\nif value = 3:\n    print('match')"",""fixed_code"":""value = 3\nif value == 3:\n    print('match')"",""fixed_line"":""if value == 3:"",""buggy_solution"":""def solve(value):\n    return None\n""}"

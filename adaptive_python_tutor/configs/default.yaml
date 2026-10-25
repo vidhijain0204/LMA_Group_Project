@@ -1,0 +1,23 @@
+# Default CLI configuration. Command-line arguments override these values.
+output_dir: data/generated
+num_students: 20
+num_questions: 100
+interactions_per_student: 50
+seed: 42
+generation_mode: template
+max_attempts: 2
+# Empty means use all skills; otherwise use skill IDs, categories, or exact names.
+skill_coverage: []
+difficulty_distribution:
+  beginner: 0.4
+  intermediate: 0.4
+  advanced: 0.2
+minimum_prerequisite_coverage: 0.5
+llm:
+  # Use any OpenAI-compatible chat-completions endpoint when generation_mode is llm.
+  base_url: ""
+  model: ""  # Configure explicitly; no model is hard-coded in the project.
+  api_key_env: PYTUTOR_LLM_API_KEY
+  timeout_seconds: 45
+  retry_limit: 2
+  batch_size: 8

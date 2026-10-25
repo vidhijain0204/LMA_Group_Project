@@ -1,3 +1,0 @@
-# Core template generation and simulation use only the Python standard library.
-# PyYAML is needed only when loading configs/default.yaml or another YAML config.
-PyYAML>=6.0

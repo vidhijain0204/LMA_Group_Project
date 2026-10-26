@@ -1,0 +1,2 @@
+user_id,problem_id,sequence_index,introduced_at,primary_skill_id,generation_source
+STU00001,PY000001,1,2025-01-09T11:45:00+00:00,SK001,simulator

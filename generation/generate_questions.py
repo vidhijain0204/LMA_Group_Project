@@ -524,13 +524,16 @@ def _case_for(skill: Skill, variant: int, rng: random.Random) -> dict[str, Any]:
 
 
 def _question_types_for(skill_id: str, skill_index: int, variant: int) -> str:
-    """Cycle formats while reserving code-execution formats for suitable skills."""
-    types = ["mcq_single", "mcq_multi", "code_trace", "fill_blank", "short_answer"]
-    if skill_id in DEBUGGING_SKILLS:
-        types.append("debugging")
-    if skill_id in CODING_SKILLS:
-        types.append("coding")
-    return types[(variant + skill_index) % len(types)]
+    # """Cycle formats while reserving code-execution formats for suitable skills."""
+    # types = ["mcq_single", "mcq_multi", "code_trace", "fill_blank", "short_answer"]
+    # if skill_id in DEBUGGING_SKILLS:
+    #     types.append("debugging")
+    # if skill_id in CODING_SKILLS:
+    #     types.append("coding")
+    # return types[(variant + skill_index) % len(types)]
+
+    """Generate single-correct-answer MCQs exclusively"""
+    return "mcq_single"
 
 
 def _json(value: Any) -> str:

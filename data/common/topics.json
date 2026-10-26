@@ -1,0 +1,15 @@
+[
+  {"topic_id": "T01", "name": "Introduction to Python"},
+  {"topic_id": "T02", "name": "Variables and Data Types"},
+  {"topic_id": "T03", "name": "Input and Output"},
+  {"topic_id": "T04", "name": "Operators"},
+  {"topic_id": "T05", "name": "Conditional Statements (if, elif, else)"},
+  {"topic_id": "T06", "name": "Loops (for, while)"},
+  {"topic_id": "T07", "name": "Strings"},
+  {"topic_id": "T08", "name": "Lists, Tuples, and Sets"},
+  {"topic_id": "T09", "name": "Dictionaries"},
+  {"topic_id": "T10", "name": "Functions"},
+  {"topic_id": "T11", "name": "List Comprehensions"},
+  {"topic_id": "T12", "name": "Exception Handling"},
+  {"topic_id": "T13", "name": "File Handling"}
+]

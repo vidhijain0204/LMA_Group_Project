@@ -1,0 +1,314 @@
+[
+  {
+    "question_id": "Q001",
+    "topic_id": "T01",
+    "question": "Which of the following is true about Python?",
+    "options": {
+      "A": "It is a compiled language only.",
+      "B": "It is an interpreted, high-level programming language.",
+      "C": "It does not support object-oriented programming.",
+      "D": "It requires explicit memory management."
+    },
+    "correct_option": "B"
+  },
+  {
+    "question_id": "Q002",
+    "topic_id": "T01",
+    "question": "What is the standard file extension for Python source code files?",
+    "options": {
+      "A": ".pt",
+      "B": ".pyt",
+      "C": ".py",
+      "D": ".python"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q003",
+    "topic_id": "T02",
+    "question": "What is the data type of the result of `3.14` in Python?",
+    "options": {
+      "A": "int",
+      "B": "decimal",
+      "C": "float",
+      "D": "double"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q004",
+    "topic_id": "T02",
+    "question": "Which symbol is used for single-line comments in Python?",
+    "options": {
+      "A": "//",
+      "B": "#",
+      "C": "/*",
+      "D": "--"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question_id": "Q005",
+    "topic_id": "T03",
+    "question": "Which function is used to take input from the user in Python?",
+    "options": {
+      "A": "scan()",
+      "B": "read()",
+      "C": "get()",
+      "D": "input()"
+    },
+    "correct_option": "D"
+  },
+  {
+    "question_id": "Q006",
+    "topic_id": "T03",
+    "question": "Which built-in function is used to display output to the console?",
+    "options": {
+      "A": "echo()",
+      "B": "print()",
+      "C": "write()",
+      "D": "display()"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question_id": "Q007",
+    "topic_id": "T04",
+    "question": "What is the result of the expression `11 % 3`?",
+    "options": {
+      "A": "2",
+      "B": "3",
+      "C": "3.66",
+      "D": "9"
+    },
+    "correct_option": "A"
+  },
+  {
+    "question_id": "Q008",
+    "topic_id": "T04",
+    "question": "Which operator is used for exponentiation (power) in Python?",
+    "options": {
+      "A": "^",
+      "B": "**",
+      "C": "^^",
+      "D": "pow"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question_id": "Q009",
+    "topic_id": "T05",
+    "question": "Which keyword is used to check multiple conditions in Python?",
+    "options": {
+      "A": "else if",
+      "B": "elseif",
+      "C": "elif",
+      "D": "switch"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q010",
+    "topic_id": "T05",
+    "question": "Which block executes when all preceding `if` and `elif` conditions evaluate to False?",
+    "options": {
+      "A": "default",
+      "B": "otherwise",
+      "C": "else",
+      "D": "fallback"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q011",
+    "topic_id": "T06",
+    "question": "Which loop is typically used when you know the exact number of iterations beforehand?",
+    "options": {
+      "A": "while loop",
+      "B": "do-while loop",
+      "C": "for loop",
+      "D": "until loop"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q012",
+    "topic_id": "T06",
+    "question": "Which statement is used to immediately exit out of a loop in Python?",
+    "options": {
+      "A": "exit",
+      "B": "stop",
+      "C": "break",
+      "D": "pass"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q013",
+    "topic_id": "T07",
+    "question": "How do you find the length of a string named `text`?",
+    "options": {
+      "A": "text.length()",
+      "B": "size(text)",
+      "C": "length(text)",
+      "D": "len(text)"
+    },
+    "correct_option": "D"
+  },
+  {
+    "question_id": "Q014",
+    "topic_id": "T07",
+    "question": "Which string method converts all characters in a string to uppercase?",
+    "options": {
+      "A": "toUpper()",
+      "B": "upper()",
+      "C": "uppercase()",
+      "D": "capitalized()"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question_id": "Q015",
+    "topic_id": "T08",
+    "question": "Which of the following data structures is immutable?",
+    "options": {
+      "A": "List",
+      "B": "Tuple",
+      "C": "Set",
+      "D": "Dictionary"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question_id": "Q016",
+    "topic_id": "T08",
+    "question": "Which method is used to add an element to the end of a list?",
+    "options": {
+      "A": "add()",
+      "B": "insert()",
+      "C": "append()",
+      "D": "extend()"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q017",
+    "topic_id": "T09",
+    "question": "How do you access the value associated with the key 'name' in a dictionary `d`?",
+    "options": {
+      "A": "d('name')",
+      "B": "d.name",
+      "C": "d['name']",
+      "D": "d{name}"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q018",
+    "topic_id": "T09",
+    "question": "Which dictionary method returns a view object displaying a list of all keys?",
+    "options": {
+      "A": "keys()",
+      "B": "get_keys()",
+      "C": "list_keys()",
+      "D": "fetch_keys()"
+    },
+    "correct_option": "A"
+  },
+  {
+    "question_id": "Q019",
+    "topic_id": "T10",
+    "question": "Which keyword is used to define a custom function in Python?",
+    "options": {
+      "A": "func",
+      "B": "define",
+      "C": "def",
+      "D": "function"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q020",
+    "topic_id": "T10",
+    "question": "Which keyword is used to send a value back from a function call?",
+    "options": {
+      "A": "yield",
+      "B": "return",
+      "C": "send",
+      "D": "output"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question_id": "Q021",
+    "topic_id": "T11",
+    "question": "What is the output of `[x * 2 for x in range(3)]`?",
+    "options": {
+      "A": "[0, 2, 4]",
+      "B": "[2, 4, 6]",
+      "C": "[0, 1, 2]",
+      "D": "[1, 2, 3]"
+    },
+    "correct_option": "A"
+  },
+  {
+    "question_id": "Q022",
+    "topic_id": "T11",
+    "question": "What is a major advantage of using list comprehensions?",
+    "options": {
+      "A": "They allow infinite loops.",
+      "B": "They are more concise and generally faster than standard for-loops.",
+      "C": "They automatically handle file input/output.",
+      "D": "They replace exception handling blocks."
+    },
+    "correct_option": "B"
+  },
+  {
+    "question_id": "Q023",
+    "topic_id": "T12",
+    "question": "Which block is used to execute code regardless of whether an exception was raised or not?",
+    "options": {
+      "A": "try",
+      "B": "except",
+      "C": "catch",
+      "D": "finally"
+    },
+    "correct_option": "D"
+  },
+  {
+    "question_id": "Q024",
+    "topic_id": "T12",
+    "question": "Which keyword is used to catch and handle specific exceptions?",
+    "options": {
+      "A": "catch",
+      "B": "except",
+      "C": "handle",
+      "D": "error"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question_id": "Q025",
+    "topic_id": "T13",
+    "question": "Which mode is used to open a file for reading in Python?",
+    "options": {
+      "A": "'w'",
+      "B": "'a'",
+      "C": "'r'",
+      "D": "'x'"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question_id": "Q026",
+    "topic_id": "T13",
+    "question": "Which method reads the entire file contents as a single string?",
+    "options": {
+      "A": "read()",
+      "B": "readline()",
+      "C": "readlines()",
+      "D": "load()"
+    },
+    "correct_option": "A"
+  }
+]

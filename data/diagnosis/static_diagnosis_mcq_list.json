@@ -1,314 +1,366 @@
 [
   {
-    "question_id": "Q001",
-    "topic_id": "T01",
-    "question": "Which of the following is true about Python?",
-    "options": {
-      "A": "It is a compiled language only.",
-      "B": "It is an interpreted, high-level programming language.",
-      "C": "It does not support object-oriented programming.",
-      "D": "It requires explicit memory management."
-    },
-    "correct_option": "B"
+    "problem_id": "P01",
+    "body": "Who created the Python programming language and in what year was it first released?",
+    "option": [
+      "Dennis Ritchie, 1972",
+      "Guido van Rossum, 1991",
+      "James Gosling, 1995",
+      "Bjarne Stroustrup, 1985"
+    ],
+    "correct option": "Guido van Rossum, 1991",
+    "type": "single_choice",
+    "related topics": ["Introduction to Python"],
+    "explanation": "Python was conceived in the late 1980s by Guido van Rossum at CWI in the Netherlands and officially released in 1991."
   },
   {
-    "question_id": "Q002",
-    "topic_id": "T01",
-    "question": "What is the standard file extension for Python source code files?",
-    "options": {
-      "A": ".pt",
-      "B": ".pyt",
-      "C": ".py",
-      "D": ".python"
-    },
-    "correct_option": "C"
+    "problem_id": "P02",
+    "body": "Which of the following statements about Python's execution model is true?",
+    "option": [
+      "Python source code is directly converted to machine code without any intermediate representation.",
+      "Python source code is compiled into bytecode (.pyc), which is then interpreted by the Python Virtual Machine (PVM).",
+      "Python is purely compiled ahead-of-time (AOT) like C++.",
+      "Python requires a browser runtime environment to execute."
+    ],
+    "correct option": "Python source code is compiled into bytecode (.pyc), which is then interpreted by the Python Virtual Machine (PVM).",
+    "type": "single_choice",
+    "related topics": ["Introduction to Python"],
+    "explanation": "Standard CPython compiles `.py` files into intermediate bytecode instructions, which are then run by the Python Virtual Machine (PVM)."
   },
   {
-    "question_id": "Q003",
-    "topic_id": "T02",
-    "question": "What is the data type of the result of `3.14` in Python?",
-    "options": {
-      "A": "int",
-      "B": "decimal",
-      "C": "float",
-      "D": "double"
-    },
-    "correct_option": "C"
+    "problem_id": "P03",
+    "body": "What will be the output of `type(3 / 2)` in Python 3?",
+    "option": [
+      "<class 'int'>",
+      "<class 'float'>",
+      "<class 'double'>",
+      "<class 'number'>"
+    ],
+    "correct option": "<class 'float'>",
+    "type": "single_choice",
+    "related topics": ["Variables and Data Types", "Operators"],
+    "explanation": "The `/` operator performs true division in Python 3, returning a float (`1.5`) even when both operands are integers."
   },
   {
-    "question_id": "Q004",
-    "topic_id": "T02",
-    "question": "Which symbol is used for single-line comments in Python?",
-    "options": {
-      "A": "//",
-      "B": "#",
-      "C": "/*",
-      "D": "--"
-    },
-    "correct_option": "B"
+    "problem_id": "P04",
+    "body": "Which of the following variables is immutable in Python?",
+    "option": [
+      "x = [1, 2, 3]",
+      "x = {'a': 1}",
+      "x = (1, 2, 3)",
+      "x = {1, 2, 3}"
+    ],
+    "correct option": "x = (1, 2, 3)",
+    "type": "single_choice",
+    "related topics": ["Variables and Data Types", "Lists, Tuples, and Sets"],
+    "explanation": "Tuples are immutable sequence types in Python; once initialized, their elements cannot be reassigned or altered."
   },
   {
-    "question_id": "Q005",
-    "topic_id": "T03",
-    "question": "Which function is used to take input from the user in Python?",
-    "options": {
-      "A": "scan()",
-      "B": "read()",
-      "C": "get()",
-      "D": "input()"
-    },
-    "correct_option": "D"
+    "problem_id": "P05",
+    "body": "What does the `input()` built-in function return by default in Python 3?",
+    "option": [
+      "int",
+      "float",
+      "str",
+      "None"
+    ],
+    "correct option": "str",
+    "type": "single_choice",
+    "related topics": ["Input and Output", "Variables and Data Types"],
+    "explanation": "`input()` reads a line from standard input and always returns it as a string (`str`), requiring explicit type-casting for numeric evaluation."
   },
   {
-    "question_id": "Q006",
-    "topic_id": "T03",
-    "question": "Which built-in function is used to display output to the console?",
-    "options": {
-      "A": "echo()",
-      "B": "print()",
-      "C": "write()",
-      "D": "display()"
-    },
-    "correct_option": "B"
+    "problem_id": "P06",
+    "body": "What is the output of `print('Python', '3', sep='-', end='!')`?",
+    "option": [
+      "Python 3-!",
+      "Python-3!",
+      "Python - 3 !",
+      "Python-3"
+    ],
+    "correct option": "Python-3!",
+    "type": "single_choice",
+    "related topics": ["Input and Output", "Strings"],
+    "explanation": "The `sep` argument specifies the separator inserted between values ('-'), and `end` replaces the default newline suffix with '!'."
   },
   {
-    "question_id": "Q007",
-    "topic_id": "T04",
-    "question": "What is the result of the expression `11 % 3`?",
-    "options": {
-      "A": "2",
-      "B": "3",
-      "C": "3.66",
-      "D": "9"
-    },
-    "correct_option": "A"
+    "problem_id": "P07",
+    "body": "What is the result of the expression `2 ** 3 ** 2`?",
+    "option": [
+      "64",
+      "512",
+      "36",
+      "12"
+    ],
+    "correct option": "512",
+    "type": "single_choice",
+    "related topics": ["Operators", "Variables and Data Types"],
+    "explanation": "Exponentiation `**` possesses right-to-left associativity: `3 ** 2 = 9`, followed by `2 ** 9 = 512`."
   },
   {
-    "question_id": "Q008",
-    "topic_id": "T04",
-    "question": "Which operator is used for exponentiation (power) in Python?",
-    "options": {
-      "A": "^",
-      "B": "**",
-      "C": "^^",
-      "D": "pow"
-    },
-    "correct_option": "B"
+    "problem_id": "P08",
+    "body": "What is the difference between `is` and `==` in Python?",
+    "option": [
+      "`is` checks for value equality; `==` checks for identity/memory location.",
+      "`==` checks for value equality; `is` checks for object identity (memory address).",
+      "They are identical and interchangeable.",
+      "`is` is only valid for boolean types."
+    ],
+    "correct option": "`==` checks for value equality; `is` checks for object identity (memory address).",
+    "type": "single_choice",
+    "related topics": ["Operators", "Conditional Statements (if, elif, else)"],
+    "explanation": "`==` evaluates whether the values of two objects are equal, while `is` verifies whether both variables point to the exact same object in memory (`id(a) == id(b)`)."
   },
   {
-    "question_id": "Q009",
-    "topic_id": "T05",
-    "question": "Which keyword is used to check multiple conditions in Python?",
-    "options": {
-      "A": "else if",
-      "B": "elseif",
-      "C": "elif",
-      "D": "switch"
-    },
-    "correct_option": "C"
+    "problem_id": "P09",
+    "body": "What does the following snippet evaluate to?\n```python\nx = 10\nif x > 15:\n    print('A')\nelif x == 10:\n    print('B')\nelse:\n    print('C')\n```",
+    "option": [
+      "A",
+      "B",
+      "C",
+      "B\nC"
+    ],
+    "correct option": "B",
+    "type": "single_choice",
+    "related topics": ["Conditional Statements (if, elif, else)", "Operators"],
+    "explanation": "The conditions evaluate sequentially; `x > 15` is False, but `x == 10` is True, executing the corresponding block and exiting the conditional structure."
   },
   {
-    "question_id": "Q010",
-    "topic_id": "T05",
-    "question": "Which block executes when all preceding `if` and `elif` conditions evaluate to False?",
-    "options": {
-      "A": "default",
-      "B": "otherwise",
-      "C": "else",
-      "D": "fallback"
-    },
-    "correct_option": "C"
+    "problem_id": "P10",
+    "body": "What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?",
+    "option": [
+      "'Pass'",
+      "'Fail'",
+      "True",
+      "SyntaxError"
+    ],
+    "correct option": "'Pass'",
+    "type": "single_choice",
+    "related topics": ["Conditional Statements (if, elif, else)", "Variables and Data Types"],
+    "explanation": "This demonstrates Python's ternary conditional expression `[true_expr] if [condition] else [false_expr]`. Because `5 > 3` is True, `'Pass'` is assigned."
   },
   {
-    "question_id": "Q011",
-    "topic_id": "T06",
-    "question": "Which loop is typically used when you know the exact number of iterations beforehand?",
-    "options": {
-      "A": "while loop",
-      "B": "do-while loop",
-      "C": "for loop",
-      "D": "until loop"
-    },
-    "correct_option": "C"
+    "problem_id": "P11",
+    "body": "What will `range(1, 10, 2)` produce when unpacked into a list?",
+    "option": [
+      "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
+      "[1, 3, 5, 7, 9]",
+      "[2, 4, 6, 8, 10]",
+      "[1, 3, 5, 7]"
+    ],
+    "correct option": "[1, 3, 5, 7, 9]",
+    "type": "single_choice",
+    "related topics": ["Loops (for, while)", "Lists, Tuples, and Sets"],
+    "explanation": "`range(start, stop, step)` starts at 1, increments by 2, and stops before reaching 10, resulting in 1, 3, 5, 7, and 9."
   },
   {
-    "question_id": "Q012",
-    "topic_id": "T06",
-    "question": "Which statement is used to immediately exit out of a loop in Python?",
-    "options": {
-      "A": "exit",
-      "B": "stop",
-      "C": "break",
-      "D": "pass"
-    },
-    "correct_option": "C"
+    "problem_id": "P12",
+    "body": "What triggers the `else` block of a `for` loop in Python?",
+    "option": [
+      "When the loop encounters a `break` statement.",
+      "When the loop terminates naturally without hitting a `break`.",
+      "When an exception occurs during loop execution.",
+      "When the loop iterable is initially empty."
+    ],
+    "correct option": "When the loop terminates naturally without hitting a `break`.",
+    "type": "single_choice",
+    "related topics": ["Loops (for, while)", "Conditional Statements (if, elif, else)"],
+    "explanation": "The `else` clause of a loop executes when the sequence is exhausted (or condition becomes false), but is skipped entirely if the loop is terminated via `break`."
   },
   {
-    "question_id": "Q013",
-    "topic_id": "T07",
-    "question": "How do you find the length of a string named `text`?",
-    "options": {
-      "A": "text.length()",
-      "B": "size(text)",
-      "C": "length(text)",
-      "D": "len(text)"
-    },
-    "correct_option": "D"
+    "problem_id": "P13",
+    "body": "What is the value of `s[::-1]` if `s = 'hello'`?",
+    "option": [
+      "'hello'",
+      "'olleh'",
+      "'h'",
+      "'o'"
+    ],
+    "correct option": "'olleh'",
+    "type": "single_choice",
+    "related topics": ["Strings", "Operators"],
+    "explanation": "Extended slice syntax `[start:stop:step]` with a step of `-1` traverses the sequence backwards from end to start, reversing the string."
   },
   {
-    "question_id": "Q014",
-    "topic_id": "T07",
-    "question": "Which string method converts all characters in a string to uppercase?",
-    "options": {
-      "A": "toUpper()",
-      "B": "upper()",
-      "C": "uppercase()",
-      "D": "capitalized()"
-    },
-    "correct_option": "B"
+    "problem_id": "P14",
+    "body": "What is the result of `'-'.join(['a', 'b', 'c'])`?",
+    "option": [
+      "'a-b-c'",
+      "['a', '-', 'b', '-', 'c']",
+      "'-abc'",
+      "'abc-'"
+    ],
+    "correct option": "'a-b-c'",
+    "type": "single_choice",
+    "related topics": ["Strings", "Lists, Tuples, and Sets"],
+    "explanation": "`str.join(iterable)` concatenates elements of an iterable using the string instance (`'-'`) as the separator."
   },
   {
-    "question_id": "Q015",
-    "topic_id": "T08",
-    "question": "Which of the following data structures is immutable?",
-    "options": {
-      "A": "List",
-      "B": "Tuple",
-      "C": "Set",
-      "D": "Dictionary"
-    },
-    "correct_option": "B"
+    "problem_id": "P15",
+    "body": "What is the result of `len({1, 2, 2, 3, 3, 3})`?",
+    "option": [
+      "6",
+      "3",
+      "1",
+      "TypeError"
+    ],
+    "correct option": "3",
+    "type": "single_choice",
+    "related topics": ["Lists, Tuples, and Sets", "Variables and Data Types"],
+    "explanation": "Sets in Python store unique elements and automatically discard duplicates upon construction, leaving `{1, 2, 3}`."
   },
   {
-    "question_id": "Q016",
-    "topic_id": "T08",
-    "question": "Which method is used to add an element to the end of a list?",
-    "options": {
-      "A": "add()",
-      "B": "insert()",
-      "C": "append()",
-      "D": "extend()"
-    },
-    "correct_option": "C"
+    "problem_id": "P16",
+    "body": "How do you append the elements of list `b` to list `a` in-place?",
+    "option": [
+      "a.add(b)",
+      "a.push(b)",
+      "a.extend(b)",
+      "a.insert(b)"
+    ],
+    "correct option": "a.extend(b)",
+    "type": "single_choice",
+    "related topics": ["Lists, Tuples, and Sets", "Functions"],
+    "explanation": "`a.extend(iterable)` iterates through the supplied argument and appends each element individually to list `a`, mutating it in place."
   },
   {
-    "question_id": "Q017",
-    "topic_id": "T09",
-    "question": "How do you access the value associated with the key 'name' in a dictionary `d`?",
-    "options": {
-      "A": "d('name')",
-      "B": "d.name",
-      "C": "d['name']",
-      "D": "d{name}"
-    },
-    "correct_option": "C"
+    "problem_id": "P17",
+    "body": "What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",
+    "option": [
+      "KeyError",
+      "None",
+      "0",
+      "False"
+    ],
+    "correct option": "0",
+    "type": "single_choice",
+    "related topics": ["Dictionaries", "Exception Handling"],
+    "explanation": "The `dict.get(key, default)` method retrieves the value if the key exists; otherwise, it returns the provided default value without raising a `KeyError`."
   },
   {
-    "question_id": "Q018",
-    "topic_id": "T09",
-    "question": "Which dictionary method returns a view object displaying a list of all keys?",
-    "options": {
-      "A": "keys()",
-      "B": "get_keys()",
-      "C": "list_keys()",
-      "D": "fetch_keys()"
-    },
-    "correct_option": "A"
+    "problem_id": "P18",
+    "body": "Which method returns a set-like view of a dictionary's key-value pairs?",
+    "option": [
+      "d.keys()",
+      "d.values()",
+      "d.items()",
+      "d.pairs()"
+    ],
+    "correct option": "d.items()",
+    "type": "single_choice",
+    "related topics": ["Dictionaries", "Lists, Tuples, and Sets", "Loops (for, while)"],
+    "explanation": "`dict.items()` returns a dynamic `dict_items` view containing `(key, value)` 2-tuples."
   },
   {
-    "question_id": "Q019",
-    "topic_id": "T10",
-    "question": "Which keyword is used to define a custom function in Python?",
-    "options": {
-      "A": "func",
-      "B": "define",
-      "C": "def",
-      "D": "function"
-    },
-    "correct_option": "C"
+    "problem_id": "P19",
+    "body": "What will the following code output?\n```python\ndef func(a, b=[]):\n    b.append(a)\n    return b\n\nprint(func(1))\nprint(func(2))\n```",
+    "option": [
+      "[1]\n[2]",
+      "[1]\n[1, 2]",
+      "[1, 2]\n[1, 2]",
+      "[1]\n[]"
+    ],
+    "correct option": "[1]\n[1, 2]",
+    "type": "single_choice",
+    "related topics": ["Functions", "Lists, Tuples, and Sets", "Variables and Data Types"],
+    "explanation": "Default parameter values in Python are evaluated once when the function is defined, making mutable defaults (like lists) shared across subsequent invocations."
   },
   {
-    "question_id": "Q020",
-    "topic_id": "T10",
-    "question": "Which keyword is used to send a value back from a function call?",
-    "options": {
-      "A": "yield",
-      "B": "return",
-      "C": "send",
-      "D": "output"
-    },
-    "correct_option": "B"
+    "problem_id": "P20",
+    "body": "What does `*args` and `**kwargs` represent in a function definition signature?",
+    "option": [
+      "Required arguments and optional arguments",
+      "Arbitrary positional arguments (tuple) and arbitrary keyword arguments (dict)",
+      "Pointers to memory addresses",
+      "Global variables and local variables"
+    ],
+    "correct option": "Arbitrary positional arguments (tuple) and arbitrary keyword arguments (dict)",
+    "type": "single_choice",
+    "related topics": ["Functions", "Dictionaries", "Lists, Tuples, and Sets"],
+    "explanation": "`*args` packs excess positional arguments into a tuple, while `**kwargs` packs named keyword arguments into a dictionary."
   },
   {
-    "question_id": "Q021",
-    "topic_id": "T11",
-    "question": "What is the output of `[x * 2 for x in range(3)]`?",
-    "options": {
-      "A": "[0, 2, 4]",
-      "B": "[2, 4, 6]",
-      "C": "[0, 1, 2]",
-      "D": "[1, 2, 3]"
-    },
-    "correct_option": "A"
+    "problem_id": "P21",
+    "body": "What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?",
+    "option": [
+      "[0, 1, 4, 9, 16]",
+      "[0, 4, 16]",
+      "[1, 9]",
+      "[4, 16]"
+    ],
+    "correct option": "[0, 4, 16]",
+    "type": "single_choice",
+    "related topics": ["List Comprehensions", "Loops (for, while)", "Operators"],
+    "explanation": "The loop generates 0, 1, 2, 3, 4. The predicate filters to even values (0, 2, 4), and squares them: `0**2=0`, `2**2=4`, `4**2=16`."
   },
   {
-    "question_id": "Q022",
-    "topic_id": "T11",
-    "question": "What is a major advantage of using list comprehensions?",
-    "options": {
-      "A": "They allow infinite loops.",
-      "B": "They are more concise and generally faster than standard for-loops.",
-      "C": "They automatically handle file input/output.",
-      "D": "They replace exception handling blocks."
-    },
-    "correct_option": "B"
+    "problem_id": "P22",
+    "body": "Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?",
+    "option": [
+      "[item for row in matrix for item in row]",
+      "[item for item in row for row in matrix]",
+      "[row for item in row in matrix]",
+      "matrix.flatten()"
+    ],
+    "correct option": "[item for row in matrix for item in row]",
+    "type": "single_choice",
+    "related topics": ["List Comprehensions", "Lists, Tuples, and Sets", "Loops (for, while)"],
+    "explanation": "Nested list comprehensions mirror the order of nested `for` loops: first `for row in matrix:` followed by `for item in row:`."
   },
   {
-    "question_id": "Q023",
-    "topic_id": "T12",
-    "question": "Which block is used to execute code regardless of whether an exception was raised or not?",
-    "options": {
-      "A": "try",
-      "B": "except",
-      "C": "catch",
-      "D": "finally"
-    },
-    "correct_option": "D"
+    "problem_id": "P23",
+    "body": "Which clause in a `try...except` block executes strictly when no exceptions are raised?",
+    "option": [
+      "finally",
+      "else",
+      "catch",
+      "pass"
+    ],
+    "correct option": "else",
+    "type": "single_choice",
+    "related topics": ["Exception Handling", "Conditional Statements (if, elif, else)"],
+    "explanation": "In Python, the `else` block of a `try...except` statement runs only if the code in the `try` block completes successfully without raising any exceptions."
   },
   {
-    "question_id": "Q024",
-    "topic_id": "T12",
-    "question": "Which keyword is used to catch and handle specific exceptions?",
-    "options": {
-      "A": "catch",
-      "B": "except",
-      "C": "handle",
-      "D": "error"
-    },
-    "correct_option": "B"
+    "problem_id": "P24",
+    "body": "What block is guaranteed to run regardless of whether an exception was raised or handled?",
+    "option": [
+      "except",
+      "finally",
+      "else",
+      "ensure"
+    ],
+    "correct option": "finally",
+    "type": "single_choice",
+    "related topics": ["Exception Handling", "File Handling"],
+    "explanation": "The `finally` block always executes prior to leaving the `try` structure, making it ideal for deterministic cleanup operations."
   },
   {
-    "question_id": "Q025",
-    "topic_id": "T13",
-    "question": "Which mode is used to open a file for reading in Python?",
-    "options": {
-      "A": "'w'",
-      "B": "'a'",
-      "C": "'r'",
-      "D": "'x'"
-    },
-    "correct_option": "C"
+    "problem_id": "P25",
+    "body": "Why is using the `with open(...) as f:` context manager preferred for file operations?",
+    "option": [
+      "It makes file read and write operations 10x faster.",
+      "It automatically handles closing the file even if exceptions occur inside the block.",
+      "It encrypts the contents written to the file on disk.",
+      "It bypasses standard operating system permissions."
+    ],
+    "correct option": "It automatically handles closing the file even if exceptions occur inside the block.",
+    "type": "single_choice",
+    "related topics": ["File Handling", "Exception Handling"],
+    "explanation": "The `with` statement leverages the Context Management protocol (`__enter__` and `__exit__`), ensuring that the file descriptor is closed properly upon block exit."
   },
   {
-    "question_id": "Q026",
-    "topic_id": "T13",
-    "question": "Which method reads the entire file contents as a single string?",
-    "options": {
-      "A": "read()",
-      "B": "readline()",
-      "C": "readlines()",
-      "D": "load()"
-    },
-    "correct_option": "A"
+    "problem_id": "P26",
+    "body": "What does the mode `'a'` do in `open('data.txt', 'a')`?",
+    "option": [
+      "Opens the file for read-only access in ASCII format.",
+      "Overwrites the entire file from the beginning.",
+      "Opens the file for writing, appending new data to the end without truncating it.",
+      "Opens an asynchronous binary stream."
+    ],
+    "correct option": "Opens the file for writing, appending new data to the end without truncating it.",
+    "type": "single_choice",
+    "related topics": ["File Handling", "Input and Output", "Strings"],
+    "explanation": "Mode `'a'` designates append mode: the file stream position is placed at the end of the file, creating the file if it does not already exist."
   }
 ]

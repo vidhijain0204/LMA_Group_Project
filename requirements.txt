@@ -1,0 +1,15 @@
+# Recommended Python: 3.11 or 3.12
+# Core model runtime (Qwen/Qwen3-4B)
+torch>=2.6.0
+transformers>=4.51.0
+accelerate>=1.0.0
+safetensors>=0.4.5
+
+# LangChain / LangGraph agent framework
+langchain-core>=0.3.0
+langchain-huggingface>=0.1.0
+langgraph>=0.2.0
+
+# Application UI and data models
+streamlit>=1.40.0
+pydantic>=2.7.0

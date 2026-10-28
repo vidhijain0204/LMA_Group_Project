@@ -1,10 +1,13 @@
 import streamlit as st
 from agents.diagnosis_agent import DiagnosisAgent  # Adjust import path as needed
+from agents.course_retriever import CourseRetriever
+from agents.tutor_agent import TutorAgent
 
 # Filepaths configuration
 TOPICS_PATH = "data/common/topics.json"
 MCQS_PATH = "data/diagnosis/static_diagnosis_mcq_list.json"
 DB_PATH = "data/skb_database.json"
+CORPUS_PATH = "data/common/corpus.jsonl"
 
 st.set_page_config(page_title="Python Learning Platform", layout="wide")
 
@@ -15,6 +18,13 @@ def get_diagnosis_agent():
         mcqs_filepath=MCQS_PATH,
         db_filepath=DB_PATH
     )
+
+
+@st.cache_resource(show_spinner="Loading course material and tutor...")
+def get_tutor_agent():
+    retriever = CourseRetriever(corpus_filepath=CORPUS_PATH)
+    return TutorAgent(db_filepath=DB_PATH, retriever=retriever)
+
 
 agent = get_diagnosis_agent()
 
@@ -71,13 +81,33 @@ if has_taken_test and existing_skb:
 
     st.divider()
 
-    # Static placeholder for the Tutor Agent interface
-    st.info("🤖 **Tutor agent will start its work...** (LLM integration and personalized chat session coming up next!)")
-    
-    st.markdown("### Upcoming Tutor Features:")
-    st.markdown("- Tailored explanations based on your weak topics.")
-    st.markdown("- Interactive Python practice problems adapted to your skill level.")
-    st.markdown("- Real-time misconception analysis during chat.")
+    if st.session_state.get("tutor_student_id") != student_id:
+        st.session_state.tutor_student_id = student_id
+        st.session_state.tutor_messages = []
+
+    for message in st.session_state.tutor_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    question = st.chat_input("Ask a Python question")
+    if question:
+        history = list(st.session_state.tutor_messages)
+        st.session_state.tutor_messages.append(
+            {"role": "user", "content": question}
+        )
+        try:
+            with st.spinner("Finding relevant course material..."):
+                answer = get_tutor_agent().explain(
+                    student_id=student_id,
+                    user_input=question,
+                    chat_history=history,
+                )
+            st.session_state.tutor_messages.append(
+                {"role": "assistant", "content": answer}
+            )
+            st.rerun()
+        except Exception as error:
+            st.error(f"The tutor could not answer this question: {error}")
 
 else:
     # --- DIAGNOSTIC ASSESSMENT FORM ---

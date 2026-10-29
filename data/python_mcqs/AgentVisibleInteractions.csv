@@ -1,2 +1,0 @@
-id,problem_id,hint_count,answer_text,saw_answer,discrete_score,end_time,user_id,start_time,attempt_number,code_submission,test_pass_rate,tests_passed,tests_total,response_time_seconds,used_hint,event_type,selected_option_ids,independent_attempt,sequence_index,introduced_at
-INT00001_00001,PY000001,1,3,0,0,2025-01-09T11:46:51+00:00,STU00001,2025-01-09T11:45:00+00:00,1,,,,,111,1,answer_submitted,"[""B""]",1,1,2025-01-09T11:45:00+00:00

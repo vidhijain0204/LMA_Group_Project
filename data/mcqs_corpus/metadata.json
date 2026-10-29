@@ -1,0 +1,965 @@
+{
+  "dataset_name": "Python Tutor MCQ Test Set",
+  "version": "1.0.0",
+  "generated_date": "2026-10-30",
+  "purpose": "Testing, evaluation, and analysis for an adaptive Python tutor using SKB mastery signals.",
+  "question_count": 455,
+  "format": "JSON array; one object per multiple-choice question",
+  "source_alignment": {
+    "topic_taxonomy_file": "topics.json",
+    "topic_count": 13,
+    "subtopic_count": 74,
+    "source_corpus_file": "corpus_final.jsonl",
+    "source_corpus_record_count": 430,
+    "source_corpus_topic_counts": {
+      "T01": 37,
+      "T02": 27,
+      "T03": 24,
+      "T04": 25,
+      "T05": 21,
+      "T06": 40,
+      "T07": 31,
+      "T08": 70,
+      "T09": 32,
+      "T10": 49,
+      "T11": 18,
+      "T12": 22,
+      "T13": 34
+    },
+    "source_corpus_record_types": {
+      "explanation": 336,
+      "example": 27,
+      "debugging": 33,
+      "common_mistake": 34
+    },
+    "source_corpus_unique_subtopic_ids": 74,
+    "note": "Question items are newly authored for this test set and aligned to the supplied taxonomy. The instructional corpus was used for topic alignment rather than copied verbatim."
+  },
+  "schema": {
+    "prob_id": "Unique stable ID, e.g. PY0001",
+    "prob_body": "Question prompt; may contain short Python code snippets",
+    "type": "Question format/category, e.g. output_prediction, debugging, code_completion, conceptual, best_practice, application, error_identification, edge_case",
+    "options": "Object with four choices labelled A, B, C, D",
+    "correct_option": "One of A, B, C, D",
+    "difficulty": "Numeric mastery-calibration level in {0, 0.2, 0.4, 0.6, 0.8, 1}; 1 is hardest",
+    "related_topics": "List of topic IDs; first is the primary topic and subsequent entries are related/prerequisite topics",
+    "related_subtopics": "List of subconcept IDs; first is primary and later entries are supporting/cross-topic concepts",
+    "explanations": "Short rationale for why the keyed option is correct"
+  },
+  "difficulty_scale": [
+    {
+      "value": 0.0,
+      "label": "Very easy",
+      "guidance": "Recognition and direct recall of a single foundational concept."
+    },
+    {
+      "value": 0.2,
+      "label": "Easy",
+      "guidance": "One-step application or straightforward code reading."
+    },
+    {
+      "value": 0.4,
+      "label": "Lower intermediate",
+      "guidance": "Short code tracing, basic conversions, or selecting a correct construct."
+    },
+    {
+      "value": 0.6,
+      "label": "Intermediate",
+      "guidance": "Multi-step tracing, debugging, or combining closely related ideas."
+    },
+    {
+      "value": 0.8,
+      "label": "Hard",
+      "guidance": "Subtle semantics, edge cases, and interaction between language features."
+    },
+    {
+      "value": 1.0,
+      "label": "Very hard",
+      "guidance": "More involved reasoning across scope, mutability, short-circuiting, iteration, or I/O behavior."
+    }
+  ],
+  "difficulty_distribution": {
+    "0.0": 78,
+    "0.2": 78,
+    "0.4": 78,
+    "0.6": 78,
+    "0.8": 78,
+    "1.0": 65
+  },
+  "question_type_distribution": {
+    "application": 27,
+    "best_practice": 36,
+    "code_completion": 54,
+    "conceptual": 114,
+    "debugging": 14,
+    "edge_case": 15,
+    "error_identification": 23,
+    "output_prediction": 172
+  },
+  "primary_topic_distribution": {
+    "T01": {
+      "name": "Introduction to Python",
+      "count": 35
+    },
+    "T02": {
+      "name": "Variables and Data Types",
+      "count": 35
+    },
+    "T03": {
+      "name": "Input and Output",
+      "count": 35
+    },
+    "T04": {
+      "name": "Operators",
+      "count": 35
+    },
+    "T05": {
+      "name": "Conditional Statements (if, elif, else)",
+      "count": 35
+    },
+    "T06": {
+      "name": "Loops (for, while)",
+      "count": 35
+    },
+    "T07": {
+      "name": "Strings",
+      "count": 35
+    },
+    "T08": {
+      "name": "Lists, Tuples, and Sets",
+      "count": 35
+    },
+    "T09": {
+      "name": "Dictionaries",
+      "count": 35
+    },
+    "T10": {
+      "name": "Functions",
+      "count": 35
+    },
+    "T11": {
+      "name": "List Comprehensions",
+      "count": 35
+    },
+    "T12": {
+      "name": "Exception Handling",
+      "count": 35
+    },
+    "T13": {
+      "name": "File Handling",
+      "count": 35
+    }
+  },
+  "topic_tag_distribution": {
+    "T01": {
+      "name": "Introduction to Python",
+      "tag_count": 35
+    },
+    "T02": {
+      "name": "Variables and Data Types",
+      "tag_count": 105
+    },
+    "T03": {
+      "name": "Input and Output",
+      "tag_count": 70
+    },
+    "T04": {
+      "name": "Operators",
+      "tag_count": 70
+    },
+    "T05": {
+      "name": "Conditional Statements (if, elif, else)",
+      "tag_count": 105
+    },
+    "T06": {
+      "name": "Loops (for, while)",
+      "tag_count": 70
+    },
+    "T07": {
+      "name": "Strings",
+      "tag_count": 105
+    },
+    "T08": {
+      "name": "Lists, Tuples, and Sets",
+      "tag_count": 140
+    },
+    "T09": {
+      "name": "Dictionaries",
+      "tag_count": 35
+    },
+    "T10": {
+      "name": "Functions",
+      "tag_count": 70
+    },
+    "T11": {
+      "name": "List Comprehensions",
+      "tag_count": 35
+    },
+    "T12": {
+      "name": "Exception Handling",
+      "tag_count": 35
+    },
+    "T13": {
+      "name": "File Handling",
+      "tag_count": 35
+    }
+  },
+  "primary_subtopic_distribution": {
+    "T01.1": {
+      "topic_id": "T01",
+      "name": "What Python is and how code is executed (interpreter)",
+      "count": 1
+    },
+    "T01.2": {
+      "topic_id": "T01",
+      "name": "Running code: interactive shell vs script file",
+      "count": 9
+    },
+    "T01.3": {
+      "topic_id": "T01",
+      "name": "Statements, indentation, and basic syntax",
+      "count": 8
+    },
+    "T01.4": {
+      "topic_id": "T01",
+      "name": "Comments",
+      "count": 5
+    },
+    "T01.5": {
+      "topic_id": "T01",
+      "name": "Reading error messages and tracebacks",
+      "count": 12
+    },
+    "T02.1": {
+      "topic_id": "T02",
+      "name": "Variable assignment and naming rules",
+      "count": 3
+    },
+    "T02.2": {
+      "topic_id": "T02",
+      "name": "Core types: int, float, str, bool",
+      "count": 4
+    },
+    "T02.3": {
+      "topic_id": "T02",
+      "name": "Type conversion (int(), float(), str(), bool())",
+      "count": 14
+    },
+    "T02.4": {
+      "topic_id": "T02",
+      "name": "Dynamic typing and type()",
+      "count": 6
+    },
+    "T02.5": {
+      "topic_id": "T02",
+      "name": "Reassignment and variable lifetime within a program",
+      "count": 8
+    },
+    "T03.1": {
+      "topic_id": "T03",
+      "name": "print() and its sep/end arguments",
+      "count": 8
+    },
+    "T03.2": {
+      "topic_id": "T03",
+      "name": "Formatted output with f-strings",
+      "count": 12
+    },
+    "T03.3": {
+      "topic_id": "T03",
+      "name": "Reading input with input()",
+      "count": 3
+    },
+    "T03.4": {
+      "topic_id": "T03",
+      "name": "Converting input to numeric types",
+      "count": 5
+    },
+    "T03.5": {
+      "topic_id": "T03",
+      "name": "Reading multiple values from one line",
+      "count": 7
+    },
+    "T04.1": {
+      "topic_id": "T04",
+      "name": "Arithmetic operators (+, -, *, /, //, %, **)",
+      "count": 9
+    },
+    "T04.2": {
+      "topic_id": "T04",
+      "name": "Comparison operators",
+      "count": 5
+    },
+    "T04.3": {
+      "topic_id": "T04",
+      "name": "Logical operators (and, or, not)",
+      "count": 9
+    },
+    "T04.4": {
+      "topic_id": "T04",
+      "name": "Augmented assignment (+=, -=, etc.)",
+      "count": 1
+    },
+    "T04.5": {
+      "topic_id": "T04",
+      "name": "Operator precedence and parentheses",
+      "count": 5
+    },
+    "T04.6": {
+      "topic_id": "T04",
+      "name": "Membership and identity operators (in, is)",
+      "count": 6
+    },
+    "T05.1": {
+      "topic_id": "T05",
+      "name": "if statements and boolean conditions",
+      "count": 6
+    },
+    "T05.2": {
+      "topic_id": "T05",
+      "name": "if-else",
+      "count": 2
+    },
+    "T05.3": {
+      "topic_id": "T05",
+      "name": "elif chains",
+      "count": 6
+    },
+    "T05.4": {
+      "topic_id": "T05",
+      "name": "Nested conditionals",
+      "count": 2
+    },
+    "T05.5": {
+      "topic_id": "T05",
+      "name": "Combining conditions with and/or/not",
+      "count": 12
+    },
+    "T05.6": {
+      "topic_id": "T05",
+      "name": "Truthy and falsy values",
+      "count": 7
+    },
+    "T06.1": {
+      "topic_id": "T06",
+      "name": "for loops with range()",
+      "count": 7
+    },
+    "T06.2": {
+      "topic_id": "T06",
+      "name": "Iterating over a sequence",
+      "count": 7
+    },
+    "T06.3": {
+      "topic_id": "T06",
+      "name": "while loop conditions and termination",
+      "count": 4
+    },
+    "T06.4": {
+      "topic_id": "T06",
+      "name": "break and continue",
+      "count": 7
+    },
+    "T06.5": {
+      "topic_id": "T06",
+      "name": "Nested loops",
+      "count": 5
+    },
+    "T06.6": {
+      "topic_id": "T06",
+      "name": "Accumulator and counter patterns",
+      "count": 5
+    },
+    "T07.1": {
+      "topic_id": "T07",
+      "name": "Indexing and negative indexing",
+      "count": 2
+    },
+    "T07.2": {
+      "topic_id": "T07",
+      "name": "Slicing",
+      "count": 9
+    },
+    "T07.3": {
+      "topic_id": "T07",
+      "name": "String immutability",
+      "count": 3
+    },
+    "T07.4": {
+      "topic_id": "T07",
+      "name": "Common methods (upper, lower, strip, split, join, replace, find)",
+      "count": 14
+    },
+    "T07.5": {
+      "topic_id": "T07",
+      "name": "Searching and iterating over strings (in, count, loops)",
+      "count": 6
+    },
+    "T07.6": {
+      "topic_id": "T07",
+      "name": "Escape characters and multi-line strings",
+      "count": 1
+    },
+    "T08.1": {
+      "topic_id": "T08",
+      "name": "Creating lists; indexing and slicing",
+      "count": 6
+    },
+    "T08.2": {
+      "topic_id": "T08",
+      "name": "List methods (append, extend, insert, remove, pop, sort)",
+      "count": 9
+    },
+    "T08.3": {
+      "topic_id": "T08",
+      "name": "Tuples and immutability",
+      "count": 5
+    },
+    "T08.4": {
+      "topic_id": "T08",
+      "name": "Sets and uniqueness",
+      "count": 6
+    },
+    "T08.5": {
+      "topic_id": "T08",
+      "name": "Membership, len(), and iteration over collections",
+      "count": 3
+    },
+    "T08.6": {
+      "topic_id": "T08",
+      "name": "Copying vs aliasing",
+      "count": 6
+    },
+    "T09.1": {
+      "topic_id": "T09",
+      "name": "Creating dictionaries and accessing values",
+      "count": 5
+    },
+    "T09.2": {
+      "topic_id": "T09",
+      "name": "Adding, updating, and deleting entries",
+      "count": 4
+    },
+    "T09.3": {
+      "topic_id": "T09",
+      "name": "Checking keys and using get()",
+      "count": 8
+    },
+    "T09.4": {
+      "topic_id": "T09",
+      "name": "Iterating over keys, values, and items",
+      "count": 8
+    },
+    "T09.5": {
+      "topic_id": "T09",
+      "name": "Valid (hashable) keys",
+      "count": 4
+    },
+    "T09.6": {
+      "topic_id": "T09",
+      "name": "Nested dictionaries and counting patterns",
+      "count": 6
+    },
+    "T10.1": {
+      "topic_id": "T10",
+      "name": "Defining and calling functions",
+      "count": 3
+    },
+    "T10.2": {
+      "topic_id": "T10",
+      "name": "Parameters and arguments",
+      "count": 5
+    },
+    "T10.3": {
+      "topic_id": "T10",
+      "name": "Return values",
+      "count": 8
+    },
+    "T10.4": {
+      "topic_id": "T10",
+      "name": "Default and keyword arguments",
+      "count": 9
+    },
+    "T10.5": {
+      "topic_id": "T10",
+      "name": "Local vs global scope",
+      "count": 7
+    },
+    "T10.6": {
+      "topic_id": "T10",
+      "name": "Decomposing a problem into functions",
+      "count": 3
+    },
+    "T11.1": {
+      "topic_id": "T11",
+      "name": "Basic comprehension syntax",
+      "count": 11
+    },
+    "T11.2": {
+      "topic_id": "T11",
+      "name": "Filtering with an if clause",
+      "count": 8
+    },
+    "T11.3": {
+      "topic_id": "T11",
+      "name": "Conditional expressions (if-else) in the output",
+      "count": 2
+    },
+    "T11.4": {
+      "topic_id": "T11",
+      "name": "Nested loops in comprehensions",
+      "count": 9
+    },
+    "T11.5": {
+      "topic_id": "T11",
+      "name": "Converting between loops and comprehensions",
+      "count": 5
+    },
+    "T12.1": {
+      "topic_id": "T12",
+      "name": "Common exception types and reading tracebacks",
+      "count": 5
+    },
+    "T12.2": {
+      "topic_id": "T12",
+      "name": "try and except",
+      "count": 7
+    },
+    "T12.3": {
+      "topic_id": "T12",
+      "name": "Catching specific exceptions",
+      "count": 8
+    },
+    "T12.4": {
+      "topic_id": "T12",
+      "name": "else and finally",
+      "count": 10
+    },
+    "T12.5": {
+      "topic_id": "T12",
+      "name": "Raising exceptions",
+      "count": 4
+    },
+    "T12.6": {
+      "topic_id": "T12",
+      "name": "Validating input with exceptions",
+      "count": 1
+    },
+    "T13.1": {
+      "topic_id": "T13",
+      "name": "Opening and closing files; file modes",
+      "count": 4
+    },
+    "T13.2": {
+      "topic_id": "T13",
+      "name": "The with statement",
+      "count": 3
+    },
+    "T13.3": {
+      "topic_id": "T13",
+      "name": "Reading files (read, readline, readlines, iteration)",
+      "count": 9
+    },
+    "T13.4": {
+      "topic_id": "T13",
+      "name": "Writing and appending",
+      "count": 9
+    },
+    "T13.5": {
+      "topic_id": "T13",
+      "name": "File paths and FileNotFoundError",
+      "count": 4
+    },
+    "T13.6": {
+      "topic_id": "T13",
+      "name": "Processing file contents line by line",
+      "count": 6
+    }
+  },
+  "related_subtopic_tag_distribution": {
+    "T01.1": {
+      "topic_id": "T01",
+      "name": "What Python is and how code is executed (interpreter)",
+      "tag_count": 1
+    },
+    "T01.2": {
+      "topic_id": "T01",
+      "name": "Running code: interactive shell vs script file",
+      "tag_count": 9
+    },
+    "T01.3": {
+      "topic_id": "T01",
+      "name": "Statements, indentation, and basic syntax",
+      "tag_count": 8
+    },
+    "T01.4": {
+      "topic_id": "T01",
+      "name": "Comments",
+      "tag_count": 5
+    },
+    "T01.5": {
+      "topic_id": "T01",
+      "name": "Reading error messages and tracebacks",
+      "tag_count": 12
+    },
+    "T02.1": {
+      "topic_id": "T02",
+      "name": "Variable assignment and naming rules",
+      "tag_count": 38
+    },
+    "T02.2": {
+      "topic_id": "T02",
+      "name": "Core types: int, float, str, bool",
+      "tag_count": 4
+    },
+    "T02.3": {
+      "topic_id": "T02",
+      "name": "Type conversion (int(), float(), str(), bool())",
+      "tag_count": 49
+    },
+    "T02.4": {
+      "topic_id": "T02",
+      "name": "Dynamic typing and type()",
+      "tag_count": 6
+    },
+    "T02.5": {
+      "topic_id": "T02",
+      "name": "Reassignment and variable lifetime within a program",
+      "tag_count": 8
+    },
+    "T03.1": {
+      "topic_id": "T03",
+      "name": "print() and its sep/end arguments",
+      "tag_count": 8
+    },
+    "T03.2": {
+      "topic_id": "T03",
+      "name": "Formatted output with f-strings",
+      "tag_count": 12
+    },
+    "T03.3": {
+      "topic_id": "T03",
+      "name": "Reading input with input()",
+      "tag_count": 3
+    },
+    "T03.4": {
+      "topic_id": "T03",
+      "name": "Converting input to numeric types",
+      "tag_count": 40
+    },
+    "T03.5": {
+      "topic_id": "T03",
+      "name": "Reading multiple values from one line",
+      "tag_count": 7
+    },
+    "T04.1": {
+      "topic_id": "T04",
+      "name": "Arithmetic operators (+, -, *, /, //, %, **)",
+      "tag_count": 9
+    },
+    "T04.2": {
+      "topic_id": "T04",
+      "name": "Comparison operators",
+      "tag_count": 40
+    },
+    "T04.3": {
+      "topic_id": "T04",
+      "name": "Logical operators (and, or, not)",
+      "tag_count": 9
+    },
+    "T04.4": {
+      "topic_id": "T04",
+      "name": "Augmented assignment (+=, -=, etc.)",
+      "tag_count": 1
+    },
+    "T04.5": {
+      "topic_id": "T04",
+      "name": "Operator precedence and parentheses",
+      "tag_count": 5
+    },
+    "T04.6": {
+      "topic_id": "T04",
+      "name": "Membership and identity operators (in, is)",
+      "tag_count": 6
+    },
+    "T05.1": {
+      "topic_id": "T05",
+      "name": "if statements and boolean conditions",
+      "tag_count": 6
+    },
+    "T05.2": {
+      "topic_id": "T05",
+      "name": "if-else",
+      "tag_count": 2
+    },
+    "T05.3": {
+      "topic_id": "T05",
+      "name": "elif chains",
+      "tag_count": 6
+    },
+    "T05.4": {
+      "topic_id": "T05",
+      "name": "Nested conditionals",
+      "tag_count": 2
+    },
+    "T05.5": {
+      "topic_id": "T05",
+      "name": "Combining conditions with and/or/not",
+      "tag_count": 82
+    },
+    "T05.6": {
+      "topic_id": "T05",
+      "name": "Truthy and falsy values",
+      "tag_count": 7
+    },
+    "T06.1": {
+      "topic_id": "T06",
+      "name": "for loops with range()",
+      "tag_count": 7
+    },
+    "T06.2": {
+      "topic_id": "T06",
+      "name": "Iterating over a sequence",
+      "tag_count": 7
+    },
+    "T06.3": {
+      "topic_id": "T06",
+      "name": "while loop conditions and termination",
+      "tag_count": 4
+    },
+    "T06.4": {
+      "topic_id": "T06",
+      "name": "break and continue",
+      "tag_count": 7
+    },
+    "T06.5": {
+      "topic_id": "T06",
+      "name": "Nested loops",
+      "tag_count": 5
+    },
+    "T06.6": {
+      "topic_id": "T06",
+      "name": "Accumulator and counter patterns",
+      "tag_count": 40
+    },
+    "T07.1": {
+      "topic_id": "T07",
+      "name": "Indexing and negative indexing",
+      "tag_count": 2
+    },
+    "T07.2": {
+      "topic_id": "T07",
+      "name": "Slicing",
+      "tag_count": 9
+    },
+    "T07.3": {
+      "topic_id": "T07",
+      "name": "String immutability",
+      "tag_count": 3
+    },
+    "T07.4": {
+      "topic_id": "T07",
+      "name": "Common methods (upper, lower, strip, split, join, replace, find)",
+      "tag_count": 49
+    },
+    "T07.5": {
+      "topic_id": "T07",
+      "name": "Searching and iterating over strings (in, count, loops)",
+      "tag_count": 41
+    },
+    "T07.6": {
+      "topic_id": "T07",
+      "name": "Escape characters and multi-line strings",
+      "tag_count": 1
+    },
+    "T08.1": {
+      "topic_id": "T08",
+      "name": "Creating lists; indexing and slicing",
+      "tag_count": 41
+    },
+    "T08.2": {
+      "topic_id": "T08",
+      "name": "List methods (append, extend, insert, remove, pop, sort)",
+      "tag_count": 9
+    },
+    "T08.3": {
+      "topic_id": "T08",
+      "name": "Tuples and immutability",
+      "tag_count": 5
+    },
+    "T08.4": {
+      "topic_id": "T08",
+      "name": "Sets and uniqueness",
+      "tag_count": 6
+    },
+    "T08.5": {
+      "topic_id": "T08",
+      "name": "Membership, len(), and iteration over collections",
+      "tag_count": 73
+    },
+    "T08.6": {
+      "topic_id": "T08",
+      "name": "Copying vs aliasing",
+      "tag_count": 6
+    },
+    "T09.1": {
+      "topic_id": "T09",
+      "name": "Creating dictionaries and accessing values",
+      "tag_count": 5
+    },
+    "T09.2": {
+      "topic_id": "T09",
+      "name": "Adding, updating, and deleting entries",
+      "tag_count": 4
+    },
+    "T09.3": {
+      "topic_id": "T09",
+      "name": "Checking keys and using get()",
+      "tag_count": 8
+    },
+    "T09.4": {
+      "topic_id": "T09",
+      "name": "Iterating over keys, values, and items",
+      "tag_count": 8
+    },
+    "T09.5": {
+      "topic_id": "T09",
+      "name": "Valid (hashable) keys",
+      "tag_count": 4
+    },
+    "T09.6": {
+      "topic_id": "T09",
+      "name": "Nested dictionaries and counting patterns",
+      "tag_count": 6
+    },
+    "T10.1": {
+      "topic_id": "T10",
+      "name": "Defining and calling functions",
+      "tag_count": 3
+    },
+    "T10.2": {
+      "topic_id": "T10",
+      "name": "Parameters and arguments",
+      "tag_count": 5
+    },
+    "T10.3": {
+      "topic_id": "T10",
+      "name": "Return values",
+      "tag_count": 43
+    },
+    "T10.4": {
+      "topic_id": "T10",
+      "name": "Default and keyword arguments",
+      "tag_count": 9
+    },
+    "T10.5": {
+      "topic_id": "T10",
+      "name": "Local vs global scope",
+      "tag_count": 7
+    },
+    "T10.6": {
+      "topic_id": "T10",
+      "name": "Decomposing a problem into functions",
+      "tag_count": 3
+    },
+    "T11.1": {
+      "topic_id": "T11",
+      "name": "Basic comprehension syntax",
+      "tag_count": 11
+    },
+    "T11.2": {
+      "topic_id": "T11",
+      "name": "Filtering with an if clause",
+      "tag_count": 8
+    },
+    "T11.3": {
+      "topic_id": "T11",
+      "name": "Conditional expressions (if-else) in the output",
+      "tag_count": 2
+    },
+    "T11.4": {
+      "topic_id": "T11",
+      "name": "Nested loops in comprehensions",
+      "tag_count": 9
+    },
+    "T11.5": {
+      "topic_id": "T11",
+      "name": "Converting between loops and comprehensions",
+      "tag_count": 5
+    },
+    "T12.1": {
+      "topic_id": "T12",
+      "name": "Common exception types and reading tracebacks",
+      "tag_count": 5
+    },
+    "T12.2": {
+      "topic_id": "T12",
+      "name": "try and except",
+      "tag_count": 7
+    },
+    "T12.3": {
+      "topic_id": "T12",
+      "name": "Catching specific exceptions",
+      "tag_count": 8
+    },
+    "T12.4": {
+      "topic_id": "T12",
+      "name": "else and finally",
+      "tag_count": 10
+    },
+    "T12.5": {
+      "topic_id": "T12",
+      "name": "Raising exceptions",
+      "tag_count": 4
+    },
+    "T12.6": {
+      "topic_id": "T12",
+      "name": "Validating input with exceptions",
+      "tag_count": 1
+    },
+    "T13.1": {
+      "topic_id": "T13",
+      "name": "Opening and closing files; file modes",
+      "tag_count": 4
+    },
+    "T13.2": {
+      "topic_id": "T13",
+      "name": "The with statement",
+      "tag_count": 3
+    },
+    "T13.3": {
+      "topic_id": "T13",
+      "name": "Reading files (read, readline, readlines, iteration)",
+      "tag_count": 9
+    },
+    "T13.4": {
+      "topic_id": "T13",
+      "name": "Writing and appending",
+      "tag_count": 9
+    },
+    "T13.5": {
+      "topic_id": "T13",
+      "name": "File paths and FileNotFoundError",
+      "tag_count": 4
+    },
+    "T13.6": {
+      "topic_id": "T13",
+      "name": "Processing file contents line by line",
+      "tag_count": 6
+    }
+  },
+  "quality_checks": {
+    "valid_json": true,
+    "all_questions_have_required_fields": true,
+    "all_questions_have_four_unique_options": true,
+    "all_correct_option_labels_valid": true,
+    "all_difficulty_values_on_allowed_scale": true,
+    "all_questions_have_more_than_one_related_topic": true,
+    "all_related_topic_ids_valid": true,
+    "all_related_subtopic_ids_valid": true,
+    "topic_balance": "35 questions per primary topic",
+    "note": "Machine validation checks schema consistency and key/option validity. Human review is still recommended before using scores for formal assessment or student-level decisions."
+  },
+  "answer_key_policy": "Correct options are balanced by deterministic option shuffling; do not infer answers from option position.",
+  "recommended_evaluation_use": "Keep a held-out slice for final evaluation. Avoid tuning question generation or tutoring policy against every item in this set; review ambiguous wording and validate the answer key before high-stakes use."
+}

@@ -1,5 +1,0 @@
-user_id,problem_id,sequence_index,introduced_at,primary_skill_id,generation_source
-STU00001,PY000009,1,2025-01-09T11:45:00+00:00,SK009,simulator
-STU00002,PY000010,1,2025-02-28T22:41:00+00:00,SK010,simulator
-STU00003,PY000067,1,2025-03-05T15:56:00+00:00,SK013,simulator
-STU00004,PY000063,1,2025-02-18T10:32:00+00:00,SK009,simulator

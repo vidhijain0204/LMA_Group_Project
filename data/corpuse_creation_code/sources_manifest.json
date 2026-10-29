@@ -1,0 +1,1025 @@
+{
+  "defaults": {
+    "delay_seconds": 2.0,
+    "chunk_target_words": 220,
+    "chunk_max_words": 380,
+    "min_chunk_words": 30,
+    "min_confidence": 0.4
+  },
+  "sources": [
+    {
+      "id": "python_docs",
+      "short": "pydoc",
+      "name": "The Python Tutorial (docs.python.org)",
+      "license": "PSF documentation license - verify at https://docs.python.org/3/license.html",
+      "attribution": "Python Software Foundation, The Python Tutorial, https://docs.python.org/3/tutorial/",
+      "content_selectors": [
+        "div.body[role=main]",
+        "div[role=main]",
+        "div.body",
+        "main"
+      ],
+      "remove_selectors": [
+        "a.headerlink",
+        ".sphinxsidebar",
+        ".related",
+        "div.footer",
+        "span.versionmodified"
+      ],
+      "ignore_headings": [],
+      "skip_headings": [
+        "^Footnotes$"
+      ],
+      "pages": [
+        {
+          "url": "https://docs.python.org/3/tutorial/interpreter.html",
+          "topics": [
+            "T01"
+          ],
+          "skip_headings": [
+            "^(\\d+\\.\\d+\\.?\\s*)?(Argument Passing|Source Code Encoding|The Interpreter and Its Environment|Executable Python Scripts)$"
+          ]
+        },
+        {
+          "url": "https://docs.python.org/3/tutorial/introduction.html",
+          "topics": [
+            "T01",
+            "T02",
+            "T04",
+            "T07",
+            "T08"
+          ],
+          "heading_map": [
+            {
+              "match": "^Numbers$",
+              "topic": "T02",
+              "subconcepts": [
+                "T02.2",
+                "T04.1"
+              ]
+            },
+            {
+              "match": "^Text$",
+              "topic": "T07",
+              "subconcepts": "auto"
+            },
+            {
+              "match": "^Lists$",
+              "topic": "T08",
+              "subconcepts": "auto"
+            },
+            {
+              "match": "^First Steps Towards Programming$",
+              "topic": "T06",
+              "subconcepts": [
+                "T06.3",
+                "T06.6"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://docs.python.org/3/tutorial/controlflow.html",
+          "topics": [
+            "T05",
+            "T06",
+            "T10"
+          ],
+          "skip_headings": [
+            "match Statements",
+            "Special parameters",
+            "Arbitrary Argument Lists",
+            "Unpacking Argument Lists",
+            "Lambda Expressions",
+            "Function Annotations",
+            "Intermezzo",
+            "^pass Statements$"
+          ]
+        },
+        {
+          "url": "https://docs.python.org/3/tutorial/datastructures.html",
+          "topics": [
+            "T08",
+            "T09",
+            "T11",
+            "T06"
+          ],
+          "skip_headings": [
+            "Using Lists as Queues",
+            "Comparing Sequences and Other Types",
+            "Unpacking in Lists and List Comprehensions"
+          ],
+          "heading_map": [
+            {
+              "match": "^More on Conditions$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.2",
+                "T04.3",
+                "T04.6"
+              ]
+            },
+            {
+              "match": "^List Comprehensions$",
+              "topic": "T11",
+              "subconcepts": [
+                "T11.1",
+                "T11.2"
+              ]
+            },
+            {
+              "match": "^Nested List Comprehensions$",
+              "topic": "T11",
+              "subconcepts": [
+                "T11.4"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://docs.python.org/3/tutorial/inputoutput.html",
+          "topics": [
+            "T03",
+            "T13"
+          ],
+          "skip_headings": [
+            "Saving structured data with json",
+            "Manual String Formatting",
+            "Old string formatting"
+          ]
+        },
+        {
+          "url": "https://docs.python.org/3/tutorial/errors.html",
+          "topics": [
+            "T12",
+            "T01"
+          ],
+          "skip_headings": [
+            "Raising and Handling Multiple Unrelated Exceptions",
+            "Enriching Exceptions with Notes",
+            "Exception Chaining",
+            "User-defined Exceptions"
+          ],
+          "heading_map": [
+            {
+              "match": "^Predefined Clean-up Actions$",
+              "topic": "T13",
+              "subconcepts": [
+                "T13.2",
+                "T12.4"
+              ]
+            }
+          ]
+        }
+      ],
+      "drop_intro": true,
+      "intro_min_evidence": 10
+    },
+    {
+      "id": "think_python_3e",
+      "short": "tp3",
+      "name": "Think Python, 3rd edition (Allen B. Downey)",
+      "license": "CC BY-NC-SA 4.0",
+      "attribution": "Allen B. Downey, Think Python 3e, https://allendowney.github.io/ThinkPython/",
+      "content_selectors": [
+        "article.bd-article",
+        "main",
+        "#main-content",
+        "article"
+      ],
+      "remove_selectors": [
+        "a.headerlink",
+        ".bd-sidebar-primary",
+        ".bd-sidebar-secondary",
+        ".prev-next-area",
+        ".bd-header",
+        ".bd-footer",
+        "footer"
+      ],
+      "ignore_headings": [],
+      "skip_headings": [
+        "^Exercises?$",
+        "^Glossary$",
+        "^Credits$",
+        "^Ask a Virtual Assistant$",
+        "^Getting Started with Programming$"
+      ],
+      "discover": {
+        "index_url": "https://allendowney.github.io/ThinkPython/",
+        "link_regex": "chap(\\d+)\\.html",
+        "topics_by_group": {
+          "01": [
+            "T01",
+            "T02",
+            "T04"
+          ],
+          "02": [
+            "T02",
+            "T03",
+            "T04"
+          ],
+          "03": [
+            "T10"
+          ],
+          "05": [
+            "T05",
+            "T04"
+          ],
+          "06": [
+            "T10",
+            "T05"
+          ],
+          "07": [
+            "T06"
+          ],
+          "08": [
+            "T07"
+          ],
+          "09": [
+            "T08"
+          ],
+          "10": [
+            "T09"
+          ],
+          "11": [
+            "T08"
+          ],
+          "13": [
+            "T13",
+            "T12"
+          ]
+        },
+        "heading_map_by_group": {
+          "01": [
+            {
+              "match": "^Arithmetic operators$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.1"
+              ]
+            },
+            {
+              "match": "^Expressions$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.5"
+              ]
+            },
+            {
+              "match": "^Arithmetic functions$",
+              "topic": "T10",
+              "subconcepts": [
+                "T10.1"
+              ]
+            },
+            {
+              "match": "^Strings$",
+              "topic": "T02",
+              "subconcepts": [
+                "T02.2"
+              ]
+            },
+            {
+              "match": "^Values and types$",
+              "topic": "T02",
+              "subconcepts": [
+                "T02.2",
+                "T02.4"
+              ]
+            },
+            {
+              "match": "^Formal and natural languages$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.3"
+              ]
+            },
+            {
+              "match": "^Debugging$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.5"
+              ]
+            }
+          ],
+          "02": [
+            {
+              "match": "^Comments$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.4"
+              ]
+            },
+            {
+              "match": "^Arguments$",
+              "topic": "T10",
+              "subconcepts": [
+                "T10.2"
+              ]
+            },
+            {
+              "match": "^Debugging$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.5"
+              ]
+            }
+          ],
+          "03": [
+            {
+              "match": "^Repetition$",
+              "topic": "T06",
+              "subconcepts": [
+                "T06.1"
+              ]
+            },
+            {
+              "match": "^Tracebacks$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.5"
+              ]
+            }
+          ],
+          "05": [
+            {
+              "match": "^Integer division and modulus$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.1"
+              ]
+            },
+            {
+              "match": "^Boolean expressions$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.2"
+              ]
+            },
+            {
+              "match": "^Logical operators$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.3",
+                "T05.5"
+              ]
+            },
+            {
+              "match": "^if statements$",
+              "topic": "T05",
+              "subconcepts": [
+                "T05.1"
+              ]
+            },
+            {
+              "match": "^The else clause$",
+              "topic": "T05",
+              "subconcepts": [
+                "T05.2"
+              ]
+            },
+            {
+              "match": "^Chained conditionals$",
+              "topic": "T05",
+              "subconcepts": [
+                "T05.3"
+              ]
+            },
+            {
+              "match": "^Nested conditionals$",
+              "topic": "T05",
+              "subconcepts": [
+                "T05.4"
+              ]
+            },
+            {
+              "match": "^Keyboard input$",
+              "topic": "T03",
+              "subconcepts": [
+                "T03.3",
+                "T03.4"
+              ]
+            }
+          ],
+          "07": [
+            {
+              "match": "^Updating variables$",
+              "topic": "T06",
+              "subconcepts": [
+                "T06.6",
+                "T04.4"
+              ]
+            },
+            {
+              "match": "^The in operator$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.6",
+                "T07.5"
+              ]
+            },
+            {
+              "match": "^Reading the word list$",
+              "topic": "T13",
+              "subconcepts": [
+                "T13.1",
+                "T13.3",
+                "T13.6"
+              ]
+            }
+          ],
+          "08": [
+            {
+              "match": "^A string is a sequence$",
+              "topic": "T07",
+              "subconcepts": [
+                "T07.1"
+              ]
+            },
+            {
+              "match": "^Writing files$",
+              "topic": "T13",
+              "subconcepts": [
+                "T13.4"
+              ]
+            }
+          ],
+          "09": [
+            {
+              "match": "^A list is a sequence$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.1"
+              ]
+            },
+            {
+              "match": "^Lists are mutable$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.1"
+              ]
+            },
+            {
+              "match": "^List slices$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.1"
+              ]
+            },
+            {
+              "match": "^List operations$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.1",
+                "T08.5"
+              ]
+            },
+            {
+              "match": "^Lists and strings$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.2",
+                "T07.4"
+              ]
+            },
+            {
+              "match": "^Looping through a list$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.5",
+                "T06.2"
+              ]
+            },
+            {
+              "match": "^Objects and values$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.6"
+              ]
+            },
+            {
+              "match": "^List arguments$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.6",
+                "T10.2"
+              ]
+            }
+          ],
+          "10": [
+            {
+              "match": "^A dictionary is a mapping$",
+              "topic": "T09",
+              "subconcepts": [
+                "T09.1"
+              ]
+            },
+            {
+              "match": "^Creating dictionaries$",
+              "topic": "T09",
+              "subconcepts": [
+                "T09.1",
+                "T09.2"
+              ]
+            },
+            {
+              "match": "^Looping and dictionaries$",
+              "topic": "T09",
+              "subconcepts": [
+                "T09.4"
+              ]
+            },
+            {
+              "match": "^Accumulating a list$",
+              "topic": "T09",
+              "subconcepts": [
+                "T09.6"
+              ]
+            }
+          ],
+          "13": [
+            {
+              "match": "^f-strings$",
+              "topic": "T03",
+              "subconcepts": [
+                "T03.2"
+              ]
+            }
+          ]
+        },
+        "skip_headings_by_group": {
+          "02": [
+            "^The import statement$"
+          ],
+          "05": [
+            "^Recursion$",
+            "^Stack diagrams for recursive",
+            "^Infinite recursion$"
+          ],
+          "06": [
+            "^Recursion with return values$",
+            "^Leap of faith$",
+            "^Fibonacci$",
+            "^Checking types$"
+          ],
+          "07": [
+            "^Doctest$"
+          ],
+          "08": [
+            "^Regular expressions$"
+          ],
+          "09": [
+            "^Making a word list$"
+          ],
+          "10": [
+            "^Memos$"
+          ],
+          "11": [
+            "^Argument packing$",
+            "^Zip$"
+          ],
+          "13": [
+            "^Shelve$",
+            "^Storing data structures$",
+            "^YAML$",
+            "^Checking for equivalent files$",
+            "^Walking directories$"
+          ]
+        }
+      },
+      "pages": [],
+      "drop_text": [
+        "Run this notebook on Colab",
+        "affiliate links",
+        "consider supporting free",
+        "Think Python.*Copyright"
+      ],
+      "drop_intro": true,
+      "intro_min_evidence": 10
+    },
+    {
+      "id": "py4e",
+      "short": "py4e",
+      "name": "Python for Everybody (Charles R. Severance)",
+      "license": "CC BY-NC-SA (site states 3.0; some mirrors 4.0) - verify at https://www.py4e.com/",
+      "attribution": "Charles R. Severance, Python for Everybody, https://www.py4e.com/book",
+      "content_selectors": [
+        "main",
+        "#main",
+        "article",
+        "div.container",
+        "body"
+      ],
+      "remove_selectors": [
+        ".navbar",
+        ".footer",
+        "#footer",
+        ".pagination"
+      ],
+      "ignore_headings": [],
+      "skip_headings": [
+        "^(\\d+\\.\\d+\\.?\\s*)?(Exercises?|Glossary)$"
+      ],
+      "pages": [
+        {
+          "url": "https://www.py4e.com/html3/01-intro",
+          "topics": [
+            "T01"
+          ],
+          "skip_headings": [
+            "^Creativity and motivation$",
+            "^Computer hardware architecture$",
+            "^Understanding programming$",
+            "^The learning journey$",
+            "^The building blocks of programs$"
+          ],
+          "heading_map": [
+            {
+              "match": "^Words and sentences$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.3"
+              ]
+            },
+            {
+              "match": "^Conversing with Python$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.2"
+              ]
+            },
+            {
+              "match": "^Terminology: Interpreter and compiler$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.1"
+              ]
+            },
+            {
+              "match": "^Writing a program$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.2"
+              ]
+            },
+            {
+              "match": "^What is a program\\?$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.1"
+              ]
+            },
+            {
+              "match": "^What could possibly go wrong\\?$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.5"
+              ]
+            },
+            {
+              "match": "^Debugging$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.5"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://www.py4e.com/html3/02-variables",
+          "topics": [
+            "T02",
+            "T03",
+            "T04"
+          ],
+          "heading_map": [
+            {
+              "match": "^Comments$",
+              "topic": "T01",
+              "subconcepts": [
+                "T01.4"
+              ]
+            },
+            {
+              "match": "^Modulus operator$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.1"
+              ]
+            },
+            {
+              "match": "^Operators and operands$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.1"
+              ]
+            },
+            {
+              "match": "^Asking the user for input$",
+              "topic": "T03",
+              "subconcepts": [
+                "T03.3",
+                "T03.4"
+              ]
+            }
+          ],
+          "skip_headings": [
+            "^Choosing mnemonic variable names$"
+          ]
+        },
+        {
+          "url": "https://www.py4e.com/html3/03-conditional",
+          "topics": [
+            "T05",
+            "T04",
+            "T12"
+          ],
+          "heading_map": [
+            {
+              "match": "^Boolean expressions$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.2"
+              ]
+            },
+            {
+              "match": "^Logical operators$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.3",
+                "T05.5"
+              ]
+            },
+            {
+              "match": "^Conditional execution$",
+              "topic": "T05",
+              "subconcepts": [
+                "T05.1"
+              ]
+            },
+            {
+              "match": "^Alternative execution$",
+              "topic": "T05",
+              "subconcepts": [
+                "T05.2"
+              ]
+            },
+            {
+              "match": "^Chained conditionals$",
+              "topic": "T05",
+              "subconcepts": [
+                "T05.3"
+              ]
+            },
+            {
+              "match": "^Nested conditionals$",
+              "topic": "T05",
+              "subconcepts": [
+                "T05.4"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://www.py4e.com/html3/04-functions",
+          "topics": [
+            "T10"
+          ],
+          "skip_headings": [
+            "^Math functions$",
+            "^Random numbers$"
+          ],
+          "heading_map": [
+            {
+              "match": "^Type conversion functions$",
+              "topic": "T02",
+              "subconcepts": [
+                "T02.3"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://www.py4e.com/html3/05-iterations",
+          "topics": [
+            "T06"
+          ],
+          "heading_map": [
+            {
+              "match": "^Updating variables$",
+              "topic": "T06",
+              "subconcepts": [
+                "T06.6",
+                "T04.4"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://www.py4e.com/html3/06-strings",
+          "topics": [
+            "T07"
+          ],
+          "heading_map": [
+            {
+              "match": "^A string is a sequence$",
+              "topic": "T07",
+              "subconcepts": [
+                "T07.1"
+              ]
+            },
+            {
+              "match": "^Getting the length of a string using len$",
+              "topic": "T07",
+              "subconcepts": [
+                "T07.1",
+                "T07.5"
+              ]
+            },
+            {
+              "match": "^Traversal through a string with a loop$",
+              "topic": "T07",
+              "subconcepts": [
+                "T07.5",
+                "T06.2"
+              ]
+            },
+            {
+              "match": "^The in operator$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.6",
+                "T07.5"
+              ]
+            },
+            {
+              "match": "^String comparison$",
+              "topic": "T04",
+              "subconcepts": [
+                "T04.2"
+              ]
+            },
+            {
+              "match": "^Formatted String Literals$",
+              "topic": "T03",
+              "subconcepts": [
+                "T03.2"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://www.py4e.com/html3/07-files",
+          "topics": [
+            "T13",
+            "T12"
+          ],
+          "heading_map": [
+            {
+              "match": "^Using try, except, and open$",
+              "topic": "T12",
+              "subconcepts": [
+                "T12.2",
+                "T12.6",
+                "T13.5"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://www.py4e.com/html3/08-lists",
+          "topics": [
+            "T08"
+          ],
+          "skip_headings": [
+            "^Parsing lines$"
+          ],
+          "heading_map": [
+            {
+              "match": "^A list is a sequence$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.1"
+              ]
+            },
+            {
+              "match": "^Lists are mutable$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.1"
+              ]
+            },
+            {
+              "match": "^Traversing a list$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.5",
+                "T06.2"
+              ]
+            },
+            {
+              "match": "^List operations$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.1",
+                "T08.5"
+              ]
+            },
+            {
+              "match": "^List slices$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.1"
+              ]
+            },
+            {
+              "match": "^Lists and functions$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.5"
+              ]
+            },
+            {
+              "match": "^Lists and strings$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.2",
+                "T07.4"
+              ]
+            },
+            {
+              "match": "^Objects and values$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.6"
+              ]
+            },
+            {
+              "match": "^List arguments$",
+              "topic": "T08",
+              "subconcepts": [
+                "T08.6",
+                "T10.2"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://www.py4e.com/html3/09-dictionaries",
+          "topics": [
+            "T09"
+          ],
+          "skip_headings": [
+            "^Advanced text parsing$"
+          ],
+          "heading_map": [
+            {
+              "match": "^Looping and dictionaries$",
+              "topic": "T09",
+              "subconcepts": [
+                "T09.4"
+              ]
+            }
+          ]
+        },
+        {
+          "url": "https://www.py4e.com/html3/10-tuples",
+          "topics": [
+            "T08"
+          ],
+          "skip_headings": [
+            "^The most common words$"
+          ],
+          "heading_map": [
+            {
+              "match": "^Using tuples as keys in dictionaries$",
+              "topic": "T09",
+              "subconcepts": [
+                "T09.5",
+                "T08.3"
+              ]
+            },
+            {
+              "match": "^Dictionaries and tuples$",
+              "topic": "T09",
+              "subconcepts": [
+                "T09.4",
+                "T08.3"
+              ]
+            },
+            {
+              "match": "^List comprehension$",
+              "topic": "T11",
+              "subconcepts": [
+                "T11.1",
+                "T11.5"
+              ]
+            }
+          ]
+        }
+      ],
+      "drop_intro": true,
+      "intro_min_evidence": 10
+    }
+  ]
+}

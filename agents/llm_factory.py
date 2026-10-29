@@ -16,31 +16,38 @@ PROFILES = {
 
 @lru_cache(maxsize=1)
 def load_base_model():
-    """Loads Qwen3-4B once per process. lru_cache makes every later call free."""
-    print(f"[llm_factory] Loading {SLM_MODEL_NAME} (one time)...")
-    tokenizer = AutoTokenizer.from_pretrained(SLM_MODEL_NAME)
+    """Loads heavy Qwen3-4B model weights once per process."""
+    print(f"[llm_factory] Loading model weights for {SLM_MODEL_NAME} (one time)...")
     model = AutoModelForCausalLM.from_pretrained(
         SLM_MODEL_NAME, device_map="auto", torch_dtype="auto"
     )
     if getattr(model, "generation_config", None) is not None:
         model.generation_config.max_length = None   # same fix you had before
+    return model
 
-    # Qwen3 "thinking" off for every call. ChatHuggingFace calls
-    # tokenizer.apply_chat_template internally and gives no way to pass
-    # enable_thinking, so we bake it in once here.
+
+@lru_cache(maxsize=2)
+def load_tokenizer(enable_thinking: bool = False):
+    """Loads tokenizer and caches instances for both enable_thinking=True and False."""
+    print(f"[llm_factory] Loading tokenizer with enable_thinking={enable_thinking}...")
+    tokenizer = AutoTokenizer.from_pretrained(SLM_MODEL_NAME)
+    
+    # Bake the thinking configuration into apply_chat_template via partial
     tokenizer.apply_chat_template = partial(
-        tokenizer.apply_chat_template, enable_thinking=False
+        tokenizer.apply_chat_template, enable_thinking=enable_thinking
     )
-    return tokenizer, model
+    return tokenizer
 
 
 @lru_cache(maxsize=None)
-def get_llm(profile: str = "tutor") -> ChatHuggingFace:
-    """Returns a LangChain chat model for the given role (cached per role)."""
+def get_llm(profile: str = "tutor", enable_thinking: bool = False) -> ChatHuggingFace:
+    """Returns a LangChain chat model for the given role and thinking configuration."""
     if profile not in PROFILES:
         raise ValueError(f"Unknown profile '{profile}'. Choose from {list(PROFILES)}")
 
-    tokenizer, model = load_base_model()
+    model = load_base_model()
+    tokenizer = load_tokenizer(enable_thinking=enable_thinking)
+    
     hf_pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
 
     pipe_llm = HuggingFacePipeline(

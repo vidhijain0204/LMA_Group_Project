@@ -8,7 +8,7 @@ SLM_MODEL_NAME = "Qwen/Qwen3-4B"
 # One profile per job. Same weights, different decoding settings.
 PROFILES = {
     "router": dict(max_new_tokens=32,  do_sample=False),
-    "tutor":  dict(max_new_tokens=512, do_sample=True, temperature=0.7, top_p=0.9),
+    "tutor":  dict(max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.9),
     "judge":  dict(max_new_tokens=256, do_sample=False),
     "quiz":   dict(max_new_tokens=512, do_sample=False),
 }

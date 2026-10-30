@@ -4,12 +4,10 @@
 import streamlit as st
 import json
 from pathlib import Path
-from langchain_core.messages import HumanMessage, AIMessage
 
-# Import your custom modules
-from agents.diagnosis_agent import DiagnosisAgent  # Assuming your DiagnosisAgent class is saved here
-from agents.orchestrator import create_orchestrator_node, load_student_kb, SKB_FILE_PATH, TOPICS_FILE_PATH
-from agents.tutor_agent import create_tutor_node
+from agents.workflow import AdaptiveTutorWorkflow
+from agents.orchestrator import load_student_kb, SKB_FILE_PATH
+from agents.diagnosis_agent import DiagnosisAgent
 
 # =====================================================================
 # PAGE CONFIGURATION
@@ -20,22 +18,21 @@ st.set_page_config(
     layout="wide",
 )
 
-# Initialize Diagnosis Agent
-diag_agent = DiagnosisAgent()
+# Initialize workflow and diagnosis agent
+workflow = AdaptiveTutorWorkflow(db_filepath=SKB_FILE_PATH)
+diag_agent = DiagnosisAgent(db_filepath=SKB_FILE_PATH)
 
 # =====================================================================
 # SESSION STATE INITIALIZATION
 # =====================================================================
 if "student_id" not in st.session_state:
     st.session_state.student_id = "S001"
-if "student_kb" not in st.session_state:
-    st.session_state.student_kb = None
-if "in_diagnosis" not in st.session_state:
-    st.session_state.in_diagnosis = False
+if "thread_id" not in st.session_state:
+    st.session_state.thread_id = "S001-session"
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "diagnosis_answers" not in st.session_state:
-    st.session_state.diagnosis_answers = {}
+if "waiting_for_interrupt" not in st.session_state:
+    st.session_state.waiting_for_interrupt = None
 
 # =====================================================================
 # SIDEBAR: STUDENT PROFILE & CONTROLS
@@ -43,145 +40,132 @@ if "diagnosis_answers" not in st.session_state:
 with st.sidebar:
     st.header("🎓 Student Portal")
     
-    # Input Student ID
     input_id = st.text_input("Enter Student ID:", value=st.session_state.student_id)
     
     if st.button("Load / Switch Student"):
         st.session_state.student_id = input_id.strip()
-        st.session_state.student_kb = load_student_kb(st.session_state.student_id, SKB_FILE_PATH)
-        st.session_state.in_diagnosis = not diag_agent.student_exists(st.session_state.student_id)
-        st.session_state.messages = []  # Clear chat history on switch
+        st.session_state.thread_id = f"{input_id.strip()}-session"
+        st.session_state.messages = []
+        st.session_state.waiting_for_interrupt = None
         st.rerun()
 
     st.divider()
 
-    # Display Student Status / KB Info
-    if diag_agent.student_exists(st.session_state.student_id):
-        st.success(f"Status: Registered Student")
-        kb = load_student_kb(st.session_state.student_id, SKB_FILE_PATH)
-        if kb:
-            st.markdown(f"**Strengths:** {', '.join(kb.get('strengths', [])) or 'None yet'}")
-            st.markdown(f"**Weaknesses:** {', '.join(kb.get('weaknesses', [])) or 'None yet'}")
-            
-            with st.expander("View Topic Scores"):
-                for tid, score in kb.get("topics", {}).items():
-                    st.progress(score, text=f"{tid}: {score}")
+    kb = load_student_kb(st.session_state.student_id, SKB_FILE_PATH)
+    if kb:
+        st.success("Status: Registered Student")
+        st.markdown(f"**Strengths:** {', '.join(kb.get('strengths', [])) or 'None yet'}")
+        st.markdown(f"**Weaknesses:** {', '.join(kb.get('weaknesses', [])) or 'None yet'}")
+        
+        with st.expander("View Topic Scores"):
+            for tid, score in kb.get("topics", {}).items():
+                st.progress(score, text=f"{tid}: {score}")
     else:
-        st.warning(f"Status: New Student (Diagnosis Required)")
-        if st.button("Start Diagnostic Test"):
-            st.session_state.in_diagnosis = True
-            st.rerun()
+        st.warning("Status: New Student / Unregistered")
+        st.info("Type a message or click below to trigger the diagnostic onboarding test.")
 
     st.divider()
     if st.button("Reset Chat / Session"):
         st.session_state.messages = []
+        st.session_state.waiting_for_interrupt = None
         st.rerun()
 
 # =====================================================================
-# MAIN VIEW 1: DIAGNOSIS MODE (For New Students)
+# MAIN CHAT & INTERRUPT INTERFACE
 # =====================================================================
-if not diag_agent.student_exists(st.session_state.student_id) or st.session_state.in_diagnosis:
-    st.title("📝 Initial Diagnostic Assessment")
-    st.markdown(f"Welcome **{st.session_state.student_id}**! Since you are a new student, please complete this brief diagnostic questionnaire so we can build your initial Knowledge Base.")
+st.title("🤖 AI Python Tutoring Assistant")
+st.markdown(f"Chatting as **{st.session_state.student_id}**. Ask questions, request explanations, or ask for a quiz!")
 
-    questions = diag_agent.get_questions()
+# Display chat history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Check if graph is interrupted (e.g. waiting for diagnosis test or quiz answers)
+interrupt_payload = st.session_state.waiting_for_interrupt
+
+if interrupt_payload:
+    int_type = interrupt_payload.get("type")
     
-    with st.form("diagnosis_form"):
-        submitted_answers = {}
-        for idx, q in enumerate(questions, 1):
-            st.subheader(f"Question {idx}: {q['body']}")
-            
-            # Render options based on type
-            options = q.get("option", [])
-            # Assuming options is a list of strings or dicts
-            choice = st.radio(
-                f"Select your answer for Q{idx}:",
-                options=options,
-                key=f"q_{q['problem_id']}"
-            )
-            submitted_answers[q["problem_id"]] = choice
-            st.divider()
-
-        submit_test = st.form_submit_button("Submit Diagnostic Test")
+    if int_type == "diagnosis":
+        st.warning("📝 **Diagnostic Assessment Required** (New Student Onboarding)")
+        questions = interrupt_payload.get("questions", [])
         
-        if submit_test:
-            try:
-                # Administer test and generate SKB using your DiagnosisAgent
-                new_kb = diag_agent.administer_test(st.session_state.student_id, submitted_answers)
-                st.session_state.student_kb = new_kb.model_dump(mode="json")
-                st.session_state.in_diagnosis = False
-                st.success("🎉 Diagnostic test completed successfully! Initializing your tutoring session...")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error processing test submission: {e}")
+        with st.form("interrupt_diagnosis_form"):
+            submitted_answers = {}
+            for idx, q in enumerate(questions, 1):
+                st.subheader(f"Question {idx}: {q['body']}")
+                options = q.get("options", q.get("option", []))
+                choice = st.radio(
+                    f"Select answer for Q{idx}:",
+                    options=options,
+                    key=f"diag_q_{q.get('problem_id', idx)}"
+                )
+                submitted_answers[q.get('problem_id')] = choice
+                st.divider()
 
-# =====================================================================
-# MAIN VIEW 2: INTERACTIVE TUTORING CHAT (Orchestrator + Tutor)
-# =====================================================================
+            submit_diag = st.form_submit_button("Submit Diagnostic Answers")
+            if submit_diag:
+                with st.spinner("Processing diagnostic test and building Knowledge Base..."):
+                    res = workflow.resume(st.session_state.thread_id, submitted_answers)
+                    st.session_state.waiting_for_interrupt = None
+                    st.success("🎉 Knowledge base initialized successfully!")
+                    st.rerun()
+
+    elif int_type == "quiz":
+        st.warning(f"🎯 **Adaptive Quiz Challenge** — Topic: {interrupt_payload.get('topic_focus')}")
+        st.markdown(interrupt_payload.get("intro_text", ""))
+        
+        questions = interrupt_payload.get("questions", [])
+        with st.form("interrupt_quiz_form"):
+            quiz_answers = {}
+            for idx, q in enumerate(questions, 1):
+                st.subheader(f"Quiz Question {idx}: {q.get('prob_body')}")
+                options = q.get("options", {})
+                # options is a dict like {"A": "...", "B": "..."}
+                option_labels = list(options.keys())
+                option_texts = [f"{k}: {v}" for k, v in options.items()]
+                
+                choice_text = st.radio(
+                    f"Select answer for Q{idx}:",
+                    options=option_texts,
+                    key=f"quiz_q_{q.get('prob_id')}"
+                )
+                # Extract chosen key (e.g., 'A' from 'A: The Python interpreter')
+                chosen_key = choice_text.split(":")[0].strip() if choice_text else None
+                quiz_answers[q.get('prob_id')] = chosen_key
+                st.divider()
+
+            submit_quiz = st.form_submit_button("Submit Quiz Answers")
+            if submit_quiz:
+                with st.spinner("Grading quiz and updating progress..."):
+                    res = workflow.resume(st.session_state.thread_id, quiz_answers)
+                    st.session_state.waiting_for_interrupt = None
+                    
+                    score_msg = f"📊 **Quiz Completed!** Score: {res.get('quiz_score')} (Accuracy: {res.get('accuracy', 0.0) * 100}%)"
+                    st.session_state.messages.append({"role": "assistant", "content": score_msg})
+                    st.rerun()
+
 else:
-    st.title("🤖 AI Python Tutoring Assistant")
-    st.markdown(f"Chatting as **{st.session_state.student_id}**. Ask questions, request code explanations, or practice quizzes!")
-
-    # Ensure student KB is loaded in session state
-    if not st.session_state.student_kb:
-        st.session_state.student_kb = load_student_kb(st.session_state.student_id, SKB_FILE_PATH)
-
-    # Display chat history
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    # User chat input
-    if user_prompt := st.chat_input("Ask your tutor a question (e.g., 'How do if/else statements work?')..."):
-        # 1. Append user message
+    # Standard Chat Input
+    if user_prompt := st.chat_input("Ask your tutor a question or request a quiz..."):
         st.session_state.messages.append({"role": "user", "content": user_prompt})
         with st.chat_message("user"):
             st.markdown(user_prompt)
 
-        # 2. Invoke Orchestrator Node to route intent & topic
-        with st.spinner("Orchestrator is analyzing your request..."):
-            orchestrator_node = create_orchestrator_node()
-            
-            state = {
-                "student_id": st.session_state.student_id,
-                "messages": [HumanMessage(content=m["content"]) if m["role"]=="user" else AIMessage(content=m["content"]) for m in st.session_state.messages],
-                "student_kb": st.session_state.student_kb,
-                "topic_focus": [],
-                "last_active_agent": None,
-                "orchestrator_instruction": "",
-                "orchestrator_reasoning": "",
-            }
+        with st.spinner("Processing request..."):
+            result = workflow.start(
+                student_id=st.session_state.student_id,
+                user_input=user_prompt,
+                thread_id=st.session_state.thread_id
+            )
 
-            # Run orchestrator
-            routing_command = orchestrator_node(state)
-            chosen_agent = routing_command.goto
-            updated_state_updates = routing_command.update
-
-            # Extract orchestrator metadata
-            topic_focus = updated_state_updates.get("topic_focus", ["Python Basics"])
-            instruction = updated_state_updates.get("orchestrator_instruction", "Explain concept.")
-            reasoning = updated_state_updates.get("orchestrator_reasoning", "Direct routing.")
-
-            st.sidebar.info(f"🧭 **Route:** `{chosen_agent}`\n\n📌 **Topic:** {topic_focus}\n\n💡 **Reason:** {reasoning}")
-
-        # 3. Route to Specialist Agent (Tutor or Assessment)
-        with st.spinner(f"Agent ({chosen_agent}) is generating response..."):
-            if chosen_agent == "tutor_agent":
-                tutor_node = create_tutor_node(enable_kb_context=True)
-                agent_output_state = tutor_node({
-                    **state,
-                    "topic_focus": topic_focus,
-                    "orchestrator_instruction": instruction
-                })
-                assistant_response = agent_output_state["messages"][-1].content
-
-            elif chosen_agent == "assessment_agent":
-                # Placeholder for Assessment Agent response
-                assistant_response = f"*(Assessment Agent)* Here is a coding quiz challenge for **{', '.join(topic_focus)}** based on your instruction: {instruction}"
+            # Check if workflow hit an interrupt (diagnosis or quiz)
+            if result.get("status") == "waiting_for_interrupt":
+                st.session_state.waiting_for_interrupt = result["payload"]
+                st.rerun()
             else:
-                assistant_response = "I am here to help you learn Python! What would you like to explore next?"
-
-        # 4. Append and display assistant response
-        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-        with st.chat_message("assistant"):
-            st.markdown(assistant_response)
+                # Normal completion (Tutor response or summary)
+                response_text = result.get("response_text", "I am here to help you learn Python!")
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+                st.rerun()

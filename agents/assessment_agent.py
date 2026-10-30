@@ -1,171 +1,137 @@
-import os
 import json
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from models.skb_schema import StudentKnowledgeBase
+import os
+import random
+from typing import List, Dict, Any, Optional
+from langchain_core.messages import SystemMessage, AIMessage
 
-# --- Configuration, Model & File Path Constants ---
-DEFAULT_SKB_DB_PATH = "data/skb_database.json"
-DEFAULT_MCQS_FILEPATH = "data/static_diagnosis_mcq_list.json"
-SLM_MODEL_NAME = "Qwen/Qwen3-4B"
-DEFAULT_DEVICE = "cuda"
-MAX_NEW_TOKENS = 512
-TEMPERATURE = 0.3
+from agents.llm_factory import get_llm
 
-class AssessmentAgent:
-    def __init__(
-        self,
-        db_filepath: str = DEFAULT_SKB_DB_PATH,
-        mcqs_filepath: str = DEFAULT_MCQS_FILEPATH,
-        shared_tokenizer = None,
-        shared_model = None
-    ):
-        self.db_filepath = db_filepath
-        self.mcqs_filepath = mcqs_filepath
-        self.tokenizer = shared_tokenizer
-        self.model = shared_model
+MCQS_FILEPATH = "data/diagnosis/static_diagnosis_mcq_list.json"
+TOPICS_FILEPATH = "data/common/topics.json"
 
-        self.mcqs = self._load_json(self.mcqs_filepath)
 
-        if self.tokenizer is None or self.model is None:
-            print(f"[AssessmentAgent] Loading standalone SLM ({SLM_MODEL_NAME})...")
-            self.tokenizer = AutoTokenizer.from_pretrained(SLM_MODEL_NAME)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                SLM_MODEL_NAME, device_map="auto", torch_dtype="auto"
+def load_all_mcqs() -> List[Dict[str, Any]]:
+    if not os.path.exists(MCQS_FILEPATH):
+        return []
+    with open(MCQS_FILEPATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def get_topic_id_from_name(topic_query: str) -> str:
+    if not os.path.exists(TOPICS_FILEPATH):
+        return topic_query
+    try:
+        with open(TOPICS_FILEPATH, "r", encoding="utf-8") as f:
+            topics = json.load(f)
+            for t in topics:
+                if t["topic_id"].lower() == topic_query.lower() or t["name"].lower() == topic_query.lower():
+                    return t["topic_id"]
+    except Exception:
+        pass
+    return topic_query
+
+
+def determine_target_difficulty(student_kb: Optional[dict], topic_focus: str) -> float:
+    if not student_kb or not student_kb.get("topics"):
+        return 0.3  
+
+    scores = student_kb.get("topics", {})
+    strengths = set(student_kb.get("strengths", []))
+    weaknesses = set(student_kb.get("weaknesses", []))
+
+    score = 0.5
+    for tid, s in scores.items():
+        if tid.lower() in topic_focus.lower() or topic_focus.lower() in tid.lower():
+            score = float(s)
+            break
+
+    if score >= 0.8 or topic_focus in strengths:
+        return 0.9  
+    elif score < 0.4 or topic_focus in weaknesses:
+        return 0.2  
+    else:
+        return 0.5  
+
+
+def select_adaptive_mcqs(topic_focus: str, student_kb: Optional[dict], limit: int = 10) -> List[Dict[str, Any]]:
+    all_mcqs = load_all_mcqs()
+    target_tid = get_topic_id_from_name(topic_focus)
+    target_diff = determine_target_difficulty(student_kb, topic_focus)
+
+    filtered = []
+    for q in all_mcqs:
+        related_tops = [str(t).lower() for t in q.get("related_topics", [])]
+        related_subs = [str(s).lower() for s in q.get("related_subtopics", [])]
+        
+        if target_tid.lower() in related_tops or any(target_tid.lower() in sub for sub in related_subs) or not related_tops:
+            filtered.append(q)
+
+    if len(filtered) < limit:
+        filtered = all_mcqs
+
+    filtered.sort(key=lambda x: abs(float(x.get("difficulty", 0.5)) - target_diff))
+
+    selected = filtered[:limit * 2]
+    random.shuffle(selected)
+    
+    final_selection = selected[:limit]
+    
+    if len(final_selection) < limit and len(all_mcqs) >= limit:
+        remaining = [q for q in all_mcqs if q not in final_selection]
+        final_selection.extend(random.sample(remaining, min(limit - len(final_selection), len(remaining))))
+
+    return final_selection
+
+
+ASSESSMENT_SYSTEM_PROMPT = """You are an expert AI Assessment Coach.
+The student is taking a personalized quiz on: {topic_focus}.
+Student Mastery Score: {mastery_score} (Target Test Difficulty: {difficulty_label}).
+Orchestrator Directive: {orchestrator_instruction}
+
+Introduce the assessment encouragingly, explaining that this quiz is tailored to challenge them appropriately based on their current knowledge profile.
+"""
+
+
+def create_assessment_node():
+    llm = get_llm("quiz", enable_thinking=False)
+
+    def assessment_node(state: dict) -> dict:
+        student_id = state.get("student_id", "Unknown")
+        student_kb = state.get("student_kb")
+        topic_focus_list = state.get("topic_focus", ["Python Basics"])
+        topic_focus = topic_focus_list[0] if topic_focus_list else "Python Basics"
+        instruction = state.get("orchestrator_instruction", "Provide a practice quiz.")
+
+        scores = student_kb.get("topics", {}) if student_kb else {}
+        score = scores.get(get_topic_id_from_name(topic_focus), 0.5)
+        
+        if score >= 0.8:
+            diff_label = "Advanced / Hard"
+        elif score < 0.4:
+            diff_label = "Foundational / Easy"
+        else:
+            diff_label = "Intermediate / Medium"
+
+        quiz_questions = select_adaptive_mcqs(topic_focus, student_kb, limit=10)
+
+        sys_msg = SystemMessage(
+            content=ASSESSMENT_SYSTEM_PROMPT.format(
+                topic_focus=topic_focus,
+                mastery_score=score,
+                difficulty_label=diff_label,
+                orchestrator_instruction=instruction,
             )
-            if hasattr(self.model, "generation_config") and self.model.generation_config is not None:
-                self.model.generation_config.max_length = None
-
-        self.assessment_pipeline = pipeline("text-generation", model=self.model, tokenizer=self.tokenizer)
-
-    def _load_json(self, filepath):
-        if not os.path.exists(filepath):
-            return []
-        with open(filepath, 'r') as file:
-            return json.load(file)
-
-    def _get_student_skb(self, student_id: str) -> dict:
-        """Retrieves the student's enriched knowledge base profile."""
-        if not os.path.exists(self.db_filepath):
-            return {}
-        with open(self.db_filepath, 'r') as file:
-            try:
-                db_data = json.load(file)
-                for entry in db_data:
-                    if entry.get("student_id") == student_id:
-                        return entry
-            except json.JSONDecodeError:
-                pass
-        return {}
-
-    def get_targeted_quiz(self, student_id: str, limit: int = 3) -> list:
-        """
-        Selects quiz questions targeted to the student's weaknesses or active misconceptions.
-        If no profile exists, returns a random sample.
-        """
-        skb = self._get_student_skb(student_id)
-        weaknesses = skb.get("weaknesses", [])
-        
-        # Filter questions matching student's weak topics
-        targeted_questions = [q for q in self.mcqs if q.get("topic_id") in weaknesses]
-        
-        # Fallback to general pool if no specific weaknesses found
-        if not targeted_questions:
-            targeted_questions = self.mcqs
-
-        # Return a limited subset for the quiz session
-        return targeted_questions[:limit]
-
-    def evaluate_quiz(self, student_id: str, student_answers: dict) -> dict:
-        """
-        Grades a submitted quiz, updates the student's SKB probabilities, 
-        adjusts active misconceptions, and persists changes to the database.
-        """
-        skb_data = self._get_student_skb(student_id)
-        if not skb_data:
-            return {"error": "Student SKB profile not found. Run diagnosis first."}
-
-        # Load existing topics, skills, and misconception counters
-        topics = skb_data.get("topics", {})
-        skills = skb_data.get("skills", {})
-        active_misconceptions = skb_data.get("active_misconceptions", {})
-
-        correct_count = 0
-        total_count = len(student_answers)
-        evaluation_details = []
-
-        for q in self.mcqs:
-            q_id = q['problem_id']
-            if q_id not in student_answers:
-                continue
-
-            topic_id = q['topic_id']
-            skill_id = q.get('primary_skill_id')
-            student_choice = student_answers[q_id]
-            
-            answer_key = json.loads(q['answer_key_json'])
-            correct_options = answer_key.get('correct_option_ids', [])
-            is_correct = student_choice in correct_options
-
-            if is_correct:
-                correct_count += 1
-                # Increment topic probability slightly towards mastery (moving average or step boost)
-                current_prob = topics.get(topic_id, 0.0)
-                topics[topic_id] = round(min(1.0, current_prob + 0.15), 2)
-                
-                if skill_id:
-                    curr_skill_prob = skills.get(skill_id, 0.0)
-                    skills[skill_id] = round(min(1.0, curr_skill_prob + 0.15), 2)
-            else:
-                # Decrement probability and log misconception frequency
-                current_prob = topics.get(topic_id, 0.0)
-                topics[topic_id] = round(max(0.0, current_prob - 0.15), 2)
-                
-                misconceptions = q.get('misconception_tags', [])
-                for tag in misconceptions:
-                    active_misconceptions[tag] = active_misconceptions.get(tag, 0) + 1
-
-            evaluation_details.append({
-                "problem_id": q_id,
-                "topic_id": topic_id,
-                "is_correct": is_correct,
-                "explanation": q.get("explanation", "No explanation provided.")
-            })
-
-        # Re-initialize Pydantic model to recalculate strengths/weaknesses and timestamps
-        updated_skb = StudentKnowledgeBase(
-            student_id=student_id,
-            topics=topics,
-            skills=skills,
-            active_misconceptions=active_misconceptions,
-            strengths=skb_data.get("strengths", []),
-            weaknesses=skb_data.get("weaknesses", []),
-            first_entry_time=skb_data.get("first_entry_time"),
-            latest_update_time=skb_data.get("latest_update_time")
         )
-        updated_skb.update_categorization()
 
-        # Save back to database
-        self._update_skb_database(updated_skb)
+        response = llm.invoke([sys_msg] + state["messages"])
+        intro_text = response.content.strip()
+
+        print(f"\n🎯 [ASSESSMENT AGENT] Generated 10 MCQs for Topic: {topic_focus} | Target Difficulty: {diff_label}")
 
         return {
-            "score": f"{correct_count}/{total_count}",
-            "evaluation_details": evaluation_details,
-            "updated_skb": updated_skb.model_dump(mode='json')
+            "messages": [AIMessage(content=intro_text)],
+            "active_quiz_questions": quiz_questions,  
+            "last_active_agent": "assessment_agent",
         }
 
-    def _update_skb_database(self, skb_entry: StudentKnowledgeBase):
-        db_data = []
-        if os.path.exists(self.db_filepath):
-            with open(self.db_filepath, 'r') as file:
-                try:
-                    db_data = json.load(file)
-                except json.JSONDecodeError:
-                    db_data = []
-
-        db_data = [entry for entry in db_data if entry.get("student_id") != skb_entry.student_id]
-        db_data.append(skb_entry.model_dump(mode='json'))
-
-        with open(self.db_filepath, 'w') as file:
-            json.dump(db_data, file, indent=2)
-            
-        print(f"Success: Assessment Agent updated SKB for {skb_entry.student_id} in {self.db_filepath}")
+    return assessment_node

@@ -22,8 +22,11 @@ class DiagnosisAgent:
         self.topics = self._load_json(topics_filepath)
         self.mcqs = self._load_json(mcqs_filepath)
 
-        # Lookup map for both name -> topic_id and topic_id -> topic_id
         self.topic_name_to_id = {t.get("name"): t.get("topic_id") for t in self.topics if "name" in t}
+        self.misconception_map = {}
+        for t in self.topics:
+            for m in t.get("common_misconceptions", []):
+                self.misconception_map[m.get("id")] = m.get("description")
 
     def _load_json(self, filepath: str) -> list:
         if not os.path.exists(filepath):
@@ -49,22 +52,19 @@ class DiagnosisAgent:
         return f"S{max(numbers, default=0) + 1:03d}"
 
     def get_questions(self) -> List[Dict[str, Any]]:
-        """
-        Returns student-facing question objects adhering to the schema.
-        Omits answer key, explanations, and internal tags.
-        """
         student_view = []
         for q in self.mcqs:
-            # Handle options whether provided as list or serialized JSON string
-            raw_options = q.get("option", [])
+            raw_options = q.get("options", q.get("option", []))
             options = json.loads(raw_options) if isinstance(raw_options, str) else raw_options
 
             student_view.append({
-                "problem_id": q.get("problem_id"),
-                "body": q.get("body"),
-                "option": options,
-                "type": q.get("type", "single_choice"),
-                "related topics": q.get("related topics", []),
+                "problem_id": q.get("prob_id", q.get("problem_id")),
+                "body": q.get("prob_body", q.get("body")),
+                "options": options,
+                "type": q.get("type", "conceptual"),
+                "related_topics": q.get("related_topics", []),
+                "related_subtopics": q.get("related_subtopics", []),
+                "difficulty": q.get("difficulty", 0.0),
             })
         return student_view
 
@@ -72,41 +72,35 @@ class DiagnosisAgent:
         if self.student_exists(student_id):
             raise ValueError(f"{student_id} already has a KB entry. Diagnosis is taken only once.")
 
-        # Initialize tracking for all defined topics
         topic_stats = {t["topic_id"]: [0, 0] for t in self.topics if "topic_id" in t}
-        skill_stats = {}
+        subtopic_stats = {}
         misconceptions = {}
 
         for q in self.mcqs:
-            problem_id = q.get("problem_id")
-            correct_val = q.get("correct option")
+            problem_id = q.get("prob_id", q.get("problem_id"))
+            correct_val = q.get("correct_option")
             submitted_val = student_answers.get(problem_id)
 
-            # Support both direct string matching and array-based answers
             if isinstance(correct_val, list):
                 is_correct = submitted_val in correct_val
             else:
                 is_correct = (submitted_val == correct_val) and (submitted_val is not None)
 
-            # Aggregate stats across all related topics
-            related_topics = q.get("related topics", [])
-            for topic_identifier in related_topics:
-                # Map topic name to topic_id if possible, otherwise retain identifier
+            for topic_identifier in q.get("related_topics", []):
                 t_id = self.topic_name_to_id.get(topic_identifier, topic_identifier)
                 bucket = topic_stats.setdefault(t_id, [0, 0])
                 bucket[1] += 1
                 bucket[0] += int(is_correct)
 
-            # Skill tracking (if present in question payload)
-            if q.get("primary_skill_id"):
-                skill_bucket = skill_stats.setdefault(q["primary_skill_id"], [0, 0])
-                skill_bucket[1] += 1
-                skill_bucket[0] += int(is_correct)
+            for sub_id in q.get("related_subtopics", []):
+                sub_bucket = subtopic_stats.setdefault(sub_id, [0, 0])
+                sub_bucket[1] += 1
+                sub_bucket[0] += int(is_correct)
 
-            # Misconception tracking on incorrect answer
             if not is_correct:
-                for tag in q.get("misconception_tags", []):
-                    misconceptions[tag] = misconceptions.get(tag, 0) + 1
+                for m_tag in q.get("misconception_tags", []):
+                    desc = self.misconception_map.get(m_tag, m_tag)
+                    misconceptions[desc] = misconceptions.get(desc, 0) + 1
 
         def to_prob(stats: Dict[str, List[int]]) -> Dict[str, float]:
             return {k: round(c / t, 2) if t else 0.0 for k, (c, t) in stats.items()}
@@ -114,7 +108,7 @@ class DiagnosisAgent:
         skb = StudentKnowledgeBase(
             student_id=student_id,
             topics=to_prob(topic_stats),
-            skills=to_prob(skill_stats),
+            skills=to_prob(subtopic_stats),  
             active_misconceptions=misconceptions,
         )
         skb.update_categorization(threshold=self.threshold)
@@ -132,5 +126,4 @@ class DiagnosisAgent:
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(db, f, indent=2)
         os.replace(tmp_path, self.db_filepath)
-
         print(f"[Diagnosis] Saved KB for {skb.student_id} to {self.db_filepath}")

@@ -1,15 +1,282 @@
 [
-  {"topic_id": "T01", "name": "Introduction to Python"},
-  {"topic_id": "T02", "name": "Variables and Data Types"},
-  {"topic_id": "T03", "name": "Input and Output"},
-  {"topic_id": "T04", "name": "Operators"},
-  {"topic_id": "T05", "name": "Conditional Statements (if, elif, else)"},
-  {"topic_id": "T06", "name": "Loops (for, while)"},
-  {"topic_id": "T07", "name": "Strings"},
-  {"topic_id": "T08", "name": "Lists, Tuples, and Sets"},
-  {"topic_id": "T09", "name": "Dictionaries"},
-  {"topic_id": "T10", "name": "Functions"},
-  {"topic_id": "T11", "name": "List Comprehensions"},
-  {"topic_id": "T12", "name": "Exception Handling"},
-  {"topic_id": "T13", "name": "File Handling"}
+  {
+    "topic_id": "T01",
+    "name": "Introduction to Python",
+    "description": "What Python is, how programs are run, basic syntax rules, and how to read error messages.",
+    "prerequisites": [],
+    "subconcepts": [
+      {"id": "T01.1", "name": "What Python is and how code is executed (interpreter)"},
+      {"id": "T01.2", "name": "Running code: interactive shell vs script file"},
+      {"id": "T01.3", "name": "Statements, indentation, and basic syntax"},
+      {"id": "T01.4", "name": "Comments"},
+      {"id": "T01.5", "name": "Reading error messages and tracebacks"}
+    ],
+    "common_misconceptions": [
+      {"id": "indentation_syntax_error", "description": "Inconsistent or missing indentation, or indenting a statement that should not be indented."},
+      {"id": "case_sensitivity_error", "description": "Assuming Python is case-insensitive (e.g. Print vs print, Name vs name)."},
+      {"id": "repl_script_confusion", "description": "Expecting values to be displayed automatically in a script the way they are in the interactive shell."},
+      {"id": "ignoring_traceback", "description": "Not reading the error message or line number and guessing at fixes."}
+    ]
+  },
+  {
+    "topic_id": "T02",
+    "name": "Variables and Data Types",
+    "description": "Naming and assigning variables, the core built-in types, and converting between them.",
+    "prerequisites": ["T01"],
+    "subconcepts": [
+      {"id": "T02.1", "name": "Variable assignment and naming rules"},
+      {"id": "T02.2", "name": "Core types: int, float, str, bool"},
+      {"id": "T02.3", "name": "Type conversion (int(), float(), str(), bool())"},
+      {"id": "T02.4", "name": "Dynamic typing and type()"},
+      {"id": "T02.5", "name": "Reassignment and variable lifetime within a program"}
+    ],
+    "common_misconceptions": [
+      {"id": "assignment_as_equation", "description": "Reading x = 5 as a mathematical equality rather than storing a value; confusion over x = x + 1."},
+      {"id": "invalid_variable_name", "description": "Using names with spaces, leading digits, or reserved keywords."},
+      {"id": "string_number_confusion", "description": "Treating \"5\" and 5 as the same value or type."},
+      {"id": "type_mismatch_concat", "description": "Concatenating a string with a number without conversion, causing TypeError."},
+      {"id": "use_before_assignment", "description": "Using a variable before it has been assigned, causing NameError."}
+    ]
+  },
+  {
+    "topic_id": "T03",
+    "name": "Input and Output",
+    "description": "Displaying output with print and f-strings, and reading user input.",
+    "prerequisites": ["T02"],
+    "subconcepts": [
+      {"id": "T03.1", "name": "print() and its sep/end arguments"},
+      {"id": "T03.2", "name": "Formatted output with f-strings"},
+      {"id": "T03.3", "name": "Reading input with input()"},
+      {"id": "T03.4", "name": "Converting input to numeric types"},
+      {"id": "T03.5", "name": "Reading multiple values from one line"}
+    ],
+    "common_misconceptions": [
+      {"id": "input_returns_string", "description": "Expecting input() to return a number, so arithmetic on it fails or concatenates."},
+      {"id": "print_syntax_error", "description": "Missing parentheses or mismatched quotes in print calls."},
+      {"id": "fstring_missing_prefix", "description": "Forgetting the f prefix so {variable} is printed literally."},
+      {"id": "print_vs_variable_value", "description": "Believing print() stores or changes a value rather than only displaying it."},
+      {"id": "unconverted_split_values", "description": "Using values from split() as numbers without converting them."}
+    ]
+  },
+  {
+    "topic_id": "T04",
+    "name": "Operators",
+    "description": "Arithmetic, comparison, logical, assignment, and membership operators, plus precedence.",
+    "prerequisites": ["T02"],
+    "subconcepts": [
+      {"id": "T04.1", "name": "Arithmetic operators (+, -, *, /, //, %, **)"},
+      {"id": "T04.2", "name": "Comparison operators"},
+      {"id": "T04.3", "name": "Logical operators (and, or, not)"},
+      {"id": "T04.4", "name": "Augmented assignment (+=, -=, etc.)"},
+      {"id": "T04.5", "name": "Operator precedence and parentheses"},
+      {"id": "T04.6", "name": "Membership and identity operators (in, is)"}
+    ],
+    "common_misconceptions": [
+      {"id": "division_type_confusion", "description": "Confusing / (float result) with // (floor division)."},
+      {"id": "assign_vs_compare", "description": "Using = where == is needed, or the reverse."},
+      {"id": "precedence_error", "description": "Assuming left-to-right evaluation without regard to precedence."},
+      {"id": "is_vs_equals", "description": "Using is to compare values instead of ==."},
+      {"id": "chained_or_misuse", "description": "Writing x == 1 or 2 expecting it to test both values."},
+      {"id": "modulo_misunderstanding", "description": "Not understanding % as a remainder, e.g. in even/odd or wrap-around checks."}
+    ]
+  },
+  {
+    "topic_id": "T05",
+    "name": "Conditional Statements (if, elif, else)",
+    "description": "Branching program flow with if, elif, and else based on boolean conditions.",
+    "prerequisites": ["T04"],
+    "subconcepts": [
+      {"id": "T05.1", "name": "if statements and boolean conditions"},
+      {"id": "T05.2", "name": "if-else"},
+      {"id": "T05.3", "name": "elif chains"},
+      {"id": "T05.4", "name": "Nested conditionals"},
+      {"id": "T05.5", "name": "Combining conditions with and/or/not"},
+      {"id": "T05.6", "name": "Truthy and falsy values"}
+    ],
+    "common_misconceptions": [
+      {"id": "missing_colon", "description": "Omitting the colon after if, elif, or else."},
+      {"id": "assign_in_condition", "description": "Using = instead of == inside a condition."},
+      {"id": "multiple_if_vs_elif", "description": "Using separate if statements where mutually exclusive elif branches are needed."},
+      {"id": "condition_order_error", "description": "Ordering elif branches so a broader condition shadows a narrower one."},
+      {"id": "block_scope_indentation", "description": "Misplacing indentation so statements fall inside or outside the intended branch."},
+      {"id": "truthiness_confusion", "description": "Misjudging which values (0, empty string, empty list, None) count as False."}
+    ]
+  },
+  {
+    "topic_id": "T06",
+    "name": "Loops (for, while)",
+    "description": "Repeating code with for and while loops, loop control, and common loop patterns.",
+    "prerequisites": ["T05"],
+    "subconcepts": [
+      {"id": "T06.1", "name": "for loops with range()"},
+      {"id": "T06.2", "name": "Iterating over a sequence"},
+      {"id": "T06.3", "name": "while loop conditions and termination"},
+      {"id": "T06.4", "name": "break and continue"},
+      {"id": "T06.5", "name": "Nested loops"},
+      {"id": "T06.6", "name": "Accumulator and counter patterns"}
+    ],
+    "common_misconceptions": [
+      {"id": "off_by_one_range", "description": "Misjudging range() bounds, since the stop value is exclusive."},
+      {"id": "infinite_loop_no_update", "description": "Writing a while loop whose condition variable is never updated."},
+      {"id": "modify_list_while_iterating", "description": "Adding or removing items from a list while looping over it."},
+      {"id": "accumulator_reset_in_loop", "description": "Initialising the accumulator or counter inside the loop body."},
+      {"id": "break_continue_confusion", "description": "Confusing break (exit loop) with continue (skip to next iteration)."},
+      {"id": "loop_variable_misuse", "description": "Misunderstanding the loop variable, e.g. expecting it to be an index when iterating over values."}
+    ]
+  },
+  {
+    "topic_id": "T07",
+    "name": "Strings",
+    "description": "Indexing, slicing, immutability, and common methods for working with text.",
+    "prerequisites": ["T02", "T06"],
+    "subconcepts": [
+      {"id": "T07.1", "name": "Indexing and negative indexing"},
+      {"id": "T07.2", "name": "Slicing"},
+      {"id": "T07.3", "name": "String immutability"},
+      {"id": "T07.4", "name": "Common methods (upper, lower, strip, split, join, replace, find)"},
+      {"id": "T07.5", "name": "Searching and iterating over strings (in, count, loops)"},
+      {"id": "T07.6", "name": "Escape characters and multi-line strings"}
+    ],
+    "common_misconceptions": [
+      {"id": "string_immutability_error", "description": "Trying to assign to a character, e.g. s[0] = 'x'."},
+      {"id": "string_index_out_of_range", "description": "Indexing past the end of a string, or mixing up 0-based and 1-based positions."},
+      {"id": "slice_end_exclusive", "description": "Forgetting that the slice end index is excluded."},
+      {"id": "method_result_not_assigned", "description": "Calling s.upper() or s.strip() without saving the returned new string."},
+      {"id": "case_sensitive_comparison", "description": "Comparing strings without accounting for letter case."},
+      {"id": "split_join_confusion", "description": "Mixing up split() (string to list) and join() (list to string), or the join separator syntax."}
+    ]
+  },
+  {
+    "topic_id": "T08",
+    "name": "Lists, Tuples, and Sets",
+    "description": "Ordered mutable lists, immutable tuples, and unordered unique sets.",
+    "prerequisites": ["T06"],
+    "subconcepts": [
+      {"id": "T08.1", "name": "Creating lists; indexing and slicing"},
+      {"id": "T08.2", "name": "List methods (append, extend, insert, remove, pop, sort)"},
+      {"id": "T08.3", "name": "Tuples and immutability"},
+      {"id": "T08.4", "name": "Sets and uniqueness"},
+      {"id": "T08.5", "name": "Membership, len(), and iteration over collections"},
+      {"id": "T08.6", "name": "Copying vs aliasing"}
+    ],
+    "common_misconceptions": [
+      {"id": "list_aliasing", "description": "Assuming b = a copies a list, when both names refer to the same list."},
+      {"id": "sort_returns_none", "description": "Writing x = lst.sort() and expecting a sorted list back."},
+      {"id": "append_vs_extend", "description": "Confusing append (adds one item) with extend (adds each item of an iterable)."},
+      {"id": "tuple_mutation_error", "description": "Trying to modify a tuple in place."},
+      {"id": "single_element_tuple", "description": "Forgetting the trailing comma in a one-element tuple."},
+      {"id": "set_ordering_assumption", "description": "Indexing a set or assuming it keeps insertion order."},
+      {"id": "list_index_out_of_range", "description": "Accessing an index that does not exist, including off-by-one on len()."},
+      {"id": "remove_vs_pop", "description": "Confusing remove (by value) with pop (by index)."}
+    ]
+  },
+  {
+    "topic_id": "T09",
+    "name": "Dictionaries",
+    "description": "Key-value mappings: creating, accessing, updating, and iterating.",
+    "prerequisites": ["T08"],
+    "subconcepts": [
+      {"id": "T09.1", "name": "Creating dictionaries and accessing values"},
+      {"id": "T09.2", "name": "Adding, updating, and deleting entries"},
+      {"id": "T09.3", "name": "Checking keys and using get()"},
+      {"id": "T09.4", "name": "Iterating over keys, values, and items"},
+      {"id": "T09.5", "name": "Valid (hashable) keys"},
+      {"id": "T09.6", "name": "Nested dictionaries and counting patterns"}
+    ],
+    "common_misconceptions": [
+      {"id": "keyerror_missing_key", "description": "Accessing a key that may not exist with [] instead of get() or an in check."},
+      {"id": "unhashable_key", "description": "Using a list or other mutable type as a dictionary key."},
+      {"id": "iterate_gives_keys", "description": "Expecting a for loop over a dictionary to yield values or pairs rather than keys."},
+      {"id": "mutate_dict_while_iterating", "description": "Adding or deleting keys while looping over the dictionary."},
+      {"id": "keys_values_confusion", "description": "Mixing up keys and values when looking up or inverting entries."},
+      {"id": "duplicate_key_overwrite", "description": "Not realising a repeated key silently overwrites the earlier value."}
+    ]
+  },
+  {
+    "topic_id": "T10",
+    "name": "Functions",
+    "description": "Defining reusable functions: parameters, return values, defaults, and scope.",
+    "prerequisites": ["T05", "T06"],
+    "subconcepts": [
+      {"id": "T10.1", "name": "Defining and calling functions"},
+      {"id": "T10.2", "name": "Parameters and arguments"},
+      {"id": "T10.3", "name": "Return values"},
+      {"id": "T10.4", "name": "Default and keyword arguments"},
+      {"id": "T10.5", "name": "Local vs global scope"},
+      {"id": "T10.6", "name": "Decomposing a problem into functions"}
+    ],
+    "common_misconceptions": [
+      {"id": "print_instead_of_return", "description": "Using print() inside a function when the caller needs a returned value."},
+      {"id": "missing_return_none", "description": "Forgetting return, so the call evaluates to None."},
+      {"id": "defined_not_called", "description": "Defining a function but never calling it."},
+      {"id": "local_scope_access", "description": "Trying to use a function's local variable outside the function."},
+      {"id": "mutable_default_argument", "description": "Using a mutable default such as [] that persists between calls."},
+      {"id": "argument_count_mismatch", "description": "Passing the wrong number or order of arguments."},
+      {"id": "early_return_in_loop", "description": "Placing return inside a loop so it exits on the first iteration."}
+    ]
+  },
+  {
+    "topic_id": "T11",
+    "name": "List Comprehensions",
+    "description": "Building lists concisely from iterables, with optional filtering and transformation.",
+    "prerequisites": ["T06", "T08"],
+    "subconcepts": [
+      {"id": "T11.1", "name": "Basic comprehension syntax"},
+      {"id": "T11.2", "name": "Filtering with an if clause"},
+      {"id": "T11.3", "name": "Conditional expressions (if-else) in the output"},
+      {"id": "T11.4", "name": "Nested loops in comprehensions"},
+      {"id": "T11.5", "name": "Converting between loops and comprehensions"}
+    ],
+    "common_misconceptions": [
+      {"id": "filter_transform_placement", "description": "Putting the if filter and the if-else expression in the wrong position."},
+      {"id": "nested_loop_order", "description": "Reversing the order of the for clauses in a nested comprehension."},
+      {"id": "side_effects_in_comprehension", "description": "Using a comprehension for side effects such as printing instead of building a list."},
+      {"id": "overly_complex_comprehension", "description": "Cramming too much logic into one comprehension where a loop would be clearer."},
+      {"id": "wrong_brackets", "description": "Using () or {} and getting a generator or set instead of a list."}
+    ]
+  },
+  {
+    "topic_id": "T12",
+    "name": "Exception Handling",
+    "description": "Handling runtime errors with try/except and raising exceptions deliberately.",
+    "prerequisites": ["T10"],
+    "subconcepts": [
+      {"id": "T12.1", "name": "Common exception types and reading tracebacks"},
+      {"id": "T12.2", "name": "try and except"},
+      {"id": "T12.3", "name": "Catching specific exceptions"},
+      {"id": "T12.4", "name": "else and finally"},
+      {"id": "T12.5", "name": "Raising exceptions"},
+      {"id": "T12.6", "name": "Validating input with exceptions"}
+    ],
+    "common_misconceptions": [
+      {"id": "bare_except", "description": "Using a bare except: that hides the actual error type."},
+      {"id": "swallowed_exception", "description": "Catching an exception and doing nothing, so failures go unnoticed."},
+      {"id": "oversized_try_block", "description": "Wrapping far more code than necessary in a single try block."},
+      {"id": "else_finally_confusion", "description": "Confusing when else (no exception) and finally (always) run."},
+      {"id": "syntax_vs_runtime_error", "description": "Expecting try/except to catch syntax errors."},
+      {"id": "wrong_exception_type", "description": "Catching an exception type that the code does not actually raise."}
+    ]
+  },
+  {
+    "topic_id": "T13",
+    "name": "File Handling",
+    "description": "Reading from and writing to text files safely.",
+    "prerequisites": ["T03", "T07", "T12"],
+    "subconcepts": [
+      {"id": "T13.1", "name": "Opening and closing files; file modes"},
+      {"id": "T13.2", "name": "The with statement"},
+      {"id": "T13.3", "name": "Reading files (read, readline, readlines, iteration)"},
+      {"id": "T13.4", "name": "Writing and appending"},
+      {"id": "T13.5", "name": "File paths and FileNotFoundError"},
+      {"id": "T13.6", "name": "Processing file contents line by line"}
+    ],
+    "common_misconceptions": [
+      {"id": "forgot_to_close", "description": "Not closing a file or not using with, risking unflushed data or leaked handles."},
+      {"id": "write_mode_overwrites", "description": "Opening with 'w' and unintentionally erasing existing content instead of using 'a'."},
+      {"id": "newline_not_stripped", "description": "Forgetting that lines read from a file keep the trailing newline."},
+      {"id": "read_pointer_exhausted", "description": "Reading a file twice without reopening it or seeking, getting empty results."},
+      {"id": "wrong_file_path", "description": "Using a path that is relative to a different working directory."},
+      {"id": "read_returns_string", "description": "Expecting read() to return a list of lines or numbers rather than one string."}
+    ]
+  }
 ]

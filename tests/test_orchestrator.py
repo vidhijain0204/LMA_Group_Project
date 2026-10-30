@@ -11,7 +11,10 @@ import json
 from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, START, END
 
-from agents.orchestrator import create_orchestrator_node, AgentState, SKB_FILE_PATH
+from agents.orchestrator import (
+    create_orchestrator_node, AgentState, SKB_FILE_PATH,
+    DIAGNOSIS_NODE, TUTOR_NODE, ASSESSMENT_NODE,
+)
 
 
 # =====================================================================
@@ -50,15 +53,15 @@ def build_test_graph():
     builder = StateGraph(AgentState)
 
     builder.add_node("orchestrator", create_orchestrator_node())
-    builder.add_node("diagnosis_agent", diagnosis_node)
-    builder.add_node("tutor_agent", tutor_node)
-    builder.add_node("assessment_agent", assessment_node)
+    builder.add_node(DIAGNOSIS_NODE, diagnosis_node)
+    builder.add_node(TUTOR_NODE, tutor_node)
+    builder.add_node(ASSESSMENT_NODE, assessment_node)
 
     builder.add_edge(START, "orchestrator")
 
-    builder.add_edge("diagnosis_agent", END)
-    builder.add_edge("tutor_agent", END)
-    builder.add_edge("assessment_agent", END)
+    builder.add_edge(DIAGNOSIS_NODE, END)
+    builder.add_edge(TUTOR_NODE, END)
+    builder.add_edge(ASSESSMENT_NODE, END)
 
     return builder.compile()
 
@@ -89,7 +92,7 @@ def run_tests():
     test_cases = [
         {
             "id": "Test 1: New Student Cold Start (Not in DB)",
-            "student_id": "S001",  # Not in database
+            "student_id": "S900",  # Not in database
             "user_input": "I am new and want to learn Python.",
             "description": "New student ID not found in KB. Expected: diagnosis_agent",
         },

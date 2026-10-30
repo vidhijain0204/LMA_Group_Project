@@ -10,6 +10,29 @@ from agents.llm_factory import get_llm
 SKB_FILE_PATH = "data/skb_database.json"
 TOPICS_FILE_PATH = "data/common/topics.json"
 
+# Names of the graph nodes the orchestrator can route to. workflow.py registers its nodes under
+# these exact names, so the routing decision and the graph always agree.
+DIAGNOSIS_NODE = "diagnosis"
+TUTOR_NODE = "tutor_agent"
+ASSESSMENT_NODE = "assessment_agent"
+ROUTABLE_NODES = (DIAGNOSIS_NODE, TUTOR_NODE, ASSESSMENT_NODE)
+
+
+def normalize_route(label) -> str:
+    """Map the routing label written by the LLM onto one of the graph node names.
+
+    The prompt asks for "diagnosis", "tutor_agent" or "assessment_quiz", but a small model may
+    also answer "diagnosis_agent", "quiz", "assessment", "tutor", ... Diagnosis is checked first
+    so that a label like "diagnostic test" is not mistaken for a quiz. Anything that is not
+    recognised goes to the tutor, the safest default.
+    """
+    label = str(label or "").strip().lower()
+    if "diag" in label:
+        return DIAGNOSIS_NODE
+    if any(word in label for word in ("assess", "quiz", "test")):
+        return ASSESSMENT_NODE
+    return TUTOR_NODE
+
 
 class AgentState(TypedDict):
     student_id: str
@@ -69,7 +92,26 @@ def create_orchestrator_node():
         
     def orchestrator_node(state: AgentState) -> Command:
         student_id = state.get("student_id", "S001")
-        student_kb = state.get("student_kb") or load_student_kb(student_id)
+        # workflow.start() has already looked the student up (None = not in the database);
+        # read the file only if the caller did not provide the record.
+        student_kb = state["student_kb"] if "student_kb" in state else load_student_kb(student_id)
+
+        # A student without a knowledge base record has never taken the diagnostic test.
+        # Onboard them first, whatever they typed: this is a fact from the database, not
+        # something the LLM can infer from the message.
+        if not student_kb:
+            print(f"\n🧭 [ORCHESTRATOR] New student {student_id} (no knowledge base) -> {DIAGNOSIS_NODE}")
+            return Command(
+                goto=DIAGNOSIS_NODE,
+                update={
+                    "student_id": student_id,
+                    "student_kb": None,
+                    "topic_focus": [],
+                    "orchestrator_instruction": "Run the onboarding diagnostic test.",
+                    "orchestrator_reasoning": "New student: no knowledge base record found.",
+                    "last_active_agent": "orchestrator",
+                },
+            )
 
         sys_msg = SystemMessage(
             content=ORCHESTRATOR_SYSTEM_PROMPT.format(
@@ -141,9 +183,13 @@ def create_orchestrator_node():
         # Continue with your existing routing logic here
 
 
-        next_agent = decision.get("next_agent", "tutor_agent")
-        if next_agent == "tutor":
-            next_agent = "tutor_agent"
+        # Translate the LLM's label into a node that exists in the graph.
+        next_agent = normalize_route(decision.get("next_agent"))
+
+        # Existing students have already taken the diagnosis, and DiagnosisAgent refuses a
+        # second attempt, so a "diagnosis" decision for them falls back to the tutor.
+        if next_agent == DIAGNOSIS_NODE:
+            next_agent = TUTOR_NODE
 
         topic_focus = decision.get("topic_focus", ["Variables and Data Types"])
         instruction = decision.get("instruction", "Explain concept.")

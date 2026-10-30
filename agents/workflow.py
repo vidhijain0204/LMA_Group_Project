@@ -7,10 +7,13 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import interrupt, Command
 from langchain_core.messages import HumanMessage, AIMessage
 
-from agents.orchestrator import create_orchestrator_node, load_student_kb, SKB_FILE_PATH
+from agents.orchestrator import (
+    create_orchestrator_node, load_student_kb, SKB_FILE_PATH,
+    DIAGNOSIS_NODE, TUTOR_NODE, ASSESSMENT_NODE,
+)
 from agents.diagnosis_agent import DiagnosisAgent
 from agents.tutor_agent import create_tutor_node, clean_tutor_output
-from agents.assessment_agent import create_assessment_node
+from agents.assessment_agent import create_assessment_node, load_all_mcqs
 
 # --- Configuration & File Path Constants ---
 MAX_ITERATIONS = 3
@@ -53,7 +56,9 @@ class AdaptiveTutorWorkflow:
         self.app = self._build_graph()
 
     # ------------------------------------------------------------------ nodes
-    def orchestrator_node(self, state: AgentState) -> Command:
+    # The orchestrator routes by returning Command(goto=<node name>). The annotation lists the
+    # possible targets so LangGraph knows the graph's edges (e.g. when drawing it).
+    def orchestrator_node(self, state: AgentState) -> Command[Literal["diagnosis", "tutor_agent", "assessment_agent"]]:
         print("\n🔵 [Orchestrator] Analyzing student status and intent...")
         return self.orchestrator_node_fn(state)
 
@@ -115,6 +120,14 @@ class AdaptiveTutorWorkflow:
             "questions": quiz_questions,
         })
 
+        # When the student submits, LangGraph runs this node again from the top, and the random
+        # selection above picks a new set of questions. Grade the questions the student actually
+        # answered (the ids in `answers`), looked up in the question bank.
+        bank = {q.get("prob_id", q.get("problem_id")): q for q in load_all_mcqs()}
+        answered = [bank[pid] for pid in (answers or {}) if pid in bank]
+        if answered:
+            quiz_questions = answered
+
         correct_count = 0
         graded_details = []
         wrong_problems = []
@@ -158,34 +171,20 @@ class AdaptiveTutorWorkflow:
     def _build_graph(self):
         g = StateGraph(AgentState)
         g.add_node("orchestrator", self.orchestrator_node)
-        g.add_node("diagnosis", self.diagnosis_node)
-        g.add_node("tutor_agent", self.tutor_node)                  
-        g.add_node("assessment_agent", self.assessment_quiz_node)
+        g.add_node(DIAGNOSIS_NODE, self.diagnosis_node)
+        g.add_node(TUTOR_NODE, self.tutor_node)
+        g.add_node(ASSESSMENT_NODE, self.assessment_quiz_node)
 
         g.set_entry_point("orchestrator")
 
-        g.add_edge("diagnosis", END)
-        g.add_edge("tutor_agent", END)
-        g.add_edge("assessment_agent", END)
+        # Routing out of the orchestrator is done only by its Command(goto=...). There is no
+        # conditional edge as well: having both made the tutor run in parallel with every
+        # diagnosis and quiz request.
+        g.add_edge(DIAGNOSIS_NODE, END)
+        g.add_edge(TUTOR_NODE, END)
+        g.add_edge(ASSESSMENT_NODE, END)
 
-        routes = {
-            "diagnosis": "diagnosis", 
-            "tutor_agent": "tutor_agent", 
-            "assessment_quiz": "assessment_agent"
-        }
-        g.add_conditional_edges("orchestrator", self.route_from_orchestrator, routes)
-        
         return g.compile(checkpointer=self.checkpointer)
-
-    def route_from_orchestrator(self, state: AgentState) -> Literal["diagnosis", "tutor_agent", "assessment_quiz"]:
-        next_agent = str(state.get("next_agent", "tutor_agent")).lower().strip()
-        if "assess" in next_agent or "quiz" in next_agent or "test" in next_agent:
-            return "assessment_agent"
-        elif "diag" in next_agent:
-            return "diagnosis"
-        elif "tutor" in next_agent:
-            return "tutor_agent"
-        return "tutor_agent"
 
     # ------------------------------------------------------------- public API
     def start(self, student_id: str, user_input: str, student_answers: dict = None,

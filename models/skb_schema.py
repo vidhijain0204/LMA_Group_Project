@@ -15,8 +15,14 @@ class StudentKnowledgeBase(BaseModel):
     # Topic-level probability mapping (e.g., {"T01": 0.89, "T06": 0.33})
     topics: Dict[str, float] = Field(default_factory=dict, description="Topic ID to mastery probability mapping")
       
+    # Subtopic-level probability mapping (e.g., {"T06.3": 0.5}); filled by the diagnosis test
+    skills: Dict[str, float] = Field(default_factory=dict, description="Subtopic ID to mastery probability mapping")
+
     strengths: List[str] = Field(default_factory=list, description="Topics with probability >= threshold")
     weaknesses: List[str] = Field(default_factory=list, description="Topics with probability < threshold")
+
+    # Misconceptions seen in wrong answers: description -> number of times observed
+    active_misconceptions: Dict[str, int] = Field(default_factory=dict, description="Observed misconceptions and their counts")
     
     # Timestamps
     first_entry_time: str = Field(default_factory=get_current_time, description="Time when the SKB was first created")

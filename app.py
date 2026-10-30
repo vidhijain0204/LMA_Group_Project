@@ -18,8 +18,15 @@ st.set_page_config(
     layout="wide",
 )
 
-# Initialize workflow and diagnosis agent
-workflow = AdaptiveTutorWorkflow(db_filepath=SKB_FILE_PATH)
+# Initialize workflow and diagnosis agent.
+# Streamlit re-runs this whole script on every click, so the workflow is created once and cached:
+# a new workflow would have an empty checkpointer and could not resume a paused diagnosis or quiz.
+@st.cache_resource
+def get_workflow() -> AdaptiveTutorWorkflow:
+    return AdaptiveTutorWorkflow(db_filepath=SKB_FILE_PATH)
+
+
+workflow = get_workflow()
 diag_agent = DiagnosisAgent(db_filepath=SKB_FILE_PATH)
 
 # =====================================================================
@@ -63,6 +70,16 @@ with st.sidebar:
     else:
         st.warning("Status: New Student / Unregistered")
         st.info("Type a message or click below to trigger the diagnostic onboarding test.")
+        if st.button("Start Diagnostic Test", disabled=bool(st.session_state.waiting_for_interrupt)):
+            # The orchestrator sends every new student to the diagnosis, whatever the message says.
+            result = workflow.start(
+                student_id=st.session_state.student_id,
+                user_input="I am a new student. Please start my diagnostic test.",
+                thread_id=st.session_state.thread_id,
+            )
+            if result.get("status") == "waiting_for_interrupt":
+                st.session_state.waiting_for_interrupt = result["payload"]
+                st.rerun()
 
     st.divider()
     if st.button("Reset Chat / Session"):

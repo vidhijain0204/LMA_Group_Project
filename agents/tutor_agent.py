@@ -60,7 +60,13 @@ Maintain an encouraging, supportive teaching tone. Do not repeat or echo system 
 def clean_tutor_output(raw_text: str) -> str:
     if not raw_text:
         return ""
-    
+
+    # The pipeline returns the whole chat prompt (system prompt + earlier messages) before the
+    # answer, because langchain-huggingface ignores the pipeline_kwargs in llm_factory.py.
+    # Keep only what follows the last assistant marker: the answer itself.
+    if "<|im_start|>assistant" in raw_text:
+        raw_text = raw_text.rsplit("<|im_start|>assistant", 1)[1]
+
     cleaned = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL)
     if "</think>" in cleaned:
         cleaned = cleaned.split("</think>")[-1]

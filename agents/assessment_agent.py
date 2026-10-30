@@ -1,12 +1,16 @@
 import json
 import os
 import random
+import re
 from typing import List, Dict, Any, Optional
 from langchain_core.messages import SystemMessage, AIMessage
 
 from agents.llm_factory import get_llm
 
-MCQS_FILEPATH = "data/diagnosis/static_diagnosis_mcq_list.json"
+# The quiz bank (455 MCQs over all 13 topics). Its format - prob_id, prob_body, options as a
+# {"A": ...} dict, correct_option as a letter - is what the quiz form in app.py and the grading in
+# workflow.py expect. (The diagnosis questions use a different format and are only for diagnosis.)
+MCQS_FILEPATH = "data/common/mcqs_list.json"
 TOPICS_FILEPATH = "data/common/topics.json"
 
 
@@ -18,17 +22,28 @@ def load_all_mcqs() -> List[Dict[str, Any]]:
 
 
 def get_topic_id_from_name(topic_query: str) -> str:
+    """Resolve a topic given as "T08", "T08: Lists, Tuples, and Sets", "Lists, Tuples, and Sets"
+    or a word from the topic name such as "lists" to its topic id. Returns the input unchanged
+    if nothing matches."""
+    query = str(topic_query or "").strip()
+    match = re.search(r"\bT\d{2}\b", query, re.IGNORECASE)   # the orchestrator sends "T08: <name>"
+    if match:
+        return match.group(0).upper()
     if not os.path.exists(TOPICS_FILEPATH):
-        return topic_query
+        return query
     try:
         with open(TOPICS_FILEPATH, "r", encoding="utf-8") as f:
             topics = json.load(f)
-            for t in topics:
-                if t["topic_id"].lower() == topic_query.lower() or t["name"].lower() == topic_query.lower():
-                    return t["topic_id"]
     except Exception:
-        pass
-    return topic_query
+        return query
+    lowered = query.lower()
+    for t in topics:
+        if lowered in (t["topic_id"].lower(), t["name"].lower()):
+            return t["topic_id"]
+    for t in topics:                       # partial match, e.g. "lists" -> "Lists, Tuples, and Sets"
+        if lowered and (lowered in t["name"].lower() or t["name"].lower() in lowered):
+            return t["topic_id"]
+    return query
 
 
 def determine_target_difficulty(student_kb: Optional[dict], topic_focus: str) -> float:
@@ -83,12 +98,44 @@ def select_adaptive_mcqs(topic_focus: str, student_kb: Optional[dict], limit: in
     return final_selection
 
 
+def clean_llm_output(raw_text: str) -> str:
+    """Return only the model's answer.
+
+    langchain-huggingface ignores the pipeline_kwargs set in llm_factory.py, so the pipeline returns
+    the full text: the whole chat prompt (<|im_start|>system ... ) followed by the answer, which may
+    also contain a <think> block. Keep what follows the last assistant marker, without the thinking."""
+    text = raw_text or ""
+    if "<|im_start|>assistant" in text:
+        text = text.rsplit("<|im_start|>assistant", 1)[1]
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    if "</think>" in text:
+        text = text.split("</think>")[-1]
+    if "<think>" in text:                  # thinking that was cut off before it closed
+        text = text.split("<think>")[0]
+    text = text.replace("<|im_end|>", "").replace("<|im_start|>", "")
+    return text.strip()
+
+
+def keep_introduction_only(text: str) -> str:
+    """The questions are shown by the quiz form, so drop anything from the point where the model
+    starts writing questions of its own (e.g. "Question 1", "**Q2**", "1. What ...")."""
+    question_start = re.compile(r"^\s*(#+\s*)?(\*\*)?\s*(Question\s*\d+|Q\s*\d+\b|\d+[.)]\s)", re.IGNORECASE)
+    kept = []
+    for line in text.split("\n"):
+        if question_start.match(line):
+            break
+        kept.append(line)
+    return "\n".join(kept).strip()
+
+
 ASSESSMENT_SYSTEM_PROMPT = """You are an expert AI Assessment Coach.
 The student is taking a personalized quiz on: {topic_focus}.
 Student Mastery Score: {mastery_score} (Target Test Difficulty: {difficulty_label}).
 Orchestrator Directive: {orchestrator_instruction}
 
 Introduce the assessment encouragingly, explaining that this quiz is tailored to challenge them appropriately based on their current knowledge profile.
+Write only a short introduction of 2-3 sentences. Do NOT write any quiz questions or answers yourself:
+the questions are shown to the student separately.
 """
 
 
@@ -103,7 +150,8 @@ def create_assessment_node():
         instruction = state.get("orchestrator_instruction", "Provide a practice quiz.")
 
         scores = student_kb.get("topics", {}) if student_kb else {}
-        score = scores.get(get_topic_id_from_name(topic_focus), 0.5)
+        topic_id = get_topic_id_from_name(topic_focus)
+        score = scores.get(topic_id, 0.5)
         
         if score >= 0.8:
             diff_label = "Advanced / Hard"
@@ -124,7 +172,10 @@ def create_assessment_node():
         )
 
         response = llm.invoke([sys_msg] + state["messages"])
-        intro_text = response.content.strip()
+        intro_text = keep_introduction_only(clean_llm_output(response.content))
+        if not intro_text:
+            intro_text = (f"Here is a quiz tailored to your current level on {topic_focus}. "
+                          "Take your time and good luck!")
 
         print(f"\n🎯 [ASSESSMENT AGENT] Generated 10 MCQs for Topic: {topic_focus} | Target Difficulty: {diff_label}")
 

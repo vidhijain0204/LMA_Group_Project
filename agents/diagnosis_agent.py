@@ -10,6 +10,15 @@ DEFAULT_MCQS_FILEPATH = "data/diagnosis/static_diagnosis_mcq_list.json"
 DEFAULT_DB_FILEPATH = "data/skb_database.json"
 DEFAULT_THRESHOLD = 0.7
 
+
+def _field(question: dict, *names, default=None):
+    """Read a question field that may be spelled differently across question files
+    (e.g. "correct_option" vs "correct option")."""
+    for name in names:
+        if name in question:
+            return question[name]
+    return default
+
 class DiagnosisAgent:
     def __init__(
         self,
@@ -62,8 +71,8 @@ class DiagnosisAgent:
                 "body": q.get("prob_body", q.get("body")),
                 "options": options,
                 "type": q.get("type", "conceptual"),
-                "related_topics": q.get("related_topics", []),
-                "related_subtopics": q.get("related_subtopics", []),
+                "related_topics": _field(q, "related_topics", "related topics", default=[]),
+                "related_subtopics": _field(q, "related_subtopics", "related subtopics", default=[]),
                 "difficulty": q.get("difficulty", 0.0),
             })
         return student_view
@@ -78,7 +87,7 @@ class DiagnosisAgent:
 
         for q in self.mcqs:
             problem_id = q.get("prob_id", q.get("problem_id"))
-            correct_val = q.get("correct_option")
+            correct_val = _field(q, "correct_option", "correct option")
             submitted_val = student_answers.get(problem_id)
 
             if isinstance(correct_val, list):
@@ -86,13 +95,13 @@ class DiagnosisAgent:
             else:
                 is_correct = (submitted_val == correct_val) and (submitted_val is not None)
 
-            for topic_identifier in q.get("related_topics", []):
+            for topic_identifier in _field(q, "related_topics", "related topics", default=[]):
                 t_id = self.topic_name_to_id.get(topic_identifier, topic_identifier)
                 bucket = topic_stats.setdefault(t_id, [0, 0])
                 bucket[1] += 1
                 bucket[0] += int(is_correct)
 
-            for sub_id in q.get("related_subtopics", []):
+            for sub_id in _field(q, "related_subtopics", "related subtopics", default=[]):
                 sub_bucket = subtopic_stats.setdefault(sub_id, [0, 0])
                 sub_bucket[1] += 1
                 sub_bucket[0] += int(is_correct)

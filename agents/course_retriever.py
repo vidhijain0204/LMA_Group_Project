@@ -1,8 +1,10 @@
 import json
 import math
 import re
+import hashlib
 from collections import Counter
 from pathlib import Path
+from rank_bm25 import BM25Okapi
 from typing import Any, Dict, List, Optional, Set
 
 
@@ -11,14 +13,34 @@ TOKEN_PATTERN = re.compile(r"[a-z0-9_]+")
 
 
 class CourseRetriever:
-    """Local TF-IDF retriever for the course chunks in corpus.jsonl."""
+    """Retrieve course chunks using F-IDF, BM25, dense, or hybrid retrieval."""
 
-    def __init__(self, corpus_filepath: str = DEFAULT_CORPUS_FILEPATH):
+    def __init__(
+        self,
+        corpus_filepath: str = DEFAULT_CORPUS_FILEPATH,
+        embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+        embedding_cache_dir: str = ".cache/course_retriever",
+    ):
         self.corpus_filepath = corpus_filepath
         self.documents = self._load_documents(corpus_filepath)
+
+        # Existing TF-IDF index
         self.document_frequencies: Counter = Counter()
         self.document_terms: List[Counter] = []
         self._index_documents()
+
+        # Existing BM25 index
+        tokenized_documents = [
+            self._tokenize(document["text"])
+            for document in self.documents
+        ]
+        self.bm25 = BM25Okapi(tokenized_documents) if tokenized_documents else None
+
+        # Dense retrieval: model and embeddings are loaded lazily
+        self.embedding_model_name = embedding_model_name
+        self.embedding_cache_dir = Path(embedding_cache_dir)
+        self._embedding_model = None
+        self._dense_embeddings = None
 
     @staticmethod
     def _load_documents(filepath: str) -> List[Dict[str, Any]]:
@@ -47,6 +69,102 @@ class CourseRetriever:
             terms = Counter(self._tokenize(document["text"]))
             self.document_terms.append(terms)
             self.document_frequencies.update(terms.keys())
+
+    def _get_embedding_model(self):
+        """Load the sentence-transformer model only when dense retrieval is used."""
+        if self._embedding_model is None:
+            from sentence_transformers import SentenceTransformer
+
+            self._embedding_model = SentenceTransformer(
+                self.embedding_model_name
+            )
+
+        return self._embedding_model
+
+
+    def _get_dense_embeddings(self):
+        """Load cached corpus embeddings or generate and save them."""
+        import numpy as np
+
+        if self._dense_embeddings is not None:
+            return self._dense_embeddings
+
+        self.embedding_cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Cache key changes if the corpus content or model name changes.
+        corpus_hash = hashlib.sha256(
+            Path(self.corpus_filepath).read_bytes()
+        ).hexdigest()[:16]
+
+        model_hash = hashlib.sha256(
+            self.embedding_model_name.encode("utf-8")
+        ).hexdigest()[:12]
+
+        cache_file = (
+            self.embedding_cache_dir
+            / f"embeddings_{model_hash}_{corpus_hash}.npy"
+        )
+
+        if cache_file.exists():
+            embeddings = np.load(cache_file, allow_pickle=False)
+
+            if embeddings.shape[0] == len(self.documents):
+                self._dense_embeddings = embeddings
+                return embeddings
+
+        # Generate embeddings only once for the entire corpus.
+        model = self._get_embedding_model()
+
+        texts = [
+            document["text"]
+            for document in self.documents
+        ]
+
+        embeddings = model.encode(
+            texts,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=True,
+        )
+
+        embeddings = np.asarray(embeddings, dtype=np.float32)
+
+        np.save(cache_file, embeddings)
+
+        self._dense_embeddings = embeddings
+
+        return embeddings
+
+
+    def _dense_relevance_scores(self, query: str, candidates: List[int]):
+        """Calculate cosine similarity between query and candidate chunks."""
+        import numpy as np
+
+        if not candidates:
+            return {}
+
+        model = self._get_embedding_model()
+        corpus_embeddings = self._get_dense_embeddings()
+
+        query_embedding = model.encode(
+            [query],
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )[0]
+
+        candidate_embeddings = corpus_embeddings[candidates]
+
+        # Embeddings are normalized, so dot product equals cosine similarity.
+        similarities = np.dot(candidate_embeddings, query_embedding)
+
+        # Convert cosine similarity from [-1, 1] to [0, 1].
+        relevance_scores = (similarities + 1.0) / 2.0
+
+        return {
+            index: float(score)
+            for index, score in zip(candidates, relevance_scores)
+    }
 
     def _idf(self, term: str) -> float:
         total_documents = len(self.documents)
@@ -100,12 +218,51 @@ class CourseRetriever:
     @staticmethod
     def _source_details(document: Dict[str, Any]) -> Dict[str, str]:
         source = document.get("source") or {}
+
+        if not isinstance(source, dict):
+            source = {}
+
         section_path = source.get("section_path") or []
+
+        if not isinstance(section_path, list):
+            section_path = []
+
         return {
-            "title": source.get("page_title") or source.get("name") or "Course material",
-            "section": " > ".join(section_path),
+            "title": (
+                source.get("page_title")
+                or source.get("name")
+                or "Course material"
+            ),
+            "section": " > ".join(str(part) for part in section_path),
             "url": source.get("url") or "",
-        }
+    }
+
+    @staticmethod
+    def _reciprocal_rank_fusion(
+        ranked_lists: List[List[Dict[str, Any]]],
+        k: int = 60,
+    ) -> Dict[str, float]:
+        """
+        Combine multiple ranked result lists using Reciprocal Rank Fusion.
+
+        Each result must contain a chunk_id.
+        RRF uses ranks rather than the original retrieval scores.
+        """
+        fused_scores: Dict[str, float] = {}
+
+        for ranked_results in ranked_lists:
+            for rank, result in enumerate(ranked_results, start=1):
+                chunk_id = result.get("chunk_id")
+
+                if not chunk_id:
+                    continue
+
+                fused_scores[chunk_id] = (
+                    fused_scores.get(chunk_id, 0.0)
+                    + 1.0 / (k + rank)
+                )
+
+        return fused_scores
 
     def search(
         self,
@@ -113,57 +270,170 @@ class CourseRetriever:
         topic_ids: Optional[List[str]] = None,
         mastery_scores: Optional[Dict[str, float]] = None,
         limit: int = 4,
+        method: str = "bm25",
     ) -> List[Dict[str, Any]]:
-        """Return relevant chunks, using mastery as a bounded ranking preference.
+        """Retrieve course chunks using TF-IDF, BM25, or dense retrieval."""
 
-        Lexical relevance remains the foundation of the score. A difficulty fit
-        multiplies that score by at most 1.10, so personalization can reorder
-        similarly relevant chunks without giving a weak keyword match a large
-        fixed bonus. Misconception metadata is intentionally not used here.
-        """
-        query_terms = Counter(self._tokenize(query))
-        if not query_terms or limit <= 0:
+        method = method.lower()
+
+        if method not in {"tfidf", "bm25", "dense", "hybrid"}:
+            raise ValueError(
+                f"Unknown retrieval method: {method!r}. "
+                "Choose 'tfidf', 'bm25', 'dense', or 'hybrid'."
+            )
+
+        if not query.strip() or limit <= 0:
+            return []
+
+        query_tokens = self._tokenize(query)
+        query_terms = Counter(query_tokens)
+
+        # Lexical methods require at least one recognized token.
+        if method in {"tfidf", "bm25"} and not query_tokens:
             return []
 
         selected_topics: Set[str] = set(topic_ids or [])
+
         candidates = [
             index
             for index, document in enumerate(self.documents)
-            if not selected_topics or document.get("topic_id") in selected_topics
+            if not selected_topics
+            or document.get("topic_id") in selected_topics
         ]
+
         if selected_topics and not candidates:
-            candidates = list(range(len(self.documents)))
+            return []
+
+        # Calculate relevance using the selected retrieval method.
+        if method == "tfidf":
+            relevance_scores = {
+                index: self._similarity(
+                    query_terms, self.document_terms[index]
+                )
+                for index in candidates
+            }
+
+        elif method == "bm25":
+            if self.bm25 is None:
+                return []
+
+            raw_scores = self.bm25.get_scores(query_tokens)
+
+            matching_candidates = [
+                index
+                for index in candidates
+                if any(
+                    term in self.document_terms[index]
+                    for term in query_terms
+                )
+            ]
+
+            if not matching_candidates:
+                return []
+
+            candidate_scores = {
+                index: float(raw_scores[index])
+                for index in matching_candidates
+            }
+
+            min_score = min(candidate_scores.values())
+            max_score = max(candidate_scores.values())
+
+            if max_score > min_score:
+                relevance_scores = {
+                    index: (score - min_score) / (max_score - min_score)
+                    for index, score in candidate_scores.items()
+                }
+            else:
+                relevance_scores = {
+                    index: 1.0 for index in matching_candidates
+                }
+
+        elif method == "dense":
+            relevance_scores = self._dense_relevance_scores(
+                query, candidates
+            )
+
+        else:  # hybrid: BM25 + dense using RRF
+
+            # Retrieve the complete ranked candidate lists from both methods.
+            # Mastery is deliberately disabled here so it is not applied twice.
+            component_limit = len(candidates)
+
+            topic_filter = (
+                list(selected_topics) if selected_topics else None
+            )
+
+            bm25_results = self.search(
+                query=query,
+                topic_ids=topic_filter,
+                mastery_scores={},
+                limit=component_limit,
+                method="bm25",
+            )
+
+            dense_results = self.search(
+                query=query,
+                topic_ids=topic_filter,
+                mastery_scores={},
+                limit=component_limit,
+                method="dense",
+            )
+
+            # Combine the two rankings using Reciprocal Rank Fusion.
+            fused_scores = self._reciprocal_rank_fusion(
+                [bm25_results, dense_results],
+                k=60,
+            )
+
+            # Map fused chunk IDs back to their original corpus positions.
+            chunk_to_index = {
+                document.get("chunk_id"): index
+                for index, document in enumerate(self.documents)
+            }
+
+            relevance_scores = {
+                chunk_to_index[chunk_id]: score
+                for chunk_id, score in fused_scores.items()
+                if chunk_id in chunk_to_index
+            }
 
         mastery_scores = mastery_scores or {}
         results = []
-        for index in candidates:
-            document = self.documents[index]
-            similarity = self._similarity(query_terms, self.document_terms[index])
-            if similarity <= 0:
+
+        for index, relevance in relevance_scores.items():
+            if relevance <= 0:
                 continue
+
+            document = self.documents[index]
 
             target_difficulty = self._target_difficulty(
                 mastery_scores.get(document.get("topic_id"))
             )
-            difficulty = document.get("difficulty")
-            difficulty_fit = self._difficulty_fit(difficulty, target_difficulty)
 
-            # Relevance-first ranking: exact difficulty match gives up to a 10%
-            # uplift, one level away gives 5%, and a mismatch gives no uplift.
-            # This avoids a fixed additive bonus overwhelming lexical relevance.
-            score = similarity * (1.0 + 0.10 * difficulty_fit)
+            difficulty_fit = self._difficulty_fit(
+                document.get("difficulty"),
+                target_difficulty,
+            )
+
+            # Relevance remains primary; mastery gives at most a 10% uplift.
+            score = relevance * (1.0 + 0.10 * difficulty_fit)
 
             results.append({
                 "chunk_id": document.get("chunk_id", ""),
                 "topic_id": document.get("topic_id", ""),
                 "type": document.get("type", ""),
-                "difficulty": difficulty,
+                "difficulty": document.get("difficulty"),
                 "text": document["text"],
                 "source": self._source_details(document),
                 "score": score,
             })
 
-        results.sort(key=lambda result: result["score"], reverse=True)
+        results.sort(
+            key=lambda result: result["score"],
+            reverse=True,
+        )
+
         return results[:limit]
 
     def __call__(self, query: str) -> str:

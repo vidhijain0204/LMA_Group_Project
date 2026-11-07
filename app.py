@@ -63,7 +63,31 @@ with st.sidebar:
         st.success("Status: Registered Student")
         st.markdown(f"**Strengths:** {', '.join(kb.get('strengths', [])) or 'None yet'}")
         st.markdown(f"**Weaknesses:** {', '.join(kb.get('weaknesses', [])) or 'None yet'}")
-        
+
+        pedagogy_history = kb.get("pedagogy_history", [])
+        if pedagogy_history:
+            with st.expander("Adaptive teaching history"):
+                for event in reversed(pedagogy_history[-8:]):
+                    topic = event.get("topic_id", "Unknown topic")
+                    if event.get("event") == "lesson":
+                        outcome = event.get("assessment_accuracy")
+                        evidence = (
+                            f" | next quiz accuracy: {outcome:.0%}"
+                            if outcome is not None
+                            else " | awaiting assessment"
+                        )
+                        st.markdown(
+                            f"- **{event.get('strategy', 'unknown').replace('_', ' ').title()}** "
+                            f"on {topic}{evidence}"
+                        )
+                    elif event.get("event") == "assessment":
+                        accuracy = event.get("accuracy")
+                        result = f"{accuracy:.0%}" if accuracy is not None else "not topic-aligned"
+                        st.markdown(
+                            f"- Quiz on {topic}: **{result}**; "
+                            f"{len(event.get('error_signals', []))} error signal(s)"
+                        )
+
         with st.expander("View Topic Scores"):
             for tid, score in kb.get("topics", {}).items():
                 st.progress(score, text=f"{tid}: {score}")
@@ -160,6 +184,13 @@ if interrupt_payload:
                     st.session_state.waiting_for_interrupt = None
                     
                     score_msg = f"📊 **Quiz Completed!** Score: {res.get('quiz_score')} (Accuracy: {res.get('accuracy', 0.0) * 100}%)"
+                    error_areas = list(dict.fromkeys(
+                        error.get("description", "")
+                        for error in res.get("error_signals", [])
+                        if error.get("description")
+                    ))
+                    if error_areas:
+                        score_msg += "\n\nAreas to revisit: " + ", ".join(error_areas[:4])
                     st.session_state.messages.append({"role": "assistant", "content": score_msg})
                     st.rerun()
 

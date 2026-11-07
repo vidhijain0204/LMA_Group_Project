@@ -5,7 +5,7 @@ from typing import List, Optional, TypedDict, Any
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langgraph.types import Command
 
-from agents.llm_factory import get_llm
+
 
 SKB_FILE_PATH = "data/skb_database.json"
 TOPICS_FILE_PATH = "data/common/topics.json"
@@ -77,17 +77,141 @@ Respond in strict JSON format with keys:
 """
 
 
-def create_orchestrator_node():
-    llm = get_llm("router", enable_thinking=True)
+def create_orchestrator_node(llm=None):
+    """
+    Create the orchestrator node.
+
+    An LLM can be injected for testing.
+    If none is provided, load the actual local LLM.
+    """
+
+    if llm is None:
+        from agents.llm_factory import get_llm
+        llm = get_llm("router", enable_thinking=True)
 
     topics_summary = "Python Basics, Control Flow, Data Structures, Functions, OOP"
+
     if os.path.exists(TOPICS_FILE_PATH):
         try:
             with open(TOPICS_FILE_PATH, "r", encoding="utf-8") as f:
                 t_list = json.load(f)
-                topics_summary = ", ".join([f"{t['topic_id']}: {t['name']}" for t in t_list])
+                topics_summary = ", ".join(
+                    [f"{t['topic_id']}: {t['name']}" for t in t_list]
+                )
         except Exception:
             pass
+
+    def orchestrator_node(state: AgentState) -> Command:
+        student_id = state.get("student_id", "S001")
+
+        student_kb = (
+            state["student_kb"]
+            if "student_kb" in state
+            else load_student_kb(student_id)
+        )
+
+        if not student_kb:
+            print(
+                f"\n🧭 [ORCHESTRATOR] New student {student_id} "
+                f"(no knowledge base) -> {DIAGNOSIS_NODE}"
+            )
+
+            return Command(
+                goto=DIAGNOSIS_NODE,
+                update={
+                    "student_id": student_id,
+                    "student_kb": None,
+                    "topic_focus": [],
+                    "orchestrator_instruction": "Run the onboarding diagnostic test.",
+                    "orchestrator_reasoning": "New student: no knowledge base record found.",
+                    "last_active_agent": "orchestrator",
+                },
+            )
+
+        sys_msg = SystemMessage(
+            content=ORCHESTRATOR_SYSTEM_PROMPT.format(
+                topics_summary=topics_summary
+            )
+        )
+
+        response = llm.invoke([sys_msg] + state["messages"])
+        raw_content = response.content.strip()
+
+        try:
+            content = raw_content.replace("\xa0", " ")
+
+            content = re.sub(
+                r"<think>.*?</think>",
+                "",
+                content,
+                flags=re.DOTALL,
+            ).strip()
+
+            if "<think>" in content:
+                content = content.split("<think>")[0].strip()
+
+            if "```json" in content:
+                content = content.split("```json", 1)[1].split("```", 1)[0].strip()
+            elif "```" in content:
+                content = content.split("```", 1)[1].split("```", 1)[0].strip()
+
+            json_start = content.find("{")
+            json_end = content.rfind("}")
+
+            if json_start == -1 or json_end == -1:
+                raise ValueError("No JSON object found in LLM response")
+
+            decision = json.loads(content[json_start:json_end + 1])
+
+            required_keys = {
+                "next_agent",
+                "topic_focus",
+                "instruction",
+                "reasoning",
+            }
+
+            if not required_keys.issubset(decision.keys()):
+                raise ValueError("Missing required JSON keys")
+
+            print("Orchestrator Decision:", decision)
+
+        except Exception as parse_err:
+            print(
+                f"[ORCHESTRATOR PARSE ERROR]: "
+                f"{parse_err} | Raw: {raw_content}"
+            )
+
+            decision = {
+                "next_agent": "tutor_agent",
+                "topic_focus": ["Variables and Data Types"],
+                "instruction": "Explain concept clearly.",
+                "reasoning": "Fallback routing due to parse error.",
+            }
+
+        next_agent = normalize_route(decision.get("next_agent"))
+
+        if next_agent == DIAGNOSIS_NODE:
+            next_agent = TUTOR_NODE
+
+        topic_focus = decision.get(
+            "topic_focus", ["Variables and Data Types"]
+        )
+        instruction = decision.get("instruction", "Explain concept.")
+        reasoning = decision.get("reasoning", "Direct routing.")
+
+        return Command(
+            goto=next_agent,
+            update={
+                "student_id": student_id,
+                "student_kb": student_kb,
+                "topic_focus": topic_focus,
+                "orchestrator_instruction": instruction,
+                "orchestrator_reasoning": reasoning,
+                "last_active_agent": "orchestrator",
+            },
+        )
+
+    return orchestrator_node
 
         
     def orchestrator_node(state: AgentState) -> Command:

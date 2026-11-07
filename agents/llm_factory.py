@@ -1,82 +1,94 @@
-import os
-from functools import lru_cache, partial
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
+from functools import lru_cache
 
-SLM_MODEL_NAME = "Qwen/Qwen3-8B"
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage
+from langchain_core.runnables import RunnableLambda
 
-SLM_MODEL_PATH = (
-    "/home/jenil/.cache/huggingface/hub/"
-    "models--Qwen--Qwen3-8B/"
-    "snapshots/b968826d9c46dd6066d109eabc6255188de91218"
-)
 
-HF_CACHE_DIR = "/home/.cache"
+MODEL_NAME = "Qwen/Qwen3-4B-MLX-4bit"
+BASE_URL = "http://127.0.0.1:8080/v1"
 
 PROFILES = {
-    "router": dict(max_new_tokens=5000, do_sample=False, enable_thinking=True),
-    "tutor": dict(max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.9),
-    "judge": dict(max_new_tokens=256, do_sample=False),
-    "quiz": dict(max_new_tokens=512, do_sample=False),
+    "router": {
+        "max_tokens": 2048,
+        "temperature": 0.6,
+        "top_p": 0.95,
+    },
+    "tutor": {
+        "max_tokens": 1024,
+        "temperature": 0.7,
+        "top_p": 0.8,
+    },
+    "judge": {
+        "max_tokens": 256,
+        "temperature": 0.0,
+        "top_p": 1.0,
+    },
+    "quiz": {
+        "max_tokens": 512,
+        "temperature": 0.0,
+        "top_p": 1.0,
+    },
 }
 
 
-@lru_cache(maxsize=1)
-def load_base_model():
-    print(f"[llm_factory] Loading local model from {SLM_MODEL_PATH}")
+def _apply_thinking_mode(messages, enable_thinking=False):
+    """Apply Qwen3's thinking directive to the system message."""
 
-    model = AutoModelForCausalLM.from_pretrained(
-        SLM_MODEL_PATH,
-        device_map="auto",
-        torch_dtype="auto",
-        local_files_only=True,
+    if not isinstance(messages, (list, tuple)):
+        return messages
+
+    prepared_messages = list(messages)
+    directive = "/think" if enable_thinking else "/no_think"
+
+    for index, message in enumerate(prepared_messages):
+        if isinstance(message, SystemMessage):
+            content = message.content
+
+            if isinstance(content, str):
+                if directive not in content:
+                    prepared_messages[index] = SystemMessage(
+                        content=f"{content.rstrip()}\n\n{directive}"
+                    )
+                return prepared_messages
+
+    prepared_messages.insert(
+        0,
+        SystemMessage(content=directive)
     )
 
-    if getattr(model, "generation_config", None) is not None:
-        model.generation_config.max_length = None
-
-    return model
-
-
-@lru_cache(maxsize=2)
-def load_tokenizer(enable_thinking: bool = False):
-    print("[llm_factory] Loading local tokenizer...")
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        SLM_MODEL_PATH,
-        local_files_only=True,
-    )
-
-    tokenizer.apply_chat_template = partial(
-        tokenizer.apply_chat_template,
-        enable_thinking=enable_thinking,
-    )
-
-    return tokenizer
+    return prepared_messages
 
 
 @lru_cache(maxsize=None)
-def get_llm(profile: str = "tutor", enable_thinking: bool = False):
+def get_llm(profile="tutor", enable_thinking=False):
+    """Return a LangChain-compatible client for the local MLX model."""
+
     if profile not in PROFILES:
-        raise ValueError(f"Unknown profile '{profile}'. Choose from {list(PROFILES)}")
+        raise ValueError(
+            f"Unknown LLM profile '{profile}'. "
+            f"Available profiles: {list(PROFILES)}"
+        )
 
-    model = load_base_model()
-    tokenizer = load_tokenizer(enable_thinking=enable_thinking)
+    config = PROFILES[profile]
 
-    hf_pipe = pipeline(
-        "text-generation",
-        model=model,
-        tokenizer=tokenizer,
+    chat_model = ChatOpenAI(
+        model=MODEL_NAME,
+        base_url=BASE_URL,
+        api_key="mlx",
+        max_tokens=config["max_tokens"],
+        temperature=config["temperature"],
+        top_p=config["top_p"],
+        timeout=300,
+        max_retries=1,
     )
 
-    pipe_llm = HuggingFacePipeline(
-        pipeline=hf_pipe,
-        pipeline_kwargs={
-            **PROFILES[profile],
-            "return_full_text": False,
-            "pad_token_id": tokenizer.eos_token_id,
-        },
+    prepare_messages = RunnableLambda(
+        lambda messages: _apply_thinking_mode(
+            messages,
+            enable_thinking
+        )
     )
 
-    return ChatHuggingFace(llm=pipe_llm, tokenizer=tokenizer)
+    return prepare_messages | chat_model

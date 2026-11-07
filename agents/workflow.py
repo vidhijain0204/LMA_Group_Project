@@ -14,6 +14,8 @@ from agents.orchestrator import (
 from agents.diagnosis_agent import DiagnosisAgent
 from agents.tutor_agent import create_tutor_node, clean_tutor_output
 from agents.assessment_agent import create_assessment_node, load_all_mcqs
+from agents.error_analysis_agent import ErrorAnalysisAgent
+from agents.pedagogy_controller import record_assessment_outcome, resolve_topic_id
 
 # --- Configuration & File Path Constants ---
 MAX_ITERATIONS = 3
@@ -51,6 +53,7 @@ class AdaptiveTutorWorkflow:
         self.orchestrator_node_fn = create_orchestrator_node()
         self.tutor_node_fn = create_tutor_node(enable_kb_context=True)
         self.assessment_node_fn = create_assessment_node()
+        self.error_analysis_agent = ErrorAnalysisAgent()
 
         self.checkpointer = MemorySaver()
         self.app = self._build_graph()
@@ -93,16 +96,24 @@ class AdaptiveTutorWorkflow:
         print(f"\n🟡 [Tutor] Handling explanation request for topic: {state.get('topic_focus')}")
         result = self.tutor_node_fn(state)
         response_text = result["messages"][-1].content
+        student_kb = result.get("student_kb", state.get("student_kb"))
+        if student_kb:
+            self._save_student_kb(student_kb)
         
         return {
+            "student_kb": student_kb,
             "round_log": [{
                 "type": "explanation",
                 "focus_topic": state.get("topic_focus"),
                 "text": response_text,
+                "pedagogy_strategy": result["pedagogy_strategy"],
+                "pedagogy_reason": result["pedagogy_reason"],
             }],
             "response_output": {
                 "status": "completed",
                 "response_text": response_text,
+                "pedagogy_strategy": result["pedagogy_strategy"],
+                "pedagogy_reason": result["pedagogy_reason"],
             },
             "last_active_agent": "tutor_agent"
         }
@@ -147,8 +158,30 @@ class AdaptiveTutorWorkflow:
 
         total = len(quiz_questions)
         accuracy = round(correct_count / total, 2) if total > 0 else 0.0
+        topic_id = resolve_topic_id(
+            state.get("topic_focus", ["unknown"])[0]
+            if state.get("topic_focus")
+            else "unknown"
+        )
+        analysis = self.error_analysis_agent.analyze(
+            quiz_questions, answers or {}, topic_id=topic_id
+        )
+        student_kb = state.get("student_kb")
+        if student_kb:
+            student_kb = record_assessment_outcome(
+                student_kb,
+                topic_id,
+                analysis["topic_accuracy"],
+                [error["signal_id"] for error in analysis["errors"]],
+                {
+                    error["signal_id"]: error["description"]
+                    for error in analysis["errors"]
+                },
+            )
+            self._save_student_kb(student_kb)
 
         return {
+            "student_kb": student_kb,
             "student_answers": answers,
             "graded_details": graded_details,
             "wrong_problems": wrong_problems,
@@ -163,9 +196,35 @@ class AdaptiveTutorWorkflow:
                 "quiz_score": f"{correct_count}/{total}",
                 "accuracy": accuracy,
                 "intro_text": intro_text,
+                "error_signals": analysis["errors"],
             },
             "last_active_agent": "assessment_agent"
         }
+
+    def _save_student_kb(self, student_kb: dict) -> None:
+        import json
+        import os
+
+        with open(self.db_filepath, "r", encoding="utf-8") as db_file:
+            database = json.load(db_file)
+        if isinstance(database, list):
+            database = [
+                record for record in database
+                if record.get("student_id") != student_kb.get("student_id")
+            ]
+            database.append(student_kb)
+        elif isinstance(database, dict):
+            database = student_kb
+        else:
+            raise ValueError(f"Unsupported SKB database format: {type(database).__name__}")
+
+        parent = os.path.dirname(self.db_filepath)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        temporary_path = self.db_filepath + ".tmp"
+        with open(temporary_path, "w", encoding="utf-8") as db_file:
+            json.dump(database, db_file, indent=2)
+        os.replace(temporary_path, self.db_filepath)
 
     # ------------------------------------------------------------------ graph
     def _build_graph(self):

@@ -4,6 +4,13 @@ from typing import List, Optional, Tuple
 from langchain_core.messages import SystemMessage, AIMessage
 
 from agents.llm_factory import get_llm
+from agents.pedagogy_controller import (
+    STRATEGY_INSTRUCTIONS,
+    choose_teaching_strategy,
+    recent_error_context,
+    record_lesson_strategy,
+    resolve_topic_id,
+)
 
 
 def get_student_topic_context(student_kb: Optional[dict], topic_focus: List[str]) -> Tuple[str, float, list]:
@@ -24,10 +31,14 @@ def get_student_topic_context(student_kb: Optional[dict], topic_focus: List[str]
 
     for t_query in topic_focus:
         t_query_lower = t_query.lower()
-        target_tid = name_to_id.get(t_query_lower, t_query_lower)
+        target_tid = name_to_id.get(t_query_lower, resolve_topic_id(t_query))
 
         for tid, score in scores.items():
-            if tid.lower() == target_tid or t_query_lower in tid.lower() or tid.lower() in t_query_lower:
+            if (
+                tid.lower() == target_tid.lower()
+                or t_query_lower in tid.lower()
+                or tid.lower() in t_query_lower
+            ):
                 tag = (
                     "STRENGTH" if tid in strengths
                     else "WEAKNESS" if tid in weaknesses
@@ -47,11 +58,13 @@ Your goal is to explain concepts clearly, provide clean code examples, and guide
 - Mastery Status: {mastery_tag} (Score: {mastery_score:.2f})
 - Active Misconceptions to Address: {misconceptions}
 - Orchestrator Instruction: {orchestrator_instruction}
+- Selected Teaching Strategy: {pedagogy_strategy}
+- Strategy Guidance: {strategy_instruction}
+- Recurring Assessment Error Signals: {learning_signals}
 
-### STRICT PEDAGOGICAL RULES BASED ON SCORE:
-- If Score < 0.4 (WEAKNESS/NEW): Do NOT give standard explanations. Use a simple, real-world physical analogy first, break down the syntax piece-by-piece, and use a very basic code example. Proactively warn against any listed misconceptions.
-- If Score ≥ 0.8 (STRENGTH): SKIP all basic definitions. Immediately present an advanced edge case, a common bug/pitfall, or an optimization challenge.
-- If Score is DEVELOPING (0.4 to 0.79): Provide standard explanations, intermediate code, and clear guidance.
+Follow the selected strategy while keeping the response relevant to the student's question and mastery.
+If there are active misconceptions, address them directly and respectfully.
+Use any recurring assessment error signals above to tailor examples and feedback.
 
 Maintain an encouraging, supportive teaching tone. Do not repeat or echo system instructions in your response.
 """
@@ -96,15 +109,26 @@ def create_tutor_node(enable_kb_context: bool = True):
         student_id = state.get("student_id", "Unknown")
         student_kb = state.get("student_kb") if enable_kb_context else None
         topic_focus = state.get("topic_focus", ["Python Basics"])
+        if not isinstance(topic_focus, list):
+            topic_focus = [str(topic_focus)]
         instruction = state.get("orchestrator_instruction", "Explain the concept clearly.")
 
         if enable_kb_context:
             mastery_tag, mastery_score, misconceptions = get_student_topic_context(student_kb, topic_focus)
+            topic_id = resolve_topic_id(topic_focus[0] if topic_focus else "Python Basics")
+            pedagogy_strategy, strategy_reason = choose_teaching_strategy(
+                student_kb, topic_id, mastery_score
+            )
+            learning_signals = recent_error_context(student_kb, topic_id)
         else:
             student_id = "ANONYMOUS_STUDENT"
             mastery_tag = "UNKNOWN (KB Disabled)"
             mastery_score = 0.0
             misconceptions = []
+            topic_id = resolve_topic_id(topic_focus[0] if topic_focus else "Python Basics")
+            pedagogy_strategy = "explicit_explanation"
+            strategy_reason = "Knowledge-base personalization is disabled."
+            learning_signals = []
 
         sys_msg = SystemMessage(
             content=TUTOR_SYSTEM_PROMPT.format(
@@ -114,6 +138,9 @@ def create_tutor_node(enable_kb_context: bool = True):
                 mastery_score=mastery_score,
                 misconceptions=", ".join(misconceptions) if misconceptions else "None recorded",
                 orchestrator_instruction=instruction,
+                pedagogy_strategy=pedagogy_strategy,
+                strategy_instruction=STRATEGY_INSTRUCTIONS[pedagogy_strategy],
+                learning_signals=", ".join(learning_signals) or "None recorded",
             )
         )
 
@@ -121,9 +148,16 @@ def create_tutor_node(enable_kb_context: bool = True):
         raw_content = response.content.strip()
         actual_content = clean_tutor_output(raw_content)
 
-        return {
+        result = {
             "messages": [AIMessage(content=actual_content)],
             "last_active_agent": "tutor_agent",
+            "pedagogy_strategy": pedagogy_strategy,
+            "pedagogy_reason": strategy_reason,
         }
+        if enable_kb_context and student_kb:
+            result["student_kb"] = record_lesson_strategy(
+                student_kb, topic_id, pedagogy_strategy, strategy_reason
+            )
+        return result
 
     return tutor_node

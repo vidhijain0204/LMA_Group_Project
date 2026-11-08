@@ -1,10 +1,13 @@
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
 from agents.error_analysis_agent import ErrorAnalysisAgent
+from langchain_core.messages import AIMessage
 from agents.pedagogy_controller import (
     choose_teaching_strategy,
     record_assessment_outcome,
@@ -84,7 +87,7 @@ class PedagogyControllerTests(unittest.TestCase):
         self.assertEqual(result["errors"], [])
 
     def test_tutor_uses_and_records_selected_strategy(self):
-        from langchain_core.messages import AIMessage, HumanMessage
+        from langchain_core.messages import HumanMessage
 
         class MockTutor:
             def invoke(self, messages):
@@ -111,6 +114,38 @@ class PedagogyControllerTests(unittest.TestCase):
             result["student_kb"]["pedagogy_history"][-1]["strategy"],
             "step_scaffolding",
         )
+
+    def test_workflow_logs_pedagogy_strategy_switch(self):
+        from agents.workflow import AdaptiveTutorWorkflow
+
+        workflow = AdaptiveTutorWorkflow.__new__(AdaptiveTutorWorkflow)
+        workflow.tutor_node_fn = lambda state: {
+            "messages": [AIMessage(content="A tutoring response.")],
+            "student_kb": state["student_kb"],
+            "pedagogy_strategy": "contrastive_feedback",
+            "pedagogy_reason": "Recurring errors call for a direct comparison.",
+        }
+        workflow._save_student_kb = lambda student_kb: None
+        state = {
+            "topic_focus": ["T05"],
+            "student_kb": {
+                "pedagogy_history": [{
+                    "event": "lesson",
+                    "topic_id": "T05",
+                    "strategy": "explicit_explanation",
+                }],
+            },
+        }
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            workflow.tutor_node(state)
+
+        self.assertIn(
+            "Teaching strategy changed: Explicit Explanation → Contrastive Feedback",
+            output.getvalue(),
+        )
+        self.assertIn("Recurring errors call for a direct comparison.", output.getvalue())
 
     def test_workflow_persists_pedagogy_history_without_replacing_other_students(self):
         from agents.workflow import AdaptiveTutorWorkflow

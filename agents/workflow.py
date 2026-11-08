@@ -97,6 +97,33 @@ class AdaptiveTutorWorkflow:
         result = self.tutor_node_fn(state)
         response_text = result["messages"][-1].content
         student_kb = result.get("student_kb", state.get("student_kb"))
+        topic_focus = state.get("topic_focus") or []
+        if not isinstance(topic_focus, list):
+            topic_focus = [str(topic_focus)]
+        topic_id = resolve_topic_id(topic_focus[0] if topic_focus else "unknown")
+        previous_strategy = next(
+            (
+                event.get("strategy")
+                for event in reversed((state.get("student_kb") or {}).get("pedagogy_history", []))
+                if event.get("event") == "lesson"
+                and event.get("topic_id") == topic_id
+            ),
+            None,
+        )
+        strategy = result["pedagogy_strategy"]
+        strategy_label = strategy.replace("_", " ").title()
+        if previous_strategy is None:
+            print(f"\n🧠 [Pedagogy] Selected teaching strategy: {strategy_label}")
+        elif previous_strategy != strategy:
+            previous_label = previous_strategy.replace("_", " ").title()
+            print(
+                f"\n🧠 [Pedagogy] Teaching strategy changed: "
+                f"{previous_label} → {strategy_label}"
+            )
+        else:
+            print(f"\n🧠 [Pedagogy] Continuing teaching strategy: {strategy_label}")
+        print(f"   - Reason: {result['pedagogy_reason']}")
+
         if student_kb:
             self._save_student_kb(student_kb)
         

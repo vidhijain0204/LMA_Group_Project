@@ -15,6 +15,7 @@ from agents.diagnosis_agent import DiagnosisAgent
 from agents.tutor_agent import create_tutor_node, clean_tutor_output
 from agents.assessment_agent import create_assessment_node, load_all_mcqs
 from agents.error_analysis_agent import ErrorAnalysisAgent
+from agents.root_cause_agent import RootCauseAgent, format_hypotheses
 from agents.pedagogy_controller import record_assessment_outcome, resolve_topic_id
 
 # --- Configuration & File Path Constants ---
@@ -54,6 +55,7 @@ class AdaptiveTutorWorkflow:
         self.tutor_node_fn = create_tutor_node(enable_kb_context=True)
         self.assessment_node_fn = create_assessment_node()
         self.error_analysis_agent = ErrorAnalysisAgent()
+        self.root_cause_agent = RootCauseAgent()
 
         self.checkpointer = MemorySaver()
         self.app = self._build_graph()
@@ -194,6 +196,18 @@ class AdaptiveTutorWorkflow:
             quiz_questions, answers or {}, topic_id=topic_id
         )
         student_kb = state.get("student_kb")
+        # Hypothesis testing on the top 3 low-scoring subtopics, using this quiz, earlier quizzes,
+        # the tutor conversation and the knowledge base. Runs before the outcome is recorded so
+        # "recent quizzes" means quizzes before this one.
+        root_cause_result = self.root_cause_agent.analyze(quiz_questions, answers or {}, student_kb)
+        root_cause = root_cause_result["root_cause"]
+        if root_cause:
+            print("\n🔎 [Root Cause] Hypotheses for this quiz's errors:")
+            print(format_hypotheses(root_cause_result))
+            print(
+                f"   => Root cause: {root_cause['subtopic_id']} {root_cause['name']} "
+                f"(P={root_cause['probability']:.2f}) - {root_cause['reason']}"
+            )
         if student_kb:
             student_kb = record_assessment_outcome(
                 student_kb,
@@ -204,6 +218,8 @@ class AdaptiveTutorWorkflow:
                     error["signal_id"]: error["description"]
                     for error in analysis["errors"]
                 },
+                question_results=root_cause_result["responses"],
+                root_cause=root_cause,
             )
             self._save_student_kb(student_kb)
 
@@ -217,6 +233,7 @@ class AdaptiveTutorWorkflow:
                 "type": "quiz_result",
                 "score": f"{correct_count}/{total}",
                 "accuracy": accuracy,
+                "root_cause": root_cause,
             }],
             "response_output": {
                 "status": "completed",
@@ -224,6 +241,8 @@ class AdaptiveTutorWorkflow:
                 "accuracy": accuracy,
                 "intro_text": intro_text,
                 "error_signals": analysis["errors"],
+                "root_cause": root_cause,
+                "hypotheses": root_cause_result["hypotheses"],
             },
             "last_active_agent": "assessment_agent"
         }

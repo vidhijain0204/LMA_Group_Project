@@ -1,16 +1,18 @@
 import json
 import re
 from typing import List, Optional, Tuple
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 
 from agents.llm_factory import get_llm
 from agents.pedagogy_controller import (
     STRATEGY_INSTRUCTIONS,
     choose_teaching_strategy,
+    latest_root_cause,
     recent_error_context,
     record_lesson_strategy,
     resolve_topic_id,
 )
+from agents.struggle_tracker import record_learning_turn
 
 
 def get_student_topic_context(student_kb: Optional[dict], topic_focus: List[str]) -> Tuple[str, float, list]:
@@ -61,10 +63,12 @@ Your goal is to explain concepts clearly, provide clean code examples, and guide
 - Selected Teaching Strategy: {pedagogy_strategy}
 - Strategy Guidance: {strategy_instruction}
 - Recurring Assessment Error Signals: {learning_signals}
+- Most Likely Root Cause of Recent Errors: {root_cause}
 
 Follow the selected strategy while keeping the response relevant to the student's question and mastery.
 If there are active misconceptions, address them directly and respectfully.
 Use any recurring assessment error signals above to tailor examples and feedback.
+If a most likely root cause is given, focus your explanation and examples on that concept first.
 
 Maintain an encouraging, supportive teaching tone. Do not repeat or echo system instructions in your response.
 """
@@ -94,7 +98,8 @@ def clean_tutor_output(raw_text: str) -> str:
         if any(stripped.startswith(prefix) for prefix in [
             "You are an expert", "### Student Context", "- Student ID:", 
             "- Focused Topic", "- Mastery Status:", "- Active Misconceptions",
-            "- Orchestrator Instruction", "### STRICT PEDAGOGICAL", "- If Score", "Maintain an encouraging"
+            "- Orchestrator Instruction",
+            "- Most Likely Root Cause", "### STRICT PEDAGOGICAL", "- If Score", "Maintain an encouraging"
         ]):
             continue
         filtered_lines.append(line)
@@ -120,6 +125,7 @@ def create_tutor_node(enable_kb_context: bool = True):
                 student_kb, topic_id, mastery_score
             )
             learning_signals = recent_error_context(student_kb, topic_id)
+            root_cause = latest_root_cause(student_kb, topic_id)
         else:
             student_id = "ANONYMOUS_STUDENT"
             mastery_tag = "UNKNOWN (KB Disabled)"
@@ -129,6 +135,7 @@ def create_tutor_node(enable_kb_context: bool = True):
             pedagogy_strategy = "explicit_explanation"
             strategy_reason = "Knowledge-base personalization is disabled."
             learning_signals = []
+            root_cause = None
 
         sys_msg = SystemMessage(
             content=TUTOR_SYSTEM_PROMPT.format(
@@ -141,6 +148,10 @@ def create_tutor_node(enable_kb_context: bool = True):
                 pedagogy_strategy=pedagogy_strategy,
                 strategy_instruction=STRATEGY_INSTRUCTIONS[pedagogy_strategy],
                 learning_signals=", ".join(learning_signals) or "None recorded",
+                root_cause=(
+                    f"{root_cause['subtopic_id']} {root_cause['name']} ({root_cause['reason']})"
+                    if root_cause else "None identified yet"
+                ),
             )
         )
 
@@ -155,8 +166,23 @@ def create_tutor_node(enable_kb_context: bool = True):
             "pedagogy_reason": strategy_reason,
         }
         if enable_kb_context and student_kb:
+            # Log the student's message with its struggle flags before recording this lesson,
+            # so the turn is linked to the strategy the student was responding to.
+            previous_strategy = next(
+                (
+                    event.get("strategy")
+                    for event in reversed(student_kb.get("pedagogy_history", []))
+                    if event.get("event") == "lesson" and event.get("topic_id") == topic_id
+                ),
+                None,
+            )
+            student_text = state.get("user_input") or next(
+                (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)),
+                "",
+            )
+            updated_kb = record_learning_turn(student_kb, topic_id, student_text, previous_strategy)
             result["student_kb"] = record_lesson_strategy(
-                student_kb, topic_id, pedagogy_strategy, strategy_reason
+                updated_kb, topic_id, pedagogy_strategy, strategy_reason
             )
         return result
 

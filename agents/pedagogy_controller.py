@@ -95,6 +95,14 @@ def recent_error_context(student_kb: Optional[dict], topic_id: str) -> List[str]
     ]
 
 
+def latest_root_cause(student_kb: Optional[dict], topic_id: str) -> Optional[dict]:
+    """The most recent root cause found for a quiz on this topic (or located in this topic)."""
+    for entry in reversed((student_kb or {}).get("root_cause_history", [])):
+        if topic_id in (entry.get("quiz_topic_id"), entry.get("topic_id")):
+            return entry
+    return None
+
+
 def choose_teaching_strategy(
     student_kb: Optional[dict],
     topic_id: str,
@@ -168,7 +176,12 @@ def record_assessment_outcome(
     accuracy: Optional[float],
     error_signals: List[str],
     error_descriptions: Optional[Dict[str, str]] = None,
+    question_results: Optional[List[dict]] = None,
+    root_cause: Optional[dict] = None,
 ) -> dict:
+    """Record a quiz outcome. `question_results` keeps the option chosen for every question
+    (needed for counter-evidence and repeat checks later); `root_cause` is the hypothesis the
+    RootCauseAgent selected for this quiz."""
     updated = deepcopy(student_kb)
     history = updated.setdefault("pedagogy_history", [])
     matched_lesson = next(
@@ -186,14 +199,35 @@ def record_assessment_outcome(
         matched_lesson["assessment_accuracy"] = accuracy
         matched_lesson["error_signals"] = list(dict.fromkeys(error_signals))
 
-    history.append({
+    assessment_event = {
         "event": "assessment",
         "topic_id": topic_id,
         "strategy": strategy,
         "accuracy": accuracy,
         "error_signals": list(dict.fromkeys(error_signals)),
         "created_at": datetime.now().isoformat(timespec="seconds"),
-    })
+    }
+    if question_results is not None:
+        assessment_event["responses"] = [
+            {
+                "prob_id": result.get("prob_id"),
+                "chosen": result.get("chosen"),
+                "correct": result.get("correct"),
+                "is_correct": bool(result.get("is_correct")),
+                "subtopics": list(result.get("subtopics", [])),
+            }
+            for result in question_results
+        ]
+    if root_cause:
+        assessment_event["root_cause"] = root_cause
+        root_causes = updated.setdefault("root_cause_history", [])
+        root_causes.append({
+            **root_cause,
+            "quiz_topic_id": topic_id,
+            "created_at": assessment_event["created_at"],
+        })
+        updated["root_cause_history"] = root_causes[-50:]
+    history.append(assessment_event)
     updated["pedagogy_history"] = history[-100:]
 
     signal_counts = updated.setdefault("learning_signals", {})

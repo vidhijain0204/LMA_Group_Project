@@ -8,6 +8,7 @@ safetensors>=0.4.5
 # LangChain / LangGraph agent framework
 langchain-core>=0.3.0
 langchain-huggingface>=0.1.0
+langchain-openai>=0.2.0
 langgraph>=0.2.0
 
 # Application UI and data models

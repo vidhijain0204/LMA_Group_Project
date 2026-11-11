@@ -28,6 +28,11 @@ class StudentKnowledgeBase(BaseModel):
     pedagogy_history: List[Dict[str, Any]] = Field(default_factory=list)
     learning_signals: Dict[str, int] = Field(default_factory=dict)
     learning_signal_descriptions: Dict[str, str] = Field(default_factory=dict)
+
+    # Student messages sent to the tutor, tagged with topic, subtopics and struggle flags
+    # (see agents/struggle_tracker.py), and the root cause selected after each quiz.
+    learning_conversations: List[Dict[str, Any]] = Field(default_factory=list)
+    root_cause_history: List[Dict[str, Any]] = Field(default_factory=list)
     
     # Timestamps
     first_entry_time: str = Field(default_factory=get_current_time, description="Time when the SKB was first created")

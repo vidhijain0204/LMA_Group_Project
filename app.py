@@ -88,6 +88,16 @@ with st.sidebar:
                             f"{len(event.get('error_signals', []))} error signal(s)"
                         )
 
+        root_causes = kb.get("root_cause_history", [])
+        if root_causes:
+            with st.expander("Root causes of quiz errors"):
+                for entry in reversed(root_causes[-5:]):
+                    st.markdown(
+                        f"- Quiz on {entry.get('quiz_topic_id', '?')}: "
+                        f"**{entry.get('subtopic_id')} {entry.get('name')}** "
+                        f"(P={entry.get('probability', 0):.2f}) - {entry.get('reason', '')}"
+                    )
+
         with st.expander("View Topic Scores"):
             for tid, score in kb.get("topics", {}).items():
                 st.progress(score, text=f"{tid}: {score}")
@@ -191,6 +201,25 @@ if interrupt_payload:
                     ))
                     if error_areas:
                         score_msg += "\n\nAreas to revisit: " + ", ".join(error_areas[:4])
+                    hypotheses = res.get("hypotheses") or []
+                    root_cause = res.get("root_cause")
+                    if root_cause:
+                        score_msg += (
+                            f"\n\n🔎 **Most likely root cause:** {root_cause['subtopic_id']} "
+                            f"{root_cause['name']} (P={root_cause['probability']:.2f}), because "
+                            f"{root_cause['reason']}."
+                        )
+                        score_msg += (
+                            "\n\n| Hypothesis | QE | CE | DS | RP | ST | LS | PM' | PW | Score | P |"
+                            "\n|---|---|---|---|---|---|---|---|---|---|---|"
+                        )
+                        for h in hypotheses:
+                            p = h["params"]
+                            score_msg += (
+                                f"\n| {h['subtopic_id']} {h['name']} | {p['QE']:.2f} | {p['CE']:.2f} | "
+                                f"{p['DS']:.2f} | {p['RP']:.2f} | {p['ST']:.2f} | {p['LS']:.2f} | "
+                                f"{p['PM']:.2f} | {p['PW']:.2f} | {h['score']:+.3f} | {h['probability']:.2f} |"
+                            )
                     st.session_state.messages.append({"role": "assistant", "content": score_msg})
                     st.rerun()
 

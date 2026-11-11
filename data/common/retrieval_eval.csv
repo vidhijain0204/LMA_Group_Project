@@ -1,0 +1,44 @@
+query_id,query,related_topics,explanation_for_annotator,relevant_chunk_ids
+P01,Who created the Python programming language and in what year was it first released?,Introduction to Python,Python was conceived in the late 1980s by Guido van Rossum at CWI in the Netherlands and officially released in 1991.,
+P02,Which of the following statements about Python's execution model is true?,Introduction to Python,"Standard CPython compiles `.py` files into intermediate bytecode instructions, which are then run by the Python Virtual Machine (PVM).",T05_py4e_001;T10_py4e_007
+P03,What will be the output of `type(3 / 2)` in Python 3?,Variables and Data Types | Operators,"The `/` operator performs true division in Python 3, returning a float (`1.5`) even when both operands are integers.",T02_py4e_001;T02_tp3_003
+P04,Which of the following variables is immutable in Python?,"Variables and Data Types | Lists, Tuples, and Sets","Tuples are immutable sequence types in Python; once initialized, their elements cannot be reassigned or altered.",T07_py4e_005;T07_tp3_004;T08_py4e_019;T08_py4e_028
+P05,What does the `input()` built-in function return by default in Python 3?,Input and Output | Variables and Data Types,"`input()` reads a line from standard input and always returns it as a string (`str`), requiring explicit type-casting for numeric evaluation.",T03_py4e_001;T03_tp3_002
+P06,"What is the output of `print('Python', '3', sep='-', end='!')`?",Input and Output | Strings,"The `sep` argument specifies the separator inserted between values ('-'), and `end` replaces the default newline suffix with '!'.",T03_orig_001;T03_orig_002;T03_tp3_001
+P07,What is the result of the expression `2 ** 3 ** 2`?,Operators | Variables and Data Types,"Exponentiation `**` possesses right-to-left associativity: `3 ** 2 = 9`, followed by `2 ** 9 = 512`.",T04_orig_002;T04_py4e_002
+P08,What is the difference between `is` and `==` in Python?,"Operators | Conditional Statements (if, elif, else)","`==` evaluates whether the values of two objects are equal, while `is` verifies whether both variables point to the exact same object in memory (`id(a) == id(b)`).",
+P09,"What does the following snippet evaluate to?
+```python
+x = 10
+if x > 15:
+    print('A')
+elif x == 10:
+    print('B')
+else:
+    print('C')
+```","Conditional Statements (if, elif, else) | Operators","The conditions evaluate sequentially; `x > 15` is False, but `x == 10` is True, executing the corresponding block and exiting the conditional structure.",T05_py4e_004;T05_py4e_005;T05_pydoc_001;T05_tp3_003;T05_tp3_004
+P10,What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?,"Conditional Statements (if, elif, else) | Variables and Data Types","This demonstrates Python's ternary conditional expression `[true_expr] if [condition] else [false_expr]`. Because `5 > 3` is True, `'Pass'` is assigned.",T05_tp3_001;T11_orig_012
+P11,"What will `range(1, 10, 2)` produce when unpacked into a list?","Loops (for, while) | Lists, Tuples, and Sets","`range(start, stop, step)` starts at 1, increments by 2, and stops before reaching 10, resulting in 1, 3, 5, 7, and 9.",T06_orig_005;T06_pydoc_004
+P12,What triggers the `else` block of a `for` loop in Python?,"Loops (for, while) | Conditional Statements (if, elif, else)","The `else` clause of a loop executes when the sequence is exhausted (or condition becomes false), but is skipped entirely if the loop is terminated via `break`.",T05_pydoc_002;T06_pydoc_007
+P13,What is the value of `s[::-1]` if `s = 'hello'`?,Strings | Operators,"Extended slice syntax `[start:stop:step]` with a step of `-1` traverses the sequence backwards from end to start, reversing the string.",T02_tp3_001
+P14,"What is the result of `'-'.join(['a', 'b', 'c'])`?","Strings | Lists, Tuples, and Sets",`str.join(iterable)` concatenates elements of an iterable using the string instance (`'-'`) as the separator.,T07_orig_001;T08_py4e_011
+P15,"What is the result of `len({1, 2, 2, 3, 3, 3})`?","Lists, Tuples, and Sets | Variables and Data Types","Sets in Python store unique elements and automatically discard duplicates upon construction, leaving `{1, 2, 3}`.",
+P16,How do you append the elements of list `b` to list `a` in-place?,"Lists, Tuples, and Sets | Functions","`a.extend(iterable)` iterates through the supplied argument and appends each element individually to list `a`, mutating it in place.",T08_py4e_006;T08_pydoc_005;T08_tp3_005
+P17,"What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",Dictionaries | Exception Handling,"The `dict.get(key, default)` method retrieves the value if the key exists; otherwise, it returns the provided default value without raising a `KeyError`.",T09_py4e_004;T09_py4e_005;T09_pydoc_002
+P18,Which method returns a set-like view of a dictionary's key-value pairs?,"Dictionaries | Lists, Tuples, and Sets | Loops (for, while)","`dict.items()` returns a dynamic `dict_items` view containing `(key, value)` 2-tuples.",T09_py4e_001;T09_py4e_002;T09_py4e_010;T09_pydoc_001;T09_pydoc_002
+P19,"What will the following code output?
+```python
+def func(a, b=[]):
+    b.append(a)
+    return b
+
+print(func(1))
+print(func(2))
+```","Functions | Lists, Tuples, and Sets | Variables and Data Types","Default parameter values in Python are evaluated once when the function is defined, making mutable defaults (like lists) shared across subsequent invocations.",T08_py4e_015;T10_pydoc_004;T10_pydoc_007
+P20,What does `*args` and `**kwargs` represent in a function definition signature?,"Functions | Dictionaries | Lists, Tuples, and Sets","`*args` packs excess positional arguments into a tuple, while `**kwargs` packs named keyword arguments into a dictionary.",
+P21,What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?,"List Comprehensions | Loops (for, while) | Operators","The loop generates 0, 1, 2, 3, 4. The predicate filters to even values (0, 2, 4), and squares them: `0**2=0`, `2**2=4`, `4**2=16`.",T11_orig_006;T11_pydoc_001;T11_pydoc_003
+P22,"Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?","List Comprehensions | Lists, Tuples, and Sets | Loops (for, while)",Nested list comprehensions mirror the order of nested `for` loops: first `for row in matrix:` followed by `for item in row:`.,T11_orig_006;T11_orig_010;T11_pydoc_002;T11_pydoc_005
+P23,Which clause in a `try...except` block executes strictly when no exceptions are raised?,"Exception Handling | Conditional Statements (if, elif, else)","In Python, the `else` block of a `try...except` statement runs only if the code in the `try` block completes successfully without raising any exceptions.",T12_pydoc_002;T12_pydoc_009
+P24,What block is guaranteed to run regardless of whether an exception was raised or handled?,Exception Handling | File Handling,"The `finally` block always executes prior to leaving the `try` structure, making it ideal for deterministic cleanup operations.",T12_orig_005;T12_pydoc_009;T12_pydoc_010
+P25,Why is using the `with open(...) as f:` context manager preferred for file operations?,File Handling | Exception Handling,"The `with` statement leverages the Context Management protocol (`__enter__` and `__exit__`), ensuring that the file descriptor is closed properly upon block exit.",T13_orig_001;T13_pydoc_008
+P26,"What does the mode `'a'` do in `open('data.txt', 'a')`?",File Handling | Input and Output | Strings,"Mode `'a'` designates append mode: the file stream position is placed at the end of the file, creating the file if it does not already exist.",T13_orig_002;T13_py4e_002;T13_pydoc_001

@@ -6,6 +6,37 @@ from pathlib import Path
 from agents.course_retriever import CourseRetriever
 
 
+class FakeEmbeddingModel:
+    """Deterministic embedding model for testing dense retrieval."""
+
+    def __init__(self):
+        self.document_encoding_calls = 0
+
+    def encode(
+        self,
+        texts,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+        show_progress_bar=False,
+    ):
+        import numpy as np
+
+        if len(texts) > 1:
+            self.document_encoding_calls += 1
+
+        embeddings = []
+
+        for text in texts:
+            text = text.lower()
+
+            if "string" in text or "immutable" in text:
+                embeddings.append([0.0, 1.0])
+            else:
+                embeddings.append([1.0, 0.0])
+
+        return np.array(embeddings, dtype=np.float32)
+
+
 class CourseRetrieverTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -77,6 +108,86 @@ class CourseRetrieverTests(unittest.TestCase):
         context = self.retriever.format_context(results)
         self.assertIn("Python Tutorial", context)
         self.assertIn("https://example.test/loops", context)
+
+    def test_bm25_returns_matching_chunks(self):
+        results = self.retriever.search(
+            "loop iteration",
+            topic_ids=["T06"],
+            method="bm25",
+            limit=4,
+        )
+        self.assertTrue(results)
+        self.assertTrue(
+            all(result["topic_id"] == "T06" for result in results)
+        )
+
+
+    def test_unknown_retrieval_method_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.retriever.search("loop iteration", method="unknown")
+
+    def test_dense_retrieval_returns_semantically_matching_chunks(self):
+        fake_model = FakeEmbeddingModel()
+
+        self.retriever.embedding_cache_dir = (
+            Path(self.temp_dir.name) / "embedding_cache"
+        )
+
+        self.retriever._get_embedding_model = lambda: fake_model
+
+        results = self.retriever.search(
+            "How can I repeatedly execute instructions?",
+            method="dense",
+            limit=2,
+        )
+
+        self.assertTrue(results)
+        self.assertEqual(results[0]["chunk_id"], "loops_intro")
+
+
+    def test_dense_retrieval_respects_topic_filter(self):
+        fake_model = FakeEmbeddingModel()
+
+        self.retriever.embedding_cache_dir = (
+            Path(self.temp_dir.name) / "embedding_cache"
+        )
+
+        self.retriever._get_embedding_model = lambda: fake_model
+
+        results = self.retriever.search(
+            "How can I repeatedly execute instructions?",
+            method="dense",
+            topic_ids=["T07"],
+        )
+
+        self.assertTrue(results)
+        self.assertTrue(
+            all(result["topic_id"] == "T07" for result in results)
+    )
+
+
+    def test_dense_embeddings_are_cached(self):
+        fake_model = FakeEmbeddingModel()
+
+        self.retriever.embedding_cache_dir = (
+            Path(self.temp_dir.name) / "embedding_cache"
+        )
+
+        self.retriever._get_embedding_model = lambda: fake_model
+
+        self.retriever.search("for loop", method="dense")
+        self.retriever.search("loop iteration", method="dense")
+
+        # Corpus embeddings should be generated only once.
+        self.assertEqual(fake_model.document_encoding_calls, 1)
+
+    def test_default_search_uses_bm25(self):
+        query = "Python list append method"
+
+        default_results = self.retriever.search(query)
+        bm25_results = self.retriever.search(query, method="bm25")
+
+        self.assertEqual(default_results, bm25_results)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,173 @@
+query_id,query,topics,condition,mastery,target_difficulty,retrieved_count,chunk_ids,difficulties,mean_difficulty,target_match_rate
+P01,Who created the Python programming language and in what year was it first released?,T01,baseline,,,5,T01_py4e_010;T01_py4e_011;T01_py4e_002;T01_tp3_004;T01_py4e_022,1;1;1;1;1,1.0,
+P01,Who created the Python programming language and in what year was it first released?,T01,beginner,0.0,1.0,5,T01_py4e_010;T01_py4e_011;T01_py4e_002;T01_tp3_004;T01_py4e_022,1;1;1;1;1,1.0,1.0
+P01,Who created the Python programming language and in what year was it first released?,T01,intermediate,0.5,2.0,5,T01_py4e_010;T01_py4e_011;T01_py4e_002;T01_tp3_004;T01_py4e_022,1;1;1;1;1,1.0,0.0
+P01,Who created the Python programming language and in what year was it first released?,T01,advanced,0.9,3.0,5,T01_py4e_010;T01_py4e_011;T01_py4e_002;T01_tp3_004;T01_py4e_022,1;1;1;1;1,1.0,0.0
+P02,Which of the following statements about Python's execution model is true?,T01,baseline,,,5,T01_py4e_002;T01_tp3_006;T01_py4e_010;T01_tp3_004;T01_py4e_013,1;2;1;1;1,1.2,
+P02,Which of the following statements about Python's execution model is true?,T01,beginner,0.0,1.0,5,T01_py4e_002;T01_tp3_006;T01_py4e_010;T01_tp3_004;T01_py4e_013,1;2;1;1;1,1.2,0.8
+P02,Which of the following statements about Python's execution model is true?,T01,intermediate,0.5,2.0,5,T01_py4e_002;T01_tp3_006;T01_py4e_010;T01_tp3_004;T01_tp3_005,1;2;1;1;2,1.4,0.4
+P02,Which of the following statements about Python's execution model is true?,T01,advanced,0.9,3.0,5,T01_py4e_002;T01_tp3_006;T01_py4e_010;T01_tp3_004;T01_tp3_005,1;2;1;1;2,1.4,0.0
+P03,What will be the output of `type(3 / 2)` in Python 3?,T02;T04,baseline,,,5,T02_py4e_001;T02_tp3_003;T02_pydoc_001;T02_py4e_002;T02_orig_004,1;2;1;1;2,1.4,
+P03,What will be the output of `type(3 / 2)` in Python 3?,T02;T04,beginner,0.0,1.0,5,T02_py4e_001;T02_tp3_003;T02_pydoc_001;T02_py4e_002;T02_pydoc_002,1;2;1;1;1,1.2,0.8
+P03,What will be the output of `type(3 / 2)` in Python 3?,T02;T04,intermediate,0.5,2.0,5,T02_py4e_001;T02_tp3_003;T02_pydoc_001;T02_py4e_002;T02_orig_004,1;2;1;1;2,1.4,0.4
+P03,What will be the output of `type(3 / 2)` in Python 3?,T02;T04,advanced,0.9,3.0,5,T02_py4e_001;T02_tp3_003;T02_pydoc_001;T02_py4e_002;T02_orig_004,1;2;1;1;2,1.4,0.0
+P04,Which of the following variables is immutable in Python?,T02;T08,baseline,,,5,T08_py4e_019;T02_py4e_007;T02_tp3_005;T08_py4e_014;T08_py4e_023,2;1;1;3;2,1.8,
+P04,Which of the following variables is immutable in Python?,T02;T08,beginner,0.0,1.0,5,T02_py4e_007;T02_tp3_005;T08_py4e_019;T08_py4e_001;T08_py4e_014,1;1;2;1;3,1.6,0.6
+P04,Which of the following variables is immutable in Python?,T02;T08,intermediate,0.5,2.0,5,T08_py4e_019;T02_py4e_007;T02_tp3_005;T08_py4e_014;T08_py4e_023,2;1;1;3;2,1.8,0.4
+P04,Which of the following variables is immutable in Python?,T02;T08,advanced,0.9,3.0,5,T08_py4e_014;T08_py4e_019;T08_tp3_010;T02_py4e_007;T02_tp3_005,3;2;3;1;1,2.0,0.4
+P05,What does the `input()` built-in function return by default in Python 3?,T03;T02,baseline,,,5,T03_py4e_001;T03_tp3_002;T03_orig_003;T02_pydoc_003;T03_orig_001,1;1;2;1;1,1.2,
+P05,What does the `input()` built-in function return by default in Python 3?,T03;T02,beginner,0.0,1.0,5,T03_py4e_001;T03_tp3_002;T03_orig_003;T02_pydoc_003;T03_orig_001,1;1;2;1;1,1.2,0.8
+P05,What does the `input()` built-in function return by default in Python 3?,T03;T02,intermediate,0.5,2.0,5,T03_py4e_001;T03_tp3_002;T03_orig_003;T02_pydoc_003;T03_pydoc_008,1;1;2;1;2,1.4,0.4
+P05,What does the `input()` built-in function return by default in Python 3?,T03;T02,advanced,0.9,3.0,5,T03_py4e_001;T03_tp3_002;T03_orig_003;T02_pydoc_003;T03_pydoc_008,1;1;2;1;2,1.4,0.0
+P06,"What is the output of `print('Python', '3', sep='-', end='!')`?",T03;T07,baseline,,,5,T03_orig_002;T03_orig_001;T03_py4e_001;T03_tp3_002;T07_py4e_011,2;1;1;1;2,1.4,
+P06,"What is the output of `print('Python', '3', sep='-', end='!')`?",T03;T07,beginner,0.0,1.0,5,T03_orig_001;T03_orig_002;T03_py4e_001;T03_tp3_002;T03_tp3_001,1;2;1;1;1,1.2,0.8
+P06,"What is the output of `print('Python', '3', sep='-', end='!')`?",T03;T07,intermediate,0.5,2.0,5,T03_orig_002;T03_orig_001;T03_py4e_001;T07_py4e_011;T07_py4e_004,2;1;1;2;2,1.6,0.6
+P06,"What is the output of `print('Python', '3', sep='-', end='!')`?",T03;T07,advanced,0.9,3.0,5,T03_orig_002;T03_orig_001;T03_py4e_001;T07_py4e_011;T07_py4e_004,2;1;1;2;2,1.6,0.0
+P07,What is the result of the expression `2 ** 3 ** 2`?,T04;T02,baseline,,,5,T04_py4e_002;T02_py4e_007;T04_py4e_006;T02_py4e_006;T04_tp3_007,2;1;2;1;2,1.6,
+P07,What is the result of the expression `2 ** 3 ** 2`?,T04;T02,beginner,0.0,1.0,5,T02_py4e_007;T04_py4e_002;T02_py4e_006;T04_py4e_006;T02_tp3_005,1;2;1;2;1,1.4,0.6
+P07,What is the result of the expression `2 ** 3 ** 2`?,T04;T02,intermediate,0.5,2.0,5,T04_py4e_002;T02_py4e_007;T04_py4e_006;T02_py4e_006;T04_tp3_007,2;1;2;1;2,1.6,0.6
+P07,What is the result of the expression `2 ** 3 ** 2`?,T04;T02,advanced,0.9,3.0,5,T04_py4e_002;T04_py4e_006;T02_py4e_007;T02_py4e_006;T04_tp3_007,2;2;1;1;2,1.6,0.0
+P08,What is the difference between `is` and `==` in Python?,T04;T05,baseline,,,5,T04_py4e_005;T04_pydoc_001;T05_py4e_006;T05_orig_004;T05_tp3_008,2;2;2;1;2,1.8,
+P08,What is the difference between `is` and `==` in Python?,T04;T05,beginner,0.0,1.0,5,T04_py4e_005;T04_pydoc_001;T05_orig_004;T05_py4e_006;T05_tp3_008,2;2;1;2;2,1.8,0.2
+P08,What is the difference between `is` and `==` in Python?,T04;T05,intermediate,0.5,2.0,5,T04_py4e_005;T04_pydoc_001;T05_py4e_006;T05_tp3_008;T05_orig_004,2;2;2;2;1,1.8,0.8
+P08,What is the difference between `is` and `==` in Python?,T04;T05,advanced,0.9,3.0,5,T04_py4e_005;T04_pydoc_001;T05_py4e_006;T05_tp3_008;T05_orig_004,2;2;2;2;1,1.8,0.0
+P09,"What does the following snippet evaluate to?
+```python
+x = 10
+if x > 15:
+    print('A')
+elif x == 10:
+    print('B')
+else:
+    print('C')
+```",T05;T04,baseline,,,5,T05_py4e_004;T05_py4e_005;T05_pydoc_001;T05_tp3_003;T05_tp3_004,2;2;1;2;2,1.8,
+P09,"What does the following snippet evaluate to?
+```python
+x = 10
+if x > 15:
+    print('A')
+elif x == 10:
+    print('B')
+else:
+    print('C')
+```",T05;T04,beginner,0.0,1.0,5,T05_py4e_004;T05_pydoc_001;T05_py4e_005;T05_tp3_003;T05_tp3_004,2;1;2;2;2,1.8,0.2
+P09,"What does the following snippet evaluate to?
+```python
+x = 10
+if x > 15:
+    print('A')
+elif x == 10:
+    print('B')
+else:
+    print('C')
+```",T05;T04,intermediate,0.5,2.0,5,T05_py4e_004;T05_py4e_005;T05_tp3_003;T05_tp3_004;T05_pydoc_001,2;2;2;2;1,1.8,0.8
+P09,"What does the following snippet evaluate to?
+```python
+x = 10
+if x > 15:
+    print('A')
+elif x == 10:
+    print('B')
+else:
+    print('C')
+```",T05;T04,advanced,0.9,3.0,5,T05_py4e_004;T05_py4e_005;T05_tp3_003;T05_tp3_004;T05_pydoc_001,2;2;2;2;1,1.8,0.0
+P10,What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?,T05;T02,baseline,,,5,T05_tp3_001;T05_pydoc_002;T05_orig_004;T05_tp3_002;T05_tp3_003,1;1;1;1;2,1.2,
+P10,What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?,T05;T02,beginner,0.0,1.0,5,T05_tp3_001;T05_pydoc_002;T05_orig_004;T05_tp3_002;T05_tp3_003,1;1;1;1;2,1.2,0.8
+P10,What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?,T05;T02,intermediate,0.5,2.0,5,T05_tp3_001;T05_pydoc_002;T05_tp3_003;T05_orig_004;T05_py4e_005,1;1;2;1;2,1.4,0.4
+P10,What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?,T05;T02,advanced,0.9,3.0,5,T05_tp3_001;T05_pydoc_002;T05_tp3_003;T05_orig_004;T05_py4e_005,1;1;2;1;2,1.4,0.0
+P11,"What will `range(1, 10, 2)` produce when unpacked into a list?",T06;T08,baseline,,,5,T06_pydoc_004;T06_orig_005;T06_pydoc_008;T06_orig_003;T06_pydoc_005,1;2;1;3;1,1.6,
+P11,"What will `range(1, 10, 2)` produce when unpacked into a list?",T06;T08,beginner,0.0,1.0,5,T06_pydoc_004;T06_orig_005;T06_pydoc_008;T06_pydoc_005;T06_orig_003,1;2;1;1;3,1.6,0.6
+P11,"What will `range(1, 10, 2)` produce when unpacked into a list?",T06;T08,intermediate,0.5,2.0,5,T06_pydoc_004;T06_orig_005;T06_pydoc_008;T06_orig_003;T06_pydoc_005,1;2;1;3;1,1.6,0.2
+P11,"What will `range(1, 10, 2)` produce when unpacked into a list?",T06;T08,advanced,0.9,3.0,5,T06_pydoc_004;T06_orig_005;T06_orig_003;T06_pydoc_008;T06_pydoc_005,1;2;3;1;1,1.6,0.2
+P12,What triggers the `else` block of a `for` loop in Python?,T06;T05,baseline,,,5,T06_pydoc_007;T06_py4e_014;T05_py4e_002;T05_tp3_001;T06_py4e_011,2;2;1;1;2,1.6,
+P12,What triggers the `else` block of a `for` loop in Python?,T06;T05,beginner,0.0,1.0,5,T06_pydoc_007;T06_py4e_014;T05_py4e_002;T05_tp3_001;T05_pydoc_002,2;2;1;1;1,1.4,0.6
+P12,What triggers the `else` block of a `for` loop in Python?,T06;T05,intermediate,0.5,2.0,5,T06_pydoc_007;T06_py4e_014;T05_py4e_002;T05_tp3_001;T06_py4e_011,2;2;1;1;2,1.6,0.6
+P12,What triggers the `else` block of a `for` loop in Python?,T06;T05,advanced,0.9,3.0,5,T06_pydoc_007;T06_py4e_014;T05_py4e_002;T05_tp3_001;T06_py4e_011,2;2;1;1;2,1.6,0.0
+P13,What is the value of `s[::-1]` if `s = 'hello'`?,T07;T04,baseline,,,5,T07_py4e_011;T07_py4e_005;T07_tp3_004;T07_pydoc_006;T07_py4e_006,2;2;2;2;2,2.0,
+P13,What is the value of `s[::-1]` if `s = 'hello'`?,T07;T04,beginner,0.0,1.0,5,T07_py4e_011;T07_py4e_005;T07_tp3_004;T07_pydoc_006;T04_tp3_001,2;2;2;2;1,1.8,0.2
+P13,What is the value of `s[::-1]` if `s = 'hello'`?,T07;T04,intermediate,0.5,2.0,5,T07_py4e_011;T07_py4e_005;T07_tp3_004;T07_pydoc_006;T07_py4e_006,2;2;2;2;2,2.0,1.0
+P13,What is the value of `s[::-1]` if `s = 'hello'`?,T07;T04,advanced,0.9,3.0,5,T07_py4e_011;T07_py4e_005;T07_tp3_004;T07_pydoc_006;T07_py4e_006,2;2;2;2;2,2.0,0.0
+P14,"What is the result of `'-'.join(['a', 'b', 'c'])`?",T07;T08,baseline,,,5,T08_tp3_008;T08_py4e_020;T08_py4e_006;T08_tp3_003;T08_py4e_005,1;2;2;1;1,1.4,
+P14,"What is the result of `'-'.join(['a', 'b', 'c'])`?",T07;T08,beginner,0.0,1.0,5,T08_tp3_008;T08_py4e_020;T08_tp3_003;T08_py4e_005;T08_py4e_006,1;2;1;1;2,1.4,0.6
+P14,"What is the result of `'-'.join(['a', 'b', 'c'])`?",T07;T08,intermediate,0.5,2.0,5,T08_tp3_008;T08_py4e_020;T08_py4e_006;T08_py4e_011;T08_tp3_005,1;2;2;2;2,1.8,0.8
+P14,"What is the result of `'-'.join(['a', 'b', 'c'])`?",T07;T08,advanced,0.9,3.0,5,T08_tp3_008;T08_py4e_020;T08_py4e_006;T08_py4e_011;T08_tp3_005,1;2;2;2;2,1.8,0.0
+P15,"What is the result of `len({1, 2, 2, 3, 3, 3})`?",T08;T02,baseline,,,5,T08_py4e_003;T08_pydoc_003;T08_orig_001;T08_tp3_001;T08_pydoc_004,1;1;1;1;2,1.2,
+P15,"What is the result of `len({1, 2, 2, 3, 3, 3})`?",T08;T02,beginner,0.0,1.0,5,T08_py4e_003;T08_pydoc_003;T08_orig_001;T08_tp3_001;T02_pydoc_002,1;1;1;1;1,1.0,1.0
+P15,"What is the result of `len({1, 2, 2, 3, 3, 3})`?",T08;T02,intermediate,0.5,2.0,5,T08_py4e_003;T08_pydoc_003;T08_pydoc_004;T08_orig_001;T08_tp3_001,1;1;2;1;1,1.2,0.2
+P15,"What is the result of `len({1, 2, 2, 3, 3, 3})`?",T08;T02,advanced,0.9,3.0,5,T08_py4e_003;T08_pydoc_003;T08_pydoc_004;T08_orig_001;T08_tp3_001,1;1;2;1;1,1.2,0.0
+P16,How do you append the elements of list `b` to list `a` in-place?,T08;T10,baseline,,,5,T08_tp3_005;T08_py4e_006;T08_pydoc_005;T08_py4e_021;T08_py4e_003,2;2;2;2;1,1.8,
+P16,How do you append the elements of list `b` to list `a` in-place?,T08;T10,beginner,0.0,1.0,5,T08_tp3_005;T08_py4e_006;T08_py4e_003;T08_tp3_003;T08_pydoc_005,2;2;1;1;2,1.6,0.4
+P16,How do you append the elements of list `b` to list `a` in-place?,T08;T10,intermediate,0.5,2.0,5,T08_tp3_005;T08_py4e_006;T08_pydoc_005;T08_py4e_021;T08_pydoc_002,2;2;2;2;2,2.0,1.0
+P16,How do you append the elements of list `b` to list `a` in-place?,T08;T10,advanced,0.9,3.0,5,T08_tp3_005;T08_py4e_006;T08_pydoc_005;T08_py4e_015;T08_py4e_021,2;2;2;3;2,2.2,0.2
+P17,"What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",T09;T12,baseline,,,5,T09_py4e_004;T09_pydoc_002;T09_py4e_005;T09_tp3_009;T09_py4e_012,2;2;3;3;2,2.4,
+P17,"What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",T09;T12,beginner,0.0,1.0,5,T09_py4e_004;T09_pydoc_002;T09_py4e_005;T09_py4e_012;T09_tp3_009,2;2;3;2;3,2.4,0.0
+P17,"What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",T09;T12,intermediate,0.5,2.0,5,T09_py4e_004;T09_pydoc_002;T09_py4e_005;T09_py4e_012;T09_tp3_009,2;2;3;2;3,2.4,0.6
+P17,"What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",T09;T12,advanced,0.9,3.0,5,T09_py4e_004;T09_pydoc_002;T09_py4e_005;T09_tp3_009;T09_py4e_012,2;2;3;3;2,2.4,0.4
+P18,Which method returns a set-like view of a dictionary's key-value pairs?,T09;T08;T06,baseline,,,5,T09_pydoc_001;T09_py4e_004;T09_py4e_002;T09_py4e_010;T09_py4e_001,3;2;2;2;2,2.2,
+P18,Which method returns a set-like view of a dictionary's key-value pairs?,T09;T08;T06,beginner,0.0,1.0,5,T09_py4e_004;T09_pydoc_001;T09_py4e_002;T09_py4e_010;T09_py4e_001,2;3;2;2;2,2.2,0.0
+P18,Which method returns a set-like view of a dictionary's key-value pairs?,T09;T08;T06,intermediate,0.5,2.0,5,T09_py4e_004;T09_pydoc_001;T09_py4e_002;T09_py4e_010;T09_py4e_001,2;3;2;2;2,2.2,0.8
+P18,Which method returns a set-like view of a dictionary's key-value pairs?,T09;T08;T06,advanced,0.9,3.0,5,T09_pydoc_001;T09_py4e_004;T09_py4e_002;T09_py4e_010;T09_py4e_001,3;2;2;2;2,2.2,0.2
+P19,"What will the following code output?
+```python
+def func(a, b=[]):
+    b.append(a)
+    return b
+
+print(func(1))
+print(func(2))
+```",T10;T08;T02,baseline,,,5,T08_py4e_006;T10_pydoc_004;T10_py4e_012;T10_pydoc_007;T08_py4e_015,2;2;2;3;3,2.4,
+P19,"What will the following code output?
+```python
+def func(a, b=[]):
+    b.append(a)
+    return b
+
+print(func(1))
+print(func(2))
+```",T10;T08;T02,beginner,0.0,1.0,5,T08_py4e_006;T10_pydoc_004;T10_py4e_012;T10_pydoc_001;T08_py4e_007,2;2;2;2;2,2.0,0.0
+P19,"What will the following code output?
+```python
+def func(a, b=[]):
+    b.append(a)
+    return b
+
+print(func(1))
+print(func(2))
+```",T10;T08;T02,intermediate,0.5,2.0,5,T08_py4e_006;T10_pydoc_004;T10_py4e_012;T10_pydoc_001;T08_py4e_007,2;2;2;2;2,2.0,1.0
+P19,"What will the following code output?
+```python
+def func(a, b=[]):
+    b.append(a)
+    return b
+
+print(func(1))
+print(func(2))
+```",T10;T08;T02,advanced,0.9,3.0,5,T08_py4e_006;T10_pydoc_004;T10_pydoc_007;T08_py4e_015;T10_py4e_012,2;2;3;3;2,2.4,0.4
+P20,What does `*args` and `**kwargs` represent in a function definition signature?,T10;T09;T08,baseline,,,5,T10_py4e_004;T10_tp3_004;T10_py4e_006;T10_py4e_002;T09_py4e_001,3;2;3;3;2,2.6,
+P20,What does `*args` and `**kwargs` represent in a function definition signature?,T10;T09;T08,beginner,0.0,1.0,5,T10_tp3_004;T10_py4e_004;T10_py4e_006;T09_py4e_001;T10_py4e_013,2;3;3;2;2,2.4,0.0
+P20,What does `*args` and `**kwargs` represent in a function definition signature?,T10;T09;T08,intermediate,0.5,2.0,5,T10_tp3_004;T10_py4e_004;T10_py4e_006;T09_py4e_001;T10_py4e_013,2;3;3;2;2,2.4,0.6
+P20,What does `*args` and `**kwargs` represent in a function definition signature?,T10;T09;T08,advanced,0.9,3.0,5,T10_py4e_004;T10_tp3_004;T10_py4e_006;T10_py4e_002;T10_py4e_003,3;2;3;3;3,2.8,0.8
+P21,What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?,T11;T06;T04,baseline,,,5,T11_pydoc_003;T06_pydoc_007;T11_orig_006;T11_pydoc_001;T06_pydoc_006,2;2;3;2;2,2.2,
+P21,What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?,T11;T06;T04,beginner,0.0,1.0,5,T11_pydoc_003;T06_pydoc_007;T11_pydoc_001;T11_orig_006;T06_pydoc_006,2;2;2;3;2,2.2,0.0
+P21,What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?,T11;T06;T04,intermediate,0.5,2.0,5,T11_pydoc_003;T06_pydoc_007;T11_pydoc_001;T11_orig_006;T06_pydoc_006,2;2;2;3;2,2.2,0.8
+P21,What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?,T11;T06;T04,advanced,0.9,3.0,5,T11_pydoc_003;T11_orig_006;T06_pydoc_007;T11_pydoc_001;T06_pydoc_006,2;3;2;2;2,2.2,0.2
+P22,"Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?",T11;T08;T06,baseline,,,5,T11_pydoc_005;T11_orig_010;T11_orig_006;T11_pydoc_002;T11_pydoc_003,3;3;3;2;2,2.6,
+P22,"Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?",T11;T08;T06,beginner,0.0,1.0,5,T11_pydoc_005;T11_orig_010;T11_orig_006;T11_pydoc_002;T11_pydoc_003,3;3;3;2;2,2.6,0.0
+P22,"Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?",T11;T08;T06,intermediate,0.5,2.0,5,T11_pydoc_005;T11_orig_010;T11_orig_006;T11_pydoc_002;T11_pydoc_003,3;3;3;2;2,2.6,0.4
+P22,"Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?",T11;T08;T06,advanced,0.9,3.0,5,T11_pydoc_005;T11_orig_010;T11_orig_006;T11_pydoc_002;T11_orig_011,3;3;3;2;3,2.8,0.8
+P23,Which clause in a `try...except` block executes strictly when no exceptions are raised?,T12;T05,baseline,,,5,T12_pydoc_009;T12_pydoc_002;T12_py4e_002;T12_pydoc_003;T12_pydoc_004,3;3;2;2;2,2.4,
+P23,Which clause in a `try...except` block executes strictly when no exceptions are raised?,T12;T05,beginner,0.0,1.0,5,T12_pydoc_009;T12_pydoc_002;T12_py4e_002;T12_pydoc_003;T12_pydoc_004,3;3;2;2;2,2.4,0.0
+P23,Which clause in a `try...except` block executes strictly when no exceptions are raised?,T12;T05,intermediate,0.5,2.0,5,T12_pydoc_009;T12_pydoc_002;T12_py4e_002;T12_pydoc_003;T12_pydoc_004,3;3;2;2;2,2.4,0.6
+P23,Which clause in a `try...except` block executes strictly when no exceptions are raised?,T12;T05,advanced,0.9,3.0,5,T12_pydoc_009;T12_pydoc_002;T12_py4e_002;T12_pydoc_003;T12_pydoc_005,3;3;2;2;3,2.6,0.6
+P24,What block is guaranteed to run regardless of whether an exception was raised or handled?,T12;T13,baseline,,,5,T12_pydoc_007;T12_pydoc_009;T12_pydoc_010;T12_pydoc_004;T12_orig_005,3;3;3;2;3,2.8,
+P24,What block is guaranteed to run regardless of whether an exception was raised or handled?,T12;T13,beginner,0.0,1.0,5,T12_pydoc_007;T12_pydoc_009;T12_pydoc_004;T12_pydoc_010;T12_orig_005,3;3;2;3;3,2.8,0.0
+P24,What block is guaranteed to run regardless of whether an exception was raised or handled?,T12;T13,intermediate,0.5,2.0,5,T12_pydoc_007;T12_pydoc_009;T12_pydoc_004;T12_pydoc_010;T12_orig_005,3;3;2;3;3,2.8,0.2
+P24,What block is guaranteed to run regardless of whether an exception was raised or handled?,T12;T13,advanced,0.9,3.0,5,T12_pydoc_007;T12_pydoc_009;T12_pydoc_010;T12_pydoc_004;T12_orig_005,3;3;3;2;3,2.8,0.8
+P25,Why is using the `with open(...) as f:` context manager preferred for file operations?,T13;T12,baseline,,,5,T13_orig_001;T13_pydoc_008;T13_orig_002;T13_pydoc_002;T12_pydoc_005,2;2;2;2;3,2.2,
+P25,Why is using the `with open(...) as f:` context manager preferred for file operations?,T13;T12,beginner,0.0,1.0,5,T13_orig_001;T13_pydoc_008;T13_orig_002;T13_pydoc_002;T12_pydoc_005,2;2;2;2;3,2.2,0.0
+P25,Why is using the `with open(...) as f:` context manager preferred for file operations?,T13;T12,intermediate,0.5,2.0,5,T13_orig_001;T13_pydoc_008;T13_orig_002;T13_pydoc_002;T12_pydoc_005,2;2;2;2;3,2.2,0.8
+P25,Why is using the `with open(...) as f:` context manager preferred for file operations?,T13;T12,advanced,0.9,3.0,5,T13_orig_001;T13_pydoc_008;T13_orig_002;T12_pydoc_005;T13_pydoc_002,2;2;2;3;2,2.2,0.2
+P26,"What does the mode `'a'` do in `open('data.txt', 'a')`?",T13;T03;T07,baseline,,,5,T13_py4e_002;T13_py4e_012;T13_tp3_004;T13_pydoc_001;T13_py4e_005,2;2;2;2;2,2.0,
+P26,"What does the mode `'a'` do in `open('data.txt', 'a')`?",T13;T03;T07,beginner,0.0,1.0,5,T13_py4e_002;T13_py4e_012;T13_tp3_004;T13_pydoc_001;T13_py4e_005,2;2;2;2;2,2.0,0.0
+P26,"What does the mode `'a'` do in `open('data.txt', 'a')`?",T13;T03;T07,intermediate,0.5,2.0,5,T13_py4e_002;T13_py4e_012;T13_tp3_004;T13_pydoc_001;T13_py4e_005,2;2;2;2;2,2.0,1.0
+P26,"What does the mode `'a'` do in `open('data.txt', 'a')`?",T13;T03;T07,advanced,0.9,3.0,5,T13_py4e_002;T13_py4e_012;T13_py4e_011;T13_tp3_004;T13_pydoc_001,2;2;3;2;2,2.2,0.2

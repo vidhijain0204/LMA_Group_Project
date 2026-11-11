@@ -1,0 +1,3088 @@
+query_id,method,query,gold_chunk_ids,top_chunk_ids,top_scores,first_result_text,first_result_source,latency_ms,recall_at_5,reciprocal_rank,annotated
+P01,tfidf,Who created the Python programming language and in what year was it first released?,,T06_py4e_008;T01_py4e_008;T01_py4e_011;T05_py4e_006;T03_orig_004,0.151306;0.134447;0.130921;0.115672;0.106962,"**Iteration > Definite loops using `for`**
+
+Sometimes we want to loop through a set of things such as a list of words, the lines in a file, or a list of numbers. When we have a list of things to loop through, we can construct a definite loop using a `for` statement. We call the `while` statement an indefinite loop because it simply loops until some condition becomes `False`, whereas the `for` loop is looping through a known set of items so it runs through as many iterations as there are items in the set.
+
+The syntax of a `for` loop is similar to the `while` loop in that there is a `for` statement and a loop body:
+
+```python
+friends = ['Joseph', 'Glenn', 'Sally']
+for friend in friends:
+    print('Happy New Year:', friend)
+print('Done!')
+```
+
+In Python terms, the variable `friends` is a list1 of three strings and the `for` loop goes through the list and executes the body once for each of the three strings in the list resulting in this output:
+
+```python
+Happy New Year: Joseph
+Happy New Year: Glenn
+Happy New Year: Sally
+Done!
+```",PY4E - Python for Everybody,23.059,,,false
+P02,tfidf,Which of the following statements about Python's execution model is true?,T05_py4e_001;T10_py4e_007,T05_py4e_003;T10_py4e_007;T04_tp3_007;T05_py4e_001;T02_tp3_006,0.229899;0.217050;0.216585;0.178020;0.171639,"**Conditional execution > Alternative execution**
+
+A second form of the `if` statement is alternative execution, in which there are two possibilities and the condition determines which one gets executed. The syntax looks like this:
+
+```python
+if x % 2 == 0:
+    print('x is even')
+else:
+    print('x is odd')
+```
+
+If the remainder when `x` is divided by 2 is 0, then we know that `x` is even, and the program displays a message to that effect. If the condition is false, the second set of statements is executed.
+
+Since the condition must either be true or false, exactly one of the alternatives will be executed. The alternatives are called branches, because they are branches in the flow of execution.",PY4E - Python for Everybody,20.366,1.0000,0.5000,true
+P03,tfidf,What will be the output of `type(3 / 2)` in Python 3?,T02_py4e_001;T02_tp3_003,T11_pydoc_002;T02_tp3_003;T04_orig_002;T02_py4e_001;T08_py4e_004,0.332938;0.310247;0.310114;0.301361;0.290401,"**5.1. More on Lists > 5.1.3. List Comprehensions**
+
+A list comprehension consists of brackets containing an expression followed by a `for` clause, then zero or more `for` or `if` clauses. The result will be a new list resulting from evaluating the expression in the context of the `for` and `if` clauses which follow it. For example, this listcomp combines the elements of two lists if they are not equal:
+
+```python
+>>> [(x, y) for x in [1,2,3] for y in [3,1,4] if x != y]
+[(1, 3), (1, 4), (2, 3), (2, 1), (2, 4), (3, 1), (3, 4)]
+```
+
+And it’s equivalent to:
+
+```python
+>>> combs = []
+>>> for x in [1,2,3]:
+...     for y in [3,1,4]:
+...         if x != y:
+...             combs.append((x, y))
+...
+>>> combs
+[(1, 3), (1, 4), (2, 3), (2, 1), (2, 4), (3, 1), (3, 4)]
+```
+
+Note how the order of the `for` and `if` statements is the same in both these snippets.",5. Data Structures — Python 3.15.2 documentation,18.315,1.0000,0.5000,true
+P04,tfidf,Which of the following variables is immutable in Python?,T07_py4e_005;T07_tp3_004;T08_py4e_019;T08_py4e_028,T07_py4e_005;T07_tp3_004;T08_py4e_028;T02_tp3_006;T02_tp3_005,0.200689;0.197746;0.186622;0.186525;0.182063,"**Strings > Strings are immutable**
+
+It is tempting to use the operator on the left side of an assignment, with the intention of changing a character in a string. For example:
+
+```python
+>>> greeting = 'Hello, world!'
+>>> greeting[0] = 'J'
+TypeError: 'str' object does not support item assignment
+```
+
+The “object” in this case is the string and the “item” is the character you tried to assign. For now, an object is the same thing as a value, but we will refine that definition later. An item is one of the values in a sequence.
+
+The reason for the error is that strings are immutable, which means you can’t change an existing string. The best you can do is create a new string that is a variation on the original:
+
+```python
+>>> greeting = 'Hello, world!'
+>>> new_greeting = 'J' + greeting[1:]
+>>> print(new_greeting)
+Jello, world!
+```
+
+This example concatenates a new first letter onto a slice of `greeting`. It has no effect on the original string.",PY4E - Python for Everybody,17.520,0.7500,1.0000,true
+P05,tfidf,What does the `input()` built-in function return by default in Python 3?,T03_py4e_001;T03_tp3_002,T03_py4e_001;T03_tp3_002;T10_py4e_001;T05_tp3_008;T10_pydoc_007,0.308022;0.302066;0.240223;0.231695;0.208046,"**Variables, expressions, and statements > Asking the user for input**
+
+Sometimes we would like to take the value for a variable from the user via their keyboard. Python provides a built-in function called `input` that gets input from the keyboard1. When this function is called, the program stops and waits for the user to type something. When the user presses `Return` or `Enter`, the program resumes and `input` returns what the user typed as a string.
+
+```python
+>>> inp = input()
+Some silly stuff
+>>> print(inp)
+Some silly stuff
+```
+
+Before getting input from the user, it is a good idea to print a prompt telling the user what to input. You can pass a string to `input` to be displayed to the user before pausing for input:
+
+```python
+>>> name = input('What is your name?\n')
+What is your name?
+Chuck
+>>> print(name)
+Chuck
+```
+
+The sequence `\n` at the end of the prompt represents a newline, which is a special character that causes a line break. That’s why the user’s input appears below the prompt.
+
+If you expect the user to type an integer, you can try to convert the return value to `int` using the `int()` function:
+
+```python
+>>> prompt = 'What...is the airspeed velocity of an unladen swallow?\n'
+>>> speed = input(prompt)
+What...is the airspeed velocity of an unladen swallow?
+17
+>>> int(speed)
+17
+>>> int(speed) + 5
+22
+```",PY4E - Python for Everybody,17.068,1.0000,1.0000,true
+P06,tfidf,"What is the output of `print('Python', '3', sep='-', end='!')`?",T03_orig_001;T03_orig_002;T03_tp3_001,T03_orig_002;T03_orig_001;T03_tp3_001;T03_tp3_002;T07_tp3_003,0.570518;0.557099;0.180575;0.173401;0.160316,"**Input and Output > Building a line of output with sep and end**
+
+Building one line of output from several print calls. With `end=""""`, the next `print` continues on the same line:
+
+```python
+print(""Loading"", end="""")
+print(""."", end="""")
+print(""."", end="""")
+print("" done"")
+```
+
+Output:
+```text
+Loading.. done
+```
+
+The last `print` uses the default `end`, so it finishes the line.
+
+Joining values without a gap, and with a custom divider:
+
+```python
+print(""a"", ""b"", ""c"", sep="""")
+print(""Name"", ""Age"", sep="" | "")
+```
+
+Output:
+```text
+abc
+Name | Age
+```",Building a line of output with sep and end,16.344,1.0000,1.0000,true
+P07,tfidf,What is the result of the expression `2 ** 3 ** 2`?,T04_orig_002;T04_py4e_002,T04_orig_002;T04_py4e_006;T11_pydoc_002;T04_py4e_002;T01_tp3_006,0.399286;0.337986;0.334127;0.318036;0.304052,"**Operators > Operator precedence**
+
+When an expression has several operators, Python applies them in a fixed order, not simply left to right:
+
+```python
+print(2 + 3 * 4)
+print((2 + 3) * 4)
+print(2 ** 3 ** 2)
+print(-2 ** 2)
+print(10 - 4 - 3)
+```
+
+Output:
+```text
+14
+20
+512
+-4
+3
+```
+
+- `*`, `/`, `//` and `%` are applied before `+` and `-`.
+- `**` is applied first of all, and it groups from the right: `2 ** 3 ** 2` is `2 ** 9`.
+- `-2 ** 2` is `-(2 ** 2)`, because `**` binds more tightly than the minus sign.
+- Operators of the same level, such as `-` and `-`, go left to right: `(10 - 4) - 3`.
+- Comparisons come after arithmetic, and `not`, `and`, `or` come last, in that order.
+
+When in doubt, add parentheses: they make the order explicit and the code easier to read.",Operator precedence,15.956,1.0000,1.0000,true
+P08,tfidf,What is the difference between `is` and `==` in Python?,,T03_tp3_002;T13_tp3_010;T01_py4e_019;T01_py4e_011;T02_py4e_002,0.182053;0.181884;0.166732;0.163653;0.162647,"**5. Conditionals and Recursion > 5.11. Keyboard input**
+
+The programs we have written so far accept no input from the user. They just do the same thing every time.
+
+Python provides a built-in function called `input` that stops the program and waits for the user to type something. When the user presses Return or Enter, the program resumes and `input` returns what the user typed as a string.
+
+```python
+text = input()
+```
+
+Before getting input from the user, you might want to display a prompt telling the user what to type. `input` can take a prompt as an argument:
+
+```python
+name = input('What...is your name?\n')
+name
+```
+
+Output:
+```text
+What...is your name?
+It is Arthur, King of the Britons
+'It is Arthur, King of the Britons'
+```
+
+The sequence `\n` at the end of the prompt represents a newline, which is a special character that causes a line break – that way the user’s input appears below the prompt.
+
+If you expect the user to type an integer, you can use the `int` function to convert the return value to `int`.
+
+```python
+prompt = 'What...is the airspeed velocity of an unladen swallow?\n'
+speed = input(prompt)
+speed
+```
+
+Output:
+```text
+What...is the airspeed velocity of an unladen swallow?
+What do you mean: an African or European swallow?
+'What do you mean: an African or European swallow?'
+```",5. Conditionals and Recursion — Think Python,16.153,,,false
+P09,tfidf,"What does the following snippet evaluate to?
+```python
+x = 10
+if x > 15:
+    print('A')
+elif x == 10:
+    print('B')
+else:
+    print('C')
+```",T05_py4e_004;T05_py4e_005;T05_pydoc_001;T05_tp3_003;T05_tp3_004,T04_orig_001;T05_pydoc_001;T05_tp3_004;T05_py4e_005;T05_py4e_004,0.359372;0.339433;0.330669;0.327758;0.316395,"**Operators > Writing x == 1 or 2**
+
+**Common mistake: writing `x == 1 or 2`**
+
+It reads like English (""x is 1 or 2""), but Python evaluates `x == 1` first and then `or 2`. Because `2` is truthy, the whole condition is always true:
+
+```python
+x = 7
+if x == 1 or 2:
+    print(""matched"")
+```
+
+Output:
+```text
+matched
+```
+
+Compare `x` with each value explicitly, or test membership with `in`:
+
+```python
+x = 7
+print(x == 1 or x == 2)
+print(x in (1, 2))
+```
+
+Output:
+```text
+False
+False
+```",Writing x == 1 or 2,18.187,0.8000,0.5000,true
+P10,tfidf,What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?,T05_tp3_001;T11_orig_012,T08_py4e_025;T08_py4e_026;T11_orig_012;T05_pydoc_002;T12_orig_005,0.338386;0.192734;0.191201;0.151823;0.133800,"**Tuples > Multiple assignment with dictionaries**
+
+Combining `items`, tuple assignment, and `for`, you can see a nice code pattern for traversing the keys and values of a dictionary in a single loop:
+
+```python
+d = {'a':10, 'b':1, 'c':22}
+for key, val in d.items():
+    print(val, key)
+```
+
+This loop has two iteration variables because `items` returns a list of tuples and `key, val` is a tuple assignment that successively iterates through each of the key-value pairs in the dictionary.
+
+For each iteration through the loop, both `key` and `val` are advanced to the next key-value pair in the dictionary (still in hash order).
+
+The output of this loop is:
+
+```python
+10 a
+1 b
+22 c
+```
+
+Again, it is in hash key order (i.e., no particular order).
+
+If we combine these two techniques, we can print out the contents of a dictionary sorted by the value stored in each key-value pair.",PY4E - Python for Everybody,17.312,0.5000,0.3333,true
+P11,tfidf,"What will `range(1, 10, 2)` produce when unpacked into a list?",T06_orig_005;T06_pydoc_004,T06_pydoc_004;T06_orig_005;T11_orig_006;T11_pydoc_001;T08_py4e_003,0.299221;0.260777;0.157029;0.151148;0.149897,"**4. More Control Flow Tools > 4.3. The `range()` Function**
+
+If you do need to iterate over a sequence of numbers, the built-in function `range()` comes in handy. It generates arithmetic progressions:
+
+```python
+>>> for i in range(5):
+...     print(i)
+...
+0
+1
+2
+3
+4
+```
+
+The given end point is never part of the generated sequence; `range(10)` generates 10 values, the legal indices for items of a sequence of length 10. It is possible to let the range start at another number, or to specify a different increment (even negative; sometimes this is called the ‘step’):
+
+```python
+>>> list(range(5, 10))
+[5, 6, 7, 8, 9]
+
+>>> list(range(0, 10, 3))
+[0, 3, 6, 9]
+
+>>> list(range(-10, -100, -30))
+[-10, -40, -70]
+```
+
+To iterate over the indices of a sequence, you can combine `range()` and `len()` as follows:
+
+```python
+>>> a = ['Mary', 'had', 'a', 'little', 'lamb']
+>>> for i in range(len(a)):
+...     print(i, a[i])
+...
+0 Mary
+1 had
+2 a
+3 little
+4 lamb
+```
+
+In most such cases, however, it is convenient to use the `enumerate()` function, see Looping Techniques.
+
+A strange thing happens if you just print a range:
+
+```python
+>>> range(10)
+range(0, 10)
+```",4. More Control Flow Tools — Python 3.15.2 documentation,17.147,1.0000,1.0000,true
+P12,tfidf,What triggers the `else` block of a `for` loop in Python?,T05_pydoc_002;T06_pydoc_007,T05_pydoc_002;T06_pydoc_007;T12_orig_005;T05_tp3_001;T06_py4e_011,0.290212;0.250046;0.231663;0.221937;0.208845,"**4. More Control Flow Tools > 4.5. `else` Clauses on Loops**
+
+(Yes, this is the correct code. Look closely: the `else` clause belongs to the `for` loop, not the `if` statement.)
+
+One way to think of the else clause is to imagine it paired with the `if` inside the loop. As the loop executes, it will run a sequence like if/if/if/else. The `if` is inside the loop, encountered a number of times. If the condition is ever true, a `break` will happen. If the condition is never true, the `else` clause outside the loop will execute.
+
+When used with a loop, the `else` clause has more in common with the `else` clause of a `try` statement than it does with that of `if` statements: a `try` statement’s `else` clause runs when no exception occurs, and a loop’s `else` clause runs when no `break` occurs. For more on the `try` statement and exceptions, see Handling Exceptions.",4. More Control Flow Tools — Python 3.15.2 documentation,16.677,1.0000,1.0000,true
+P13,tfidf,What is the value of `s[::-1]` if `s = 'hello'`?,T02_tp3_001,T03_pydoc_004;T01_py4e_012;T01_tp3_006;T11_orig_003;T03_orig_006,0.331556;0.290786;0.242881;0.237511;0.219239,"**7. Input and output > 7.1. Fancier output formatting**
+
+Some examples:
+
+```python
+>>> s = 'Hello, world.'
+>>> str(s)
+'Hello, world.'
+>>> repr(s)
+""'Hello, world.'""
+>>> str(1/7)
+'0.14285714285714285'
+>>> x = 10 * 3.25
+>>> y = 200 * 200
+>>> s = 'The value of x is ' + repr(x) + ', and y is ' + repr(y) + '...'
+>>> print(s)
+The value of x is 32.5, and y is 40000...
+>>> # The repr() of a string adds string quotes and backslashes:
+>>> hello = 'hello, world\n'
+>>> hellos = repr(hello)
+>>> print(hellos)
+'hello, world\n'
+>>> # The argument to repr() may be any Python object:
+>>> repr((x, y, ('spam', 'eggs')))
+""(32.5, 40000, ('spam', 'eggs'))""
+```
+
+The `string` module contains support for a simple templating approach based upon regular expressions, via `string.Template`. This offers yet another way to substitute values into strings, using placeholders like `$x` and replacing them with values from a dictionary. This syntax is easy to use, although it offers much less control for formatting.",7. Input and output — Python 3.15.2 documentation,16.172,0.0000,0.0000,true
+P14,tfidf,"What is the result of `'-'.join(['a', 'b', 'c'])`?",T07_orig_001;T08_py4e_011,T07_orig_001;T08_tp3_008;T08_pydoc_003;T08_py4e_006;T08_py4e_011,0.387590;0.356545;0.337391;0.314270;0.311960,"**Strings > Mixing up split() and join()**
+
+**Common mistake: mixing up `split()` and `join()`**
+
+`split()` breaks a string into a **list**. `join()` does the opposite, and it is called on the **separator** string, with the list as its argument:
+
+```python
+words = ""red green blue"".split()
+print(words)
+print(""-"".join(words))
+```
+
+Output:
+```text
+['red', 'green', 'blue']
+red-green-blue
+```
+
+Writing `words.join(""-"")` fails, because lists have no `join` method. `join` also only accepts strings, so convert numbers first:
+
+```python
+nums = [1, 2, 3]
+parts = []
+for n in nums:
+    parts.append(str(n))
+print("", "".join(parts))
+```
+
+Output:
+```text
+1, 2, 3
+```",Mixing up split() and join(),16.096,1.0000,1.0000,true
+P15,tfidf,"What is the result of `len({1, 2, 2, 3, 3, 3})`?",,T11_pydoc_002;T08_py4e_004;T04_orig_002;T08_pydoc_009;T04_py4e_002,0.442403;0.407888;0.390199;0.313988;0.310717,"**5.1. More on Lists > 5.1.3. List Comprehensions**
+
+A list comprehension consists of brackets containing an expression followed by a `for` clause, then zero or more `for` or `if` clauses. The result will be a new list resulting from evaluating the expression in the context of the `for` and `if` clauses which follow it. For example, this listcomp combines the elements of two lists if they are not equal:
+
+```python
+>>> [(x, y) for x in [1,2,3] for y in [3,1,4] if x != y]
+[(1, 3), (1, 4), (2, 3), (2, 1), (2, 4), (3, 1), (3, 4)]
+```
+
+And it’s equivalent to:
+
+```python
+>>> combs = []
+>>> for x in [1,2,3]:
+...     for y in [3,1,4]:
+...         if x != y:
+...             combs.append((x, y))
+...
+>>> combs
+[(1, 3), (1, 4), (2, 3), (2, 1), (2, 4), (3, 1), (3, 4)]
+```
+
+Note how the order of the `for` and `if` statements is the same in both these snippets.",5. Data Structures — Python 3.15.2 documentation,16.066,,,false
+P16,tfidf,How do you append the elements of list `b` to list `a` in-place?,T08_py4e_006;T08_pydoc_005;T08_tp3_005,T08_tp3_001;T08_py4e_001;T08_py4e_003;T08_tp3_005;T08_py4e_006,0.416840;0.366638;0.354988;0.327047;0.311867,"**9. Lists > 9.1. A list is a sequence**
+
+Like a string, a list is a sequence of values. In a string, the values are characters; in a list, they can be any type. The values in a list are called elements.
+
+There are several ways to create a new list; the simplest is to enclose the elements in square brackets (`[` and `]`). For example, here is a list of two integers.
+
+```python
+numbers = [42, 123]
+```
+
+And here’s a list of three strings.
+
+```python
+cheeses = ['Cheddar', 'Edam', 'Gouda']
+```
+
+The elements of a list don’t have to be the same type. The following list contains a string, a float, an integer, and even another list.
+
+```python
+t = ['spam', 2.0, 5, [10, 20]]
+```
+
+A list within another list is nested.
+
+A list that contains no elements is called an empty list; you can create one with empty brackets, `[]`.
+
+```python
+empty = []
+```
+
+The `len` function returns the length of a list.
+
+```python
+len(cheeses)
+```
+
+Output:
+```text
+3
+```
+
+The length of an empty list is `0`.
+
+The following figure shows the state diagram for `cheeses`, `numbers` and `empty`.
+
+Lists are represented by boxes with the word “list” outside and the numbered elements of the list inside.",9. Lists — Think Python,17.081,0.6667,0.2500,true
+P17,tfidf,"What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",T09_py4e_004;T09_py4e_005;T09_pydoc_002,T09_pydoc_002;T09_py4e_004;T08_py4e_025;T08_tp3_017;T08_tp3_015,0.532887;0.429864;0.396859;0.385983;0.377332,"**5. Data Structures > 5.5. Dictionaries**
+
+The main operations on a dictionary are storing a value with some key and extracting the value given the key. It is also possible to delete a key:value pair with `del`. If you store using a key that is already in use, the old value associated with that key is forgotten.
+
+Extracting a value for a non-existent key by subscripting (`d[key]`) raises a `KeyError`. To avoid getting this error when trying to access a possibly non-existent key, use the `get()` method instead, which returns `None` (or a specified default value) if the key is not in the dictionary.
+
+Performing `list(d)` on a dictionary returns a list of all the keys used in the dictionary, in insertion order (if you want it sorted, just use `sorted(d)` instead). To check whether a single key is in the dictionary, use the `in` keyword.",5. Data Structures — Python 3.15.2 documentation,16.948,0.6667,1.0000,true
+P18,tfidf,Which method returns a set-like view of a dictionary's key-value pairs?,T09_py4e_001;T09_py4e_002;T09_py4e_010;T09_pydoc_001;T09_pydoc_002,T09_pydoc_002;T09_py4e_001;T09_pydoc_001;T08_py4e_025;T08_tp3_022,0.352243;0.327009;0.317990;0.287486;0.256500,"**5. Data Structures > 5.5. Dictionaries**
+
+The main operations on a dictionary are storing a value with some key and extracting the value given the key. It is also possible to delete a key:value pair with `del`. If you store using a key that is already in use, the old value associated with that key is forgotten.
+
+Extracting a value for a non-existent key by subscripting (`d[key]`) raises a `KeyError`. To avoid getting this error when trying to access a possibly non-existent key, use the `get()` method instead, which returns `None` (or a specified default value) if the key is not in the dictionary.
+
+Performing `list(d)` on a dictionary returns a list of all the keys used in the dictionary, in insertion order (if you want it sorted, just use `sorted(d)` instead). To check whether a single key is in the dictionary, use the `in` keyword.",5. Data Structures — Python 3.15.2 documentation,17.129,0.6000,1.0000,true
+P19,tfidf,"What will the following code output?
+```python
+def func(a, b=[]):
+    b.append(a)
+    return b
+
+print(func(1))
+print(func(2))
+```",T08_py4e_015;T10_pydoc_004;T10_pydoc_007,T08_pydoc_013;T08_pydoc_003;T06_pydoc_001;T08_py4e_006;T06_orig_005,0.203012;0.172545;0.171992;0.167818;0.166134,"**5. Data Structures > 5.4. Sets**
+
+Here is a brief demonstration:
+
+```python
+>>> basket = {'apple', 'orange', 'apple', 'pear', 'orange', 'banana'}
+>>> print(basket)                      # show that duplicates have been removed
+{'orange', 'banana', 'pear', 'apple'}
+>>> 'orange' in basket                 # fast membership testing
+True
+>>> 'crabgrass' in basket
+False
+
+>>> # Demonstrate set operations on unique letters from two words
+>>>
+>>> a = set('abracadabra')
+>>> b = set('alacazam')
+>>> a                                  # unique letters in a
+{'a', 'r', 'b', 'c', 'd'}
+>>> a - b                              # letters in a but not in b
+{'r', 'd', 'b'}
+>>> a | b                              # letters in a or b or both
+{'a', 'c', 'r', 'd', 'b', 'm', 'z', 'l'}
+>>> a & b                              # letters in both a and b
+{'a', 'c'}
+>>> a ^ b                              # letters in a or b but not both
+{'r', 'd', 'b', 'm', 'z', 'l'}
+```
+
+Similarly to list comprehensions, set comprehensions are also supported:
+
+```python
+>>> a = {x for x in 'abracadabra' if x not in 'abc'}
+>>> a
+{'r', 'd'}
+```",5. Data Structures — Python 3.15.2 documentation,17.646,0.0000,0.0000,true
+P20,tfidf,What does `*args` and `**kwargs` represent in a function definition signature?,,T12_pydoc_004;T10_py4e_003;T10_tp3_004;T10_py4e_004;T02_tp3_006,0.202770;0.131695;0.120720;0.113930;0.112851,"**8. Errors and Exceptions > 8.3. Handling Exceptions**
+
+The except clause may specify a variable after the exception name. The variable is bound to the exception instance which typically has an `args` attribute that stores the arguments. For convenience, builtin exception types define `__str__()` to print all the arguments without explicitly accessing `.args`.
+
+```python
+>>> try:
+...     raise Exception('spam', 'eggs')
+... except Exception as inst:
+...     print(type(inst))    # the exception type
+...     print(inst.args)     # arguments stored in .args
+...     print(inst)          # __str__ allows args to be printed directly,
+...                          # but may be overridden in exception subclasses
+...     x, y = inst.args     # unpack args
+...     print('x =', x)
+...     print('y =', y)
+...
+<class 'Exception'>
+('spam', 'eggs')
+('spam', 'eggs')
+x = spam
+y = eggs
+```
+
+The exception’s `__str__()` output is printed as the last part (‘detail’) of the message for unhandled exceptions.
+
+`BaseException` is the common base class of all exceptions. One of its subclasses, `Exception`, is the base class of all the non-fatal exceptions. Exceptions which are not subclasses of `Exception` are not typically handled, because they are used to indicate that the program should terminate. They include `SystemExit` which is raised by `sys.exit()` and `KeyboardInterrupt` which is raised when a user wishes to interrupt the program.",8. Errors and Exceptions — Python 3.15.2 documentation,16.917,,,false
+P21,tfidf,What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?,T11_orig_006;T11_pydoc_001;T11_pydoc_003,T04_orig_001;T11_pydoc_003;T04_py4e_006;T05_tp3_008;T06_py4e_001,0.639904;0.592813;0.505616;0.499175;0.484833,"**Operators > Writing x == 1 or 2**
+
+**Common mistake: writing `x == 1 or 2`**
+
+It reads like English (""x is 1 or 2""), but Python evaluates `x == 1` first and then `or 2`. Because `2` is truthy, the whole condition is always true:
+
+```python
+x = 7
+if x == 1 or 2:
+    print(""matched"")
+```
+
+Output:
+```text
+matched
+```
+
+Compare `x` with each value explicitly, or test membership with `in`:
+
+```python
+x = 7
+print(x == 1 or x == 2)
+print(x in (1, 2))
+```
+
+Output:
+```text
+False
+False
+```",Writing x == 1 or 2,16.961,0.3333,0.5000,true
+P22,tfidf,"Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?",T11_orig_006;T11_orig_010;T11_pydoc_002;T11_pydoc_005,T11_pydoc_002;T11_pydoc_005;T08_py4e_004;T04_orig_002;T11_orig_006,0.371856;0.310270;0.299561;0.288062;0.247838,"**5.1. More on Lists > 5.1.3. List Comprehensions**
+
+A list comprehension consists of brackets containing an expression followed by a `for` clause, then zero or more `for` or `if` clauses. The result will be a new list resulting from evaluating the expression in the context of the `for` and `if` clauses which follow it. For example, this listcomp combines the elements of two lists if they are not equal:
+
+```python
+>>> [(x, y) for x in [1,2,3] for y in [3,1,4] if x != y]
+[(1, 3), (1, 4), (2, 3), (2, 1), (2, 4), (3, 1), (3, 4)]
+```
+
+And it’s equivalent to:
+
+```python
+>>> combs = []
+>>> for x in [1,2,3]:
+...     for y in [3,1,4]:
+...         if x != y:
+...             combs.append((x, y))
+...
+>>> combs
+[(1, 3), (1, 4), (2, 3), (2, 1), (2, 4), (3, 1), (3, 4)]
+```
+
+Note how the order of the `for` and `if` statements is the same in both these snippets.",5. Data Structures — Python 3.15.2 documentation,16.652,0.7500,1.0000,true
+P23,tfidf,Which clause in a `try...except` block executes strictly when no exceptions are raised?,T12_pydoc_002;T12_pydoc_009,T12_pydoc_002;T12_pydoc_003;T12_pydoc_009;T12_py4e_002;T12_pydoc_005,0.365673;0.339259;0.318804;0.298188;0.275134,"**8. Errors and Exceptions > 8.3. Handling Exceptions**
+
+It is possible to write programs that handle selected exceptions. Look at the following example, which asks the user for input until a valid integer has been entered, but allows the user to interrupt the program (using `Control`-`C` or whatever the operating system supports); note that a user-generated interruption is signalled by raising the `KeyboardInterrupt` exception.
+
+```python
+>>> while True:
+...     try:
+...         x = int(input(""Please enter a number: ""))
+...         break
+...     except ValueError:
+...         print(""Oops!  That was no valid number.  Try again..."")
+...
+```
+
+The `try` statement works as follows.
+
+- First, the try clause (the statement(s) between the `try` and `except` keywords) is executed.
+- If no exception occurs, the except clause is skipped and execution of the `try` statement is finished.
+- If an exception occurs during execution of the `try` clause, the rest of the clause is skipped. Then, if its type matches the exception named after the `except` keyword, the except clause is executed, and then execution continues after the try/except block.
+- If an exception occurs which does not match the exception named in the except clause, it is passed on to outer `try` statements; if no handler is found, it is an unhandled exception and execution stops with an error message.",8. Errors and Exceptions — Python 3.15.2 documentation,17.509,1.0000,1.0000,true
+P24,tfidf,What block is guaranteed to run regardless of whether an exception was raised or handled?,T12_orig_005;T12_pydoc_009;T12_pydoc_010,T12_pydoc_007;T12_orig_005;T12_pydoc_009;T12_pydoc_004;T12_pydoc_002,0.187937;0.187391;0.185883;0.182643;0.154988,"**8. Errors and Exceptions > 8.4. Raising Exceptions**
+
+The `raise` statement allows the programmer to force a specified exception to occur. For example:
+
+```python
+>>> raise NameError('HiThere')
+Traceback (most recent call last):
+  File ""<stdin>"", line 1, in <module>
+    raise NameError('HiThere')
+NameError: HiThere
+```
+
+The sole argument to `raise` indicates the exception to be raised. This must be either an exception instance or an exception class (a class that derives from `BaseException`, such as `Exception` or one of its subclasses). If an exception class is passed, it will be implicitly instantiated by calling its constructor with no arguments:
+
+```python
+raise ValueError  # shorthand for 'raise ValueError()'
+```
+
+If you need to determine whether an exception was raised but don’t intend to handle it, a simpler form of the `raise` statement allows you to re-raise the exception:
+
+```python
+>>> try:
+...     raise NameError('HiThere')
+... except NameError:
+...     print('An exception flew by!')
+...     raise
+...
+An exception flew by!
+Traceback (most recent call last):
+  File ""<stdin>"", line 2, in <module>
+    raise NameError('HiThere')
+NameError: HiThere
+```",8. Errors and Exceptions — Python 3.15.2 documentation,17.286,0.6667,0.5000,true
+P25,tfidf,Why is using the `with open(...) as f:` context manager preferred for file operations?,T13_orig_001;T13_pydoc_008,T13_orig_002;T13_orig_001;T13_orig_003;T13_pydoc_005;T13_pydoc_006,0.261202;0.241297;0.236110;0.233784;0.203234,"**File Handling > Write mode erases the file; read() returns one string**
+
+**Common mistake: expecting `""w""` to add to a file**
+
+Opening a file with `""w""` erases what was there. Use `""a""` (append) to add to the end:
+
+```python
+with open(""log.txt"", ""w"") as f:
+    f.write(""run 1\n"")
+with open(""log.txt"", ""w"") as f:
+    f.write(""run 2\n"")
+with open(""log.txt"") as f:
+    print(repr(f.read()))
+```
+
+Output:
+```text
+'run 2\n'
+```
+
+`""run 1""` is gone. Appending keeps the old content:
+
+```python
+with open(""log.txt"", ""a"") as f:
+    f.write(""run 3\n"")
+with open(""log.txt"") as f:
+    print(f.read().splitlines())
+```
+
+Output:
+```text
+['run 2', 'run 3']
+```
+
+Also note that `f.read()` returns the whole file as **one string**; `.splitlines()` turns it into a list of lines.",Write mode erases the file; read() returns one string,17.284,0.5000,0.5000,true
+P26,tfidf,"What does the mode `'a'` do in `open('data.txt', 'a')`?",T13_orig_002;T13_py4e_002;T13_pydoc_001,T13_pydoc_001;T13_py4e_002;T13_py4e_012;T13_tp3_004;T13_orig_002,0.351693;0.344225;0.300534;0.286067;0.242109,"**7. Input and output > 7.2. Reading and writing files**
+
+`open()` returns a file object, and is most commonly used with two positional arguments: `open(filename, mode)`
+
+```python
+>>> f = open('workfile', 'w')
+```
+
+The first argument is a string containing the filename. The second argument is another string containing a few characters describing the way in which the file will be used. Mode can be `'r'` when the file will only be read, `'w'` for only writing (an existing file with the same name will be erased), and `'a'` opens the file for appending; any data written to the file is automatically added to the end. `'r+'` opens the file for both reading and writing. The mode argument is optional; `'r'` will be assumed if it’s omitted.
+
+Normally, files are opened in text mode, that means, you read and write strings from and to the file, which are encoded in a specific encoding. If encoding is not specified, the default is UTF-8 (see `open()`). Appending a `'b'` to the mode opens the file in binary mode. Binary mode data is read and written as `bytes` objects. You can not specify encoding when opening file in binary mode.",7. Input and output — Python 3.15.2 documentation,16.309,1.0000,1.0000,true
+P01,bm25,Who created the Python programming language and in what year was it first released?,,T01_py4e_010;T01_py4e_011;T06_py4e_008;T01_py4e_002;T10_tp3_011,1.000000;0.998412;0.970714;0.925320;0.867474,"**Why should you learn to write programs? > Terminology: Interpreter and compiler**
+
+Even though we are typing these commands into Python one line at a time, Python is treating them as an ordered sequence of statements with later statements able to retrieve data created in earlier statements. We are writing our first simple paragraph with four sentences in a logical and meaningful order.
+
+It is the nature of an interpreter to be able to have an interactive conversation as shown above. A compiler needs to be handed the entire program in a file, and then it runs a process to translate the high-level source code into machine language and then the compiler puts the resulting machine language into a file for later execution.
+
+If you have a Windows system, often these executable machine language programs have a suffix of “.exe” or “.dll” which stand for “executable” and “dynamic link library” respectively. In Linux and Macintosh, there is no suffix that uniquely marks a file as executable.
+
+If you were to open an executable file in a text editor, it would look completely crazy and be unreadable:
+
+```python
+^?ELF^A^A^A^@^@^@^@^@^@^@^@^@^B^@^C^@^A^@^@^@\xa0\x82
+^D^H4^@^@^@\x90^]^@^@^@^@^@^@4^@ ^@^G^@(^@$^@!^@^F^@
+^@^@4^@^@^@4\x80^D^H4\x80^D^H\xe0^@^@^@\xe0^@^@^@^E
+^@^@^@^D^@^@^@^C^@^@^@^T^A^@^@^T\x81^D^H^T\x81^D^H^S
+^@^@^@^S^@^@^@^D^@^@^@^A^@^@^@^A\^D^HQVhT\x83^D^H\xe8
+....
+```
+
+It is not easy to read or write machine language, so it is nice that we have interpreters and compilers that allow us to write in high-level languages like Python or C.",PY4E - Python for Everybody,2.917,,,false
+P02,bm25,Which of the following statements about Python's execution model is true?,T05_py4e_001;T10_py4e_007,T02_tp3_006;T12_pydoc_002;T05_py4e_003;T05_py4e_001;T10_tp3_021,1.000000;0.958996;0.955504;0.919440;0.901048,"**2. Variables and Statements > 2.2. State diagrams**
+
+A common way to represent variables on paper is to write the name with an arrow pointing to its value.
+
+This kind of figure is called a state diagram because it shows what state each of the variables is in (think of it as the variable’s state of mind). We’ll use state diagrams throughout the book to represent a model of how Python stores variables and their values.",2. Variables and Statements — Think Python,2.461,0.5000,0.2500,true
+P03,bm25,What will be the output of `type(3 / 2)` in Python 3?,T02_py4e_001;T02_tp3_003,T01_py4e_003;T02_py4e_001;T01_pydoc_007;T02_tp3_003;T12_pydoc_001,1.000000;0.997661;0.921610;0.910400;0.874466,"**Why should you learn to write programs? > Conversing with Python**
+
+Now that we have a word and a simple sentence that we know in Python, we need to know how to start a conversation with Python to test our new language skills.
+
+Before you can converse with Python, you must first install the Python software on your computer and learn how to start Python on your computer. At some point, you will be in a terminal or command window and you will type python and the Python interpreter will start executing in interactive mode and appear somewhat as follows:
+
+```python
+Python 3.11.6 (main, Nov  2 2023, 04:39:43)
+   [Clang 14.0.3 (clang-1403.0.22.14.1)] on darwin
+Type ""help"", ""copyright"", ""credits"" or ""license"" for more
+information.
+>>>
+```
+
+The `>>>` prompt is the Python interpreter’s way of asking you, “What do you want me to do next?” Python is ready to have a conversation with you. All you have to know is how to speak the Python language.",PY4E - Python for Everybody,2.430,1.0000,0.5000,true
+P04,bm25,Which of the following variables is immutable in Python?,T07_py4e_005;T07_tp3_004;T08_py4e_019;T08_py4e_028,T07_py4e_005;T07_tp3_004;T08_py4e_019;T02_py4e_007;T02_tp3_005,1.000000;0.985815;0.949796;0.947984;0.943048,"**Strings > Strings are immutable**
+
+It is tempting to use the operator on the left side of an assignment, with the intention of changing a character in a string. For example:
+
+```python
+>>> greeting = 'Hello, world!'
+>>> greeting[0] = 'J'
+TypeError: 'str' object does not support item assignment
+```
+
+The “object” in this case is the string and the “item” is the character you tried to assign. For now, an object is the same thing as a value, but we will refine that definition later. An item is one of the values in a sequence.
+
+The reason for the error is that strings are immutable, which means you can’t change an existing string. The best you can do is create a new string that is a variation on the original:
+
+```python
+>>> greeting = 'Hello, world!'
+>>> new_greeting = 'J' + greeting[1:]
+>>> print(new_greeting)
+Jello, world!
+```
+
+This example concatenates a new first letter onto a slice of `greeting`. It has no effect on the original string.",PY4E - Python for Everybody,2.097,0.7500,1.0000,true
+P05,bm25,What does the `input()` built-in function return by default in Python 3?,T03_py4e_001;T03_tp3_002,T03_py4e_001;T03_tp3_002;T10_pydoc_006;T12_py4e_001;T06_py4e_014,1.000000;0.993976;0.934580;0.857382;0.811241,"**Variables, expressions, and statements > Asking the user for input**
+
+Sometimes we would like to take the value for a variable from the user via their keyboard. Python provides a built-in function called `input` that gets input from the keyboard1. When this function is called, the program stops and waits for the user to type something. When the user presses `Return` or `Enter`, the program resumes and `input` returns what the user typed as a string.
+
+```python
+>>> inp = input()
+Some silly stuff
+>>> print(inp)
+Some silly stuff
+```
+
+Before getting input from the user, it is a good idea to print a prompt telling the user what to input. You can pass a string to `input` to be displayed to the user before pausing for input:
+
+```python
+>>> name = input('What is your name?\n')
+What is your name?
+Chuck
+>>> print(name)
+Chuck
+```
+
+The sequence `\n` at the end of the prompt represents a newline, which is a special character that causes a line break. That’s why the user’s input appears below the prompt.
+
+If you expect the user to type an integer, you can try to convert the return value to `int` using the `int()` function:
+
+```python
+>>> prompt = 'What...is the airspeed velocity of an unladen swallow?\n'
+>>> speed = input(prompt)
+What...is the airspeed velocity of an unladen swallow?
+17
+>>> int(speed)
+17
+>>> int(speed) + 5
+22
+```",PY4E - Python for Everybody,2.400,1.0000,1.0000,true
+P06,bm25,"What is the output of `print('Python', '3', sep='-', end='!')`?",T03_orig_001;T03_orig_002;T03_tp3_001,T03_orig_002;T03_orig_001;T03_py4e_001;T01_py4e_022;T03_tp3_002,1.000000;0.999564;0.608986;0.562839;0.560485,"**Input and Output > Building a line of output with sep and end**
+
+Building one line of output from several print calls. With `end=""""`, the next `print` continues on the same line:
+
+```python
+print(""Loading"", end="""")
+print(""."", end="""")
+print(""."", end="""")
+print("" done"")
+```
+
+Output:
+```text
+Loading.. done
+```
+
+The last `print` uses the default `end`, so it finishes the line.
+
+Joining values without a gap, and with a custom divider:
+
+```python
+print(""a"", ""b"", ""c"", sep="""")
+print(""Name"", ""Age"", sep="" | "")
+```
+
+Output:
+```text
+abc
+Name | Age
+```",Building a line of output with sep and end,2.108,0.6667,1.0000,true
+P07,bm25,What is the result of the expression `2 ** 3 ** 2`?,T04_orig_002;T04_py4e_002,T01_tp3_006;T03_tp3_001;T04_py4e_002;T10_pydoc_005;T10_py4e_001,1.000000;0.969840;0.943680;0.937208;0.928095,"**2. Variables and Statements > 2.9. Debugging**
+
+If you use an operator with a type it doesn’t support, that’s a runtime error.
+
+```python
+'126' / 3
+```
+
+Output:
+```text
+TypeError: unsupported operand type(s) for /: 'str' and 'int'
+```
+
+Finally, here’s an example of a semantic error. Suppose we want to compute the average of `1` and `3`, but we forget about the order of operations and write this:
+
+```python
+1 + 3 / 2
+```
+
+Output:
+```text
+2.5
+```
+
+When this expression is evaluated, it does not produce an error message, so there is no syntax error or runtime error. But the result is not the average of `1` and `3`, so the program is not correct. This is a semantic error because the program runs but it doesn’t do what’s intended.",2. Variables and Statements — Think Python,2.098,0.5000,0.3333,true
+P08,bm25,What is the difference between `is` and `==` in Python?,,T02_py4e_002;T13_tp3_010;T01_tp3_005;T08_py4e_019;T10_tp3_015,1.000000;0.994591;0.926995;0.903581;0.897757,"**Variables, expressions, and statements > Values and types**
+
+When you type a large integer, you might be tempted to use commas between groups of three digits, as in 1,000,000. This is not a legal integer in Python, but it is legal:
+
+```python
+>>> print(1,000,000)
+1 0 0
+```
+
+Well, that’s not what we expected at all! Python interprets 1,000,000 as a comma-separated sequence of integers, which it prints with spaces between.
+
+This is the first example we have seen of a semantic error: the code runs without producing an error message, but it doesn’t do the “right” thing.",PY4E - Python for Everybody,2.074,,,false
+P09,bm25,"What does the following snippet evaluate to?
+```python
+x = 10
+if x > 15:
+    print('A')
+elif x == 10:
+    print('B')
+else:
+    print('C')
+```",T05_py4e_004;T05_py4e_005;T05_pydoc_001;T05_tp3_003;T05_tp3_004,T05_py4e_004;T05_py4e_005;T05_pydoc_001;T05_tp3_003;T05_tp3_004,1.000000;0.906663;0.885785;0.857224;0.850748,"**Conditional execution > Chained conditionals**
+
+Sometimes there are more than two possibilities and we need more than two branches. One way to express a computation like that is a chained conditional:
+
+```python
+if x < y:
+    print('x is less than y')
+elif x > y:
+    print('x is greater than y')
+else:
+    print('x and y are equal')
+```
+
+`elif` is an abbreviation of “else if.” Again, exactly one branch will be executed.
+
+There is no limit on the number of `elif` statements. If there is an `else` clause, it has to be at the end, but there doesn’t have to be one.
+
+```python
+if choice == 'a':
+    print('Bad guess')
+elif choice == 'b':
+    print('Good guess')
+elif choice == 'c':
+    print('Close, but not correct')
+```
+
+Each condition is checked in order. If the first is false, the next is checked, and so on. If one of them is true, the corresponding branch executes, and the statement ends. Even if more than one condition is true, only the first true branch executes.",PY4E - Python for Everybody,3.118,1.0000,1.0000,true
+P10,bm25,What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?,T05_tp3_001;T11_orig_012,T08_py4e_025;T11_orig_012;T08_py4e_026;T06_pydoc_007;T05_tp3_001,1.000000;0.869016;0.816396;0.628689;0.564376,"**Tuples > Multiple assignment with dictionaries**
+
+Combining `items`, tuple assignment, and `for`, you can see a nice code pattern for traversing the keys and values of a dictionary in a single loop:
+
+```python
+d = {'a':10, 'b':1, 'c':22}
+for key, val in d.items():
+    print(val, key)
+```
+
+This loop has two iteration variables because `items` returns a list of tuples and `key, val` is a tuple assignment that successively iterates through each of the key-value pairs in the dictionary.
+
+For each iteration through the loop, both `key` and `val` are advanced to the next key-value pair in the dictionary (still in hash order).
+
+The output of this loop is:
+
+```python
+10 a
+1 b
+22 c
+```
+
+Again, it is in hash key order (i.e., no particular order).
+
+If we combine these two techniques, we can print out the contents of a dictionary sorted by the value stored in each key-value pair.",PY4E - Python for Everybody,2.431,1.0000,0.5000,true
+P11,bm25,"What will `range(1, 10, 2)` produce when unpacked into a list?",T06_orig_005;T06_pydoc_004,T06_pydoc_004;T11_pydoc_005;T11_pydoc_001;T06_orig_005;T03_pydoc_008,1.000000;0.965703;0.913670;0.858743;0.849913,"**4. More Control Flow Tools > 4.3. The `range()` Function**
+
+If you do need to iterate over a sequence of numbers, the built-in function `range()` comes in handy. It generates arithmetic progressions:
+
+```python
+>>> for i in range(5):
+...     print(i)
+...
+0
+1
+2
+3
+4
+```
+
+The given end point is never part of the generated sequence; `range(10)` generates 10 values, the legal indices for items of a sequence of length 10. It is possible to let the range start at another number, or to specify a different increment (even negative; sometimes this is called the ‘step’):
+
+```python
+>>> list(range(5, 10))
+[5, 6, 7, 8, 9]
+
+>>> list(range(0, 10, 3))
+[0, 3, 6, 9]
+
+>>> list(range(-10, -100, -30))
+[-10, -40, -70]
+```
+
+To iterate over the indices of a sequence, you can combine `range()` and `len()` as follows:
+
+```python
+>>> a = ['Mary', 'had', 'a', 'little', 'lamb']
+>>> for i in range(len(a)):
+...     print(i, a[i])
+...
+0 Mary
+1 had
+2 a
+3 little
+4 lamb
+```
+
+In most such cases, however, it is convenient to use the `enumerate()` function, see Looping Techniques.
+
+A strange thing happens if you just print a range:
+
+```python
+>>> range(10)
+range(0, 10)
+```",4. More Control Flow Tools — Python 3.15.2 documentation,2.327,1.0000,1.0000,true
+P12,bm25,What triggers the `else` block of a `for` loop in Python?,T05_pydoc_002;T06_pydoc_007,T06_pydoc_007;T06_py4e_014;T12_orig_005;T05_py4e_002;T12_py4e_002,1.000000;0.973417;0.960032;0.938071;0.899466,"**4. More Control Flow Tools > 4.5. `else` Clauses on Loops**
+
+In a `for` or `while` loop the `break` statement may be paired with an `else` clause. If the loop finishes without executing the `break`, the `else` clause executes.
+
+In a `for` loop, the `else` clause is executed after the loop finishes its final iteration, that is, if no break occurred.
+
+In a `while` loop, it’s executed after the loop’s condition becomes false.
+
+In either kind of loop, the `else` clause is not executed if the loop was terminated by a `break`. Of course, other ways of ending the loop early, such as a `return` or a raised exception, will also skip execution of the `else` clause.
+
+This is exemplified in the following `for` loop, which searches for prime numbers:
+
+```python
+>>> for n in range(2, 10):
+...     for x in range(2, n):
+...         if n % x == 0:
+...             print(n, 'equals', x, '*', n//x)
+...             break
+...     else:
+...         # loop fell through without finding a factor
+...         print(n, 'is a prime number')
+...
+2 is a prime number
+3 is a prime number
+4 equals 2 * 2
+5 is a prime number
+6 equals 2 * 3
+7 is a prime number
+8 equals 2 * 4
+9 equals 3 * 3
+```",4. More Control Flow Tools — Python 3.15.2 documentation,2.258,0.5000,1.0000,true
+P13,bm25,What is the value of `s[::-1]` if `s = 'hello'`?,T02_tp3_001,T03_pydoc_004;T02_tp3_003;T09_py4e_004;T01_tp3_006;T02_tp3_001,1.000000;0.946834;0.847631;0.822771;0.809577,"**7. Input and output > 7.1. Fancier output formatting**
+
+Some examples:
+
+```python
+>>> s = 'Hello, world.'
+>>> str(s)
+'Hello, world.'
+>>> repr(s)
+""'Hello, world.'""
+>>> str(1/7)
+'0.14285714285714285'
+>>> x = 10 * 3.25
+>>> y = 200 * 200
+>>> s = 'The value of x is ' + repr(x) + ', and y is ' + repr(y) + '...'
+>>> print(s)
+The value of x is 32.5, and y is 40000...
+>>> # The repr() of a string adds string quotes and backslashes:
+>>> hello = 'hello, world\n'
+>>> hellos = repr(hello)
+>>> print(hellos)
+'hello, world\n'
+>>> # The argument to repr() may be any Python object:
+>>> repr((x, y, ('spam', 'eggs')))
+""(32.5, 40000, ('spam', 'eggs'))""
+```
+
+The `string` module contains support for a simple templating approach based upon regular expressions, via `string.Template`. This offers yet another way to substitute values into strings, using placeholders like `$x` and replacing them with values from a dictionary. This syntax is easy to use, although it offers much less control for formatting.",7. Input and output — Python 3.15.2 documentation,2.067,1.0000,0.2000,true
+P14,bm25,"What is the result of `'-'.join(['a', 'b', 'c'])`?",T07_orig_001;T08_py4e_011,T08_tp3_008;T08_py4e_020;T04_pydoc_002;T09_py4e_012;T09_py4e_004,1.000000;0.735100;0.718229;0.715305;0.705812,"**9. Lists > 9.8. Sorting lists**
+
+Python provides a built-in function called `sorted` that sorts the elements of a list.
+
+```python
+scramble = ['c', 'a', 'b']
+sorted(scramble)
+```
+
+Output:
+```text
+['a', 'b', 'c']
+```
+
+The original list is unchanged.
+
+```python
+scramble
+```
+
+Output:
+```text
+['c', 'a', 'b']
+```
+
+`sorted` works with any kind of sequence, not just lists. So we can sort the letters in a string like this.
+
+```python
+sorted('letters')
+```
+
+Output:
+```text
+['e', 'e', 'l', 'r', 's', 't', 't']
+```
+
+The result is a list. To convert the list to a string, we can use `join`.
+
+```python
+''.join(sorted('letters'))
+```
+
+Output:
+```text
+'eelrstt'
+```
+
+With an empty string as the delimiter, the elements of the list are joined with nothing between them.",9. Lists — Think Python,1.971,0.0000,0.0000,true
+P15,bm25,"What is the result of `len({1, 2, 2, 3, 3, 3})`?",,T07_pydoc_006;T01_tp3_006;T11_orig_012;T07_tp3_001;T10_tp3_021,1.000000;0.968587;0.947822;0.939422;0.930962,"**3.1. Using Python as a Calculator > 3.1.2. Text**
+
+For non-negative indices, the length of a slice is the difference of the indices, if both are within bounds. For example, the length of `word[1:3]` is 2.
+
+Attempting to use an index that is too large will result in an error:
+
+```python
+>>> word[42]  # the word only has 6 characters
+Traceback (most recent call last):
+  File ""<stdin>"", line 1, in <module>
+IndexError: string index out of range
+```
+
+However, out of range slice indexes are handled gracefully when used for slicing:
+
+```python
+>>> word[4:42]
+'on'
+>>> word[42:]
+''
+```
+
+Python strings cannot be changed — they are immutable. Therefore, assigning to an indexed position in the string results in an error:
+
+```python
+>>> word[0] = 'J'
+Traceback (most recent call last):
+  File ""<stdin>"", line 1, in <module>
+TypeError: 'str' object does not support item assignment
+>>> word[2:] = 'py'
+Traceback (most recent call last):
+  File ""<stdin>"", line 1, in <module>
+TypeError: 'str' object does not support item assignment
+```
+
+If you need a different string, you should create a new one:
+
+```python
+>>> 'J' + word[1:]
+'Jython'
+>>> word[:2] + 'py'
+'Pypy'
+```
+
+The built-in function `len()` returns the length of a string:
+
+```python
+>>> s = 'supercalifragilisticexpialidocious'
+>>> len(s)
+34
+```",3. An Informal Introduction to Python — Python 3.15.2 documentation,2.181,,,false
+P16,bm25,How do you append the elements of list `b` to list `a` in-place?,T08_py4e_006;T08_pydoc_005;T08_tp3_005,T08_tp3_005;T08_py4e_006;T08_pydoc_005;T08_py4e_021;T08_py4e_003,1.000000;0.980879;0.882513;0.869112;0.857134,"**9. Lists > 9.5. List methods**
+
+Python provides methods that operate on lists. For example, `append` adds a new element to the end of a list:
+
+```python
+letters.append('e')
+letters
+```
+
+Output:
+```text
+['a', 'b', 'c', 'd', 'e']
+```
+
+`extend` takes a list as an argument and appends all of the elements:
+
+```python
+letters.extend(['f', 'g'])
+letters
+```
+
+Output:
+```text
+['a', 'b', 'c', 'd', 'e', 'f', 'g']
+```
+
+There are two methods that remove elements from a list. If you know the index of the element you want, you can use `pop`.
+
+```python
+t = ['a', 'b', 'c']
+t.pop(1)
+```
+
+Output:
+```text
+'b'
+```
+
+The return value is the element that was removed. And we can confirm that the list has been modified.
+
+```python
+t
+```
+
+Output:
+```text
+['a', 'c']
+```
+
+If you know the element you want to remove (but not the index), you can use `remove`:
+
+```python
+t = ['a', 'b', 'c']
+t.remove('b')
+```
+
+The return value from `remove` is `None`. But we can confirm that the list has been modified.
+
+```python
+t
+```
+
+Output:
+```text
+['a', 'c']
+```
+
+If the element you ask for is not in the list, that’s a ValueError.
+
+```python
+t.remove('d')
+```
+
+Output:
+```text
+ValueError: list.remove(x): x not in list
+```",9. Lists — Think Python,2.545,1.0000,1.0000,true
+P17,bm25,"What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",T09_py4e_004;T09_py4e_005;T09_pydoc_002,T09_py4e_004;T09_pydoc_002;T08_tp3_015;T08_tp3_022;T09_py4e_005,1.000000;0.962479;0.898591;0.886669;0.846736,"**Dictionaries > Dictionary as a set of counters**
+
+Here is what the code might look like:
+
+```python
+word = 'brontosaurus'
+d = dict()
+for c in word:
+    if c not in d:
+        d[c] = 1
+    else:
+        d[c] = d[c] + 1
+print(d)
+```
+
+We are effectively computing a histogram, which is a statistical term for a set of counters (or frequencies).
+
+The `for` loop traverses the string. Each time through the loop, if `c` is not in the dictionary, we create a new item with key `c` and the initial value 1 (since we have seen this letter once). If `c` is already in the dictionary we increment `d[c]`.
+
+Here’s the output of the program:
+
+```python
+{'b': 1, 'r': 2, 'o': 2, 'n': 1, 't': 1, 's': 2, 'a': 1, 'u': 2}
+```
+
+The histogram indicates that the letters “a” and “b” appear once; “o” appears twice, and so on.
+
+Dictionaries have a method called `get` that takes a key and a default value. If the key appears in the dictionary, `get` returns the corresponding value; otherwise it returns the default value. For example:
+
+```python
+>>> counts = { 'chuck' : 1 , 'annie' : 42, 'jan': 100}
+>>> print(counts.get('jan', 0))
+100
+>>> print(counts.get('tim', 0))
+0
+```",PY4E - Python for Everybody,2.568,1.0000,1.0000,true
+P18,bm25,Which method returns a set-like view of a dictionary's key-value pairs?,T09_py4e_001;T09_py4e_002;T09_py4e_010;T09_pydoc_001;T09_pydoc_002,T09_pydoc_001;T09_py4e_004;T09_py4e_002;T09_py4e_010;T09_py4e_001,1.000000;0.966798;0.935867;0.900630;0.857495,"**5. Data Structures > 5.5. Dictionaries**
+
+Another useful data type built into Python is the dictionary (see Mapping types — dict, frozendict). Dictionaries are sometimes found in other languages as “associative memories” or “associative arrays”. Unlike sequences, which are indexed by a range of numbers, dictionaries are indexed by keys, which can be any immutable type; strings and numbers can always be keys. Tuples can be used as keys if they contain only strings, numbers, or tuples; if a tuple contains any mutable object either directly or indirectly, it cannot be used as a key. You can’t use lists as keys, since lists can be modified in place using index assignments, slice assignments, or methods like `append()` and `extend()`.
+
+It is best to think of a dictionary as a set of key: value pairs, with the requirement that the keys are unique (within one dictionary). A pair of braces creates an empty dictionary: `{}`. Placing a comma-separated list of key:value pairs within the braces adds initial key:value pairs to the dictionary; this is also the way dictionaries are written on output.",5. Data Structures — Python 3.15.2 documentation,2.434,0.8000,1.0000,true
+P19,bm25,"What will the following code output?
+```python
+def func(a, b=[]):
+    b.append(a)
+    return b
+
+print(func(1))
+print(func(2))
+```",T08_py4e_015;T10_pydoc_004;T10_pydoc_007,T08_py4e_006;T10_pydoc_004;T10_py4e_012;T10_pydoc_007;T08_py4e_015,1.000000;0.954408;0.926259;0.893494;0.893014,"**Lists > List methods**
+
+Python provides methods that operate on lists. For example, `append` adds a new element to the end of a list:
+
+```python
+>>> t = ['a', 'b', 'c']
+>>> t.append('d')
+>>> print(t)
+['a', 'b', 'c', 'd']
+```
+
+`extend` takes a list as an argument and appends all of the elements:
+
+```python
+>>> t1 = ['a', 'b', 'c']
+>>> t2 = ['d', 'e']
+>>> t1.extend(t2)
+>>> print(t1)
+['a', 'b', 'c', 'd', 'e']
+```
+
+This example leaves `t2` unmodified.
+
+`sort` arranges the elements of the list from low to high:
+
+```python
+>>> t = ['d', 'c', 'e', 'b', 'a']
+>>> t.sort()
+>>> print(t)
+['a', 'b', 'c', 'd', 'e']
+```
+
+Most list methods are void; they modify the list and return `None`. If you accidentally write `t = t.sort()`, you will be disappointed with the result.",PY4E - Python for Everybody,2.939,1.0000,0.5000,true
+P20,bm25,What does `*args` and `**kwargs` represent in a function definition signature?,,T12_pydoc_004;T02_tp3_006;T01_py4e_013;T04_py4e_001;T10_py4e_004,1.000000;0.913367;0.828701;0.828224;0.817538,"**8. Errors and Exceptions > 8.3. Handling Exceptions**
+
+The except clause may specify a variable after the exception name. The variable is bound to the exception instance which typically has an `args` attribute that stores the arguments. For convenience, builtin exception types define `__str__()` to print all the arguments without explicitly accessing `.args`.
+
+```python
+>>> try:
+...     raise Exception('spam', 'eggs')
+... except Exception as inst:
+...     print(type(inst))    # the exception type
+...     print(inst.args)     # arguments stored in .args
+...     print(inst)          # __str__ allows args to be printed directly,
+...                          # but may be overridden in exception subclasses
+...     x, y = inst.args     # unpack args
+...     print('x =', x)
+...     print('y =', y)
+...
+<class 'Exception'>
+('spam', 'eggs')
+('spam', 'eggs')
+x = spam
+y = eggs
+```
+
+The exception’s `__str__()` output is printed as the last part (‘detail’) of the message for unhandled exceptions.
+
+`BaseException` is the common base class of all exceptions. One of its subclasses, `Exception`, is the base class of all the non-fatal exceptions. Exceptions which are not subclasses of `Exception` are not typically handled, because they are used to indicate that the program should terminate. They include `SystemExit` which is raised by `sys.exit()` and `KeyboardInterrupt` which is raised when a user wishes to interrupt the program.",8. Errors and Exceptions — Python 3.15.2 documentation,2.292,,,false
+P21,bm25,What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?,T11_orig_006;T11_pydoc_001;T11_pydoc_003,T11_pydoc_003;T06_pydoc_007;T11_orig_006;T11_pydoc_001;T06_pydoc_006,1.000000;0.925838;0.910702;0.888312;0.866002,"**5.1. More on Lists > 5.1.3. List Comprehensions**
+
+If the expression is a tuple (e.g. The `(x, y)` in the previous example), it must be parenthesized.
+
+```python
+>>> vec = [-4, -2, 0, 2, 4]
+>>> # create a new list with the values doubled
+>>> [x*2 for x in vec]
+[-8, -4, 0, 4, 8]
+>>> # filter the list to exclude negative numbers
+>>> [x for x in vec if x >= 0]
+[0, 2, 4]
+>>> # apply a function to all the elements
+>>> [abs(x) for x in vec]
+[4, 2, 0, 2, 4]
+>>> # call a method on each element
+>>> freshfruit = ['  banana', '  loganberry ', 'passion fruit  ']
+>>> [weapon.strip() for weapon in freshfruit]
+['banana', 'loganberry', 'passion fruit']
+>>> # create a list of 2-tuples like (number, square)
+>>> [(x, x**2) for x in range(6)]
+[(0, 0), (1, 1), (2, 4), (3, 9), (4, 16), (5, 25)]
+>>> # the tuple must be parenthesized, otherwise an error is raised
+>>> [x, x**2 for x in range(6)]
+  File ""<stdin>"", line 1
+    [x, x**2 for x in range(6)]
+     ^^^^^^^
+SyntaxError: did you forget parentheses around the comprehension target?
+>>> # flatten a list using a listcomp with two 'for'
+>>> vec = [[1,2,3], [4,5,6], [7,8,9]]
+>>> [num for elem in vec for num in elem]
+[1, 2, 3, 4, 5, 6, 7, 8, 9]
+```",5. Data Structures — Python 3.15.2 documentation,2.554,1.0000,1.0000,true
+P22,bm25,"Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?",T11_orig_006;T11_orig_010;T11_pydoc_002;T11_pydoc_005,T11_pydoc_005;T11_orig_010;T11_orig_006;T11_pydoc_002;T03_pydoc_008,1.000000;0.838168;0.793356;0.704875;0.666651,"**5.1. More on Lists > 5.1.4. Nested List Comprehensions**
+
+The initial expression in a list comprehension can be any arbitrary expression, including another list comprehension.
+
+Consider the following example of a 3x4 matrix implemented as a list of 3 lists of length 4:
+
+```python
+>>> matrix = [
+...     [1, 2, 3, 4],
+...     [5, 6, 7, 8],
+...     [9, 10, 11, 12],
+... ]
+```
+
+The following list comprehension will transpose rows and columns:
+
+```python
+>>> [[row[i] for row in matrix] for i in range(4)]
+[[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
+```
+
+As we saw in the previous section, the inner list comprehension is evaluated in the context of the `for` that follows it, so this example is equivalent to:
+
+```python
+>>> transposed = []
+>>> for i in range(4):
+...     transposed.append([row[i] for row in matrix])
+...
+>>> transposed
+[[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
+```
+
+Which, in turn, is the same as:
+
+```python
+>>> transposed = []
+>>> for i in range(4):
+...     # the following 3 lines implement the nested listcomp
+...     transposed_row = []
+...     for row in matrix:
+...         transposed_row.append(row[i])
+...     transposed.append(transposed_row)
+...
+>>> transposed
+[[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
+```",5. Data Structures — Python 3.15.2 documentation,2.389,1.0000,1.0000,true
+P23,bm25,Which clause in a `try...except` block executes strictly when no exceptions are raised?,T12_pydoc_002;T12_pydoc_009,T12_pydoc_009;T12_pydoc_002;T12_py4e_002;T12_pydoc_003;T12_pydoc_004,1.000000;0.964274;0.919594;0.886031;0.848537,"**8. Errors and Exceptions > 8.7. Defining Clean-up Actions**
+
+- If an exception occurs during execution of the `try` clause, the exception may be handled by an `except` clause. If the exception is not handled by an `except` clause, the exception is re-raised after the `finally` clause has been executed.
+- An exception could occur during execution of an `except` or `else` clause. Again, the exception is re-raised after the `finally` clause has been executed.
+- If the `finally` clause executes a `break`, `continue` or `return` statement, exceptions are not re-raised. This can be confusing and is therefore discouraged. From version 3.14 the compiler emits a `SyntaxWarning` for it (see PEP 765).
+- If the `try` statement reaches a `break`, `continue` or `return` statement, the `finally` clause will execute just prior to the `break`, `continue` or `return` statement’s execution.
+- If a `finally` clause includes a `return` statement, the returned value will be the one from the `finally` clause’s `return` statement, not the value from the `try` clause’s `return` statement. This can be confusing and is therefore discouraged. From version 3.14 the compiler emits a `SyntaxWarning` for it (see PEP 765).
+
+For example:
+
+```python
+>>> def bool_return():
+...     try:
+...         return True
+...     finally:
+...         return False
+...
+>>> bool_return()
+False
+```",8. Errors and Exceptions — Python 3.15.2 documentation,2.436,1.0000,1.0000,true
+P24,bm25,What block is guaranteed to run regardless of whether an exception was raised or handled?,T12_orig_005;T12_pydoc_009;T12_pydoc_010,T12_pydoc_007;T12_pydoc_009;T12_pydoc_010;T12_pydoc_004;T12_orig_005,1.000000;0.995924;0.948989;0.936999;0.836285,"**8. Errors and Exceptions > 8.4. Raising Exceptions**
+
+The `raise` statement allows the programmer to force a specified exception to occur. For example:
+
+```python
+>>> raise NameError('HiThere')
+Traceback (most recent call last):
+  File ""<stdin>"", line 1, in <module>
+    raise NameError('HiThere')
+NameError: HiThere
+```
+
+The sole argument to `raise` indicates the exception to be raised. This must be either an exception instance or an exception class (a class that derives from `BaseException`, such as `Exception` or one of its subclasses). If an exception class is passed, it will be implicitly instantiated by calling its constructor with no arguments:
+
+```python
+raise ValueError  # shorthand for 'raise ValueError()'
+```
+
+If you need to determine whether an exception was raised but don’t intend to handle it, a simpler form of the `raise` statement allows you to re-raise the exception:
+
+```python
+>>> try:
+...     raise NameError('HiThere')
+... except NameError:
+...     print('An exception flew by!')
+...     raise
+...
+An exception flew by!
+Traceback (most recent call last):
+  File ""<stdin>"", line 2, in <module>
+    raise NameError('HiThere')
+NameError: HiThere
+```",8. Errors and Exceptions — Python 3.15.2 documentation,2.533,1.0000,0.5000,true
+P25,bm25,Why is using the `with open(...) as f:` context manager preferred for file operations?,T13_orig_001;T13_pydoc_008,T13_orig_001;T13_pydoc_008;T13_orig_002;T13_pydoc_002;T12_pydoc_005,1.000000;0.983113;0.977110;0.930716;0.904127,"**File Handling > A complete file example you can run**
+
+This example is self-contained: it first creates the file it then reads, so it runs anywhere.
+
+```python
+with open(""notes.txt"", ""w"") as f:
+    f.write(""first line\n"")
+    f.write(""second line\n"")
+
+with open(""notes.txt"") as f:
+    for line in f:
+        print(line.rstrip())
+```
+
+Output:
+```text
+first line
+second line
+```
+
+- `open(name, ""w"")` creates the file (or empties it if it already exists) for writing.
+- `with` closes the file automatically when the indented block ends, even if an error happens.
+- Looping over a file object gives one line at a time. Each line still ends with `""\n""`, so `.rstrip()` removes it before printing.",A complete file example you can run,2.392,1.0000,1.0000,true
+P26,bm25,"What does the mode `'a'` do in `open('data.txt', 'a')`?",T13_orig_002;T13_py4e_002;T13_pydoc_001,T13_py4e_002;T13_py4e_012;T13_tp3_004;T13_pydoc_001;T13_py4e_005,1.000000;0.941993;0.832230;0.819393;0.808337,"**Files > Opening files**
+
+When we want to read or write a file (say on your hard drive), we first must open the file. Opening the file communicates with your operating system, which knows where the data for each file is stored. When you open a file, you are asking the operating system to find the file by name and make sure the file exists. In this example, we open the file mbox.txt, which should be stored in the same folder that you are in when you start Python.
+
+```python
+>>> fhand = open('mbox.txt')
+>>> print(fhand)
+<_io.TextIOWrapper name='mbox.txt' mode='r' encoding='cp1252'>
+```
+
+If the `open` is successful, the operating system returns us a file handle. The file handle is not the actual data contained in the file, but instead it is a “handle” that we can use to read the data. You are given a handle if the requested file exists and you have the proper permissions to read the file.
+
+If the file does not exist, `open` will fail with a traceback and you will not get a handle to access the contents of the file:
+
+```python
+>>> fhand = open('stuff.txt')
+Traceback (most recent call last):
+File ""<stdin>"", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: 'stuff.txt'
+```
+
+Note: this example reads `mbox.txt`, `stuff.txt`, a sample data file from the original textbook. To try it yourself, create a small text file with that name (any lines of text will do) in the same folder as your program, or use your own file.",PY4E - Python for Everybody,2.168,0.6667,1.0000,true
+P01,dense,Who created the Python programming language and in what year was it first released?,,T01_py4e_011;T01_py4e_003;T01_py4e_008;T01_pydoc_003;T01_py4e_002,0.812678;0.789131;0.779562;0.754810;0.749038,"**Why should you learn to write programs? > Terminology: Interpreter and compiler**
+
+Now at this point in our discussion of compilers and interpreters, you should be wondering a bit about the Python interpreter itself. What language is it written in? Is it written in a compiled language? When we type “python”, what exactly is happening?
+
+The Python interpreter is written in a high-level language called “C”. So Python is a program itself and it is compiled into machine code. When you installed Python on your computer (or the vendor installed it), you copied a machine-code copy of the translated Python program onto your system. In Windows, the executable machine code for Python itself is likely in a file with a name like:
+
+```python
+C:\Python35\python.exe
+```
+
+That is more than you really need to know to be a Python programmer, but sometimes it pays to answer those little nagging questions right at the beginning.",PY4E - Python for Everybody,19.246,,,false
+P02,dense,Which of the following statements about Python's execution model is true?,T05_py4e_001;T10_py4e_007,T05_py4e_001;T06_pydoc_002;T01_pydoc_003;T10_py4e_007;T02_py4e_006,0.769583;0.757684;0.756153;0.754466;0.751643,"**Conditional execution > Conditional execution**
+
+In order to write useful programs, we almost always need the ability to check conditions and change the behavior of the program accordingly. Conditional statements give us this ability. The simplest form is the `if` statement:
+
+```python
+if x > 0 :
+    print('x is positive')
+```
+
+The boolean expression after the `if` statement is called the condition. We end the `if` statement with a colon character (:) and the line(s) after the if statement are indented.
+
+If the logical condition is true, then the indented statement gets executed. If the logical condition is false, the indented statement is skipped.
+
+`if` statements have the same structure as function definitions or `for` loops1. The statement consists of a header line that ends with the colon character (:) followed by an indented block. Statements like this are called compound statements because they stretch across more than one line.
+
+```python
+if x > y:
+    print(x)
+    print(y)
+```",PY4E - Python for Everybody,13.665,1.0000,1.0000,true
+P03,dense,What will be the output of `type(3 / 2)` in Python 3?,T02_py4e_001;T02_tp3_003,T02_tp3_003;T02_tp3_004;T02_orig_004;T02_py4e_011;T01_tp3_006,0.815470;0.789458;0.788817;0.783596;0.781827,"**1. Programming as a way of thinking > 1.5. Values and types**
+
+So far we’ve seen three kinds of values:
+
+- `2` is an integer,
+- `42.0` is a floating-point number, and
+- `'Hello'` is a string.
+
+A kind of value is called a type. Every value has a type – or we sometimes say it “belongs to” a type.
+
+Python provides a function called `type` that tells you the type of any value. The type of an integer is `int`.
+
+```python
+type(2)
+```
+
+Output:
+```text
+<class 'int'>
+```
+
+The type of a floating-point number is `float`.
+
+```python
+type(42.0)
+```
+
+Output:
+```text
+<class 'float'>
+```
+
+And the type of a string is `str`.
+
+```python
+type('Hello, World!')
+```
+
+Output:
+```text
+<class 'str'>
+```
+
+The types `int`, `float`, and `str` can be used as functions. For example, `int` can take a floating-point number and convert it to an integer (always rounding down).
+
+```python
+int(42.9)
+```
+
+Output:
+```text
+42
+```
+
+And `float` can convert an integer to a floating-point value.
+
+```python
+float(42)
+```
+
+Output:
+```text
+42.0
+```
+
+Now, here’s something that can be confusing. What do you get if you put a sequence of digits in quotes?
+
+```python
+'126'
+```
+
+Output:
+```text
+'126'
+```
+
+It looks like a number, but it is actually a string.
+
+```python
+type('126')
+```
+
+Output:
+```text
+<class 'str'>
+```
+
+If you try to use it like a number, you might get an error.
+
+```python
+'126' / 3
+```
+
+Output:
+```text
+TypeError: unsupported operand type(s) for /: 'str' and 'int'
+```",1. Programming as a way of thinking — Think Python,15.188,0.5000,1.0000,true
+P04,dense,Which of the following variables is immutable in Python?,T07_py4e_005;T07_tp3_004;T08_py4e_019;T08_py4e_028,T08_py4e_019;T08_py4e_020;T08_tp3_015;T08_pydoc_009;T08_py4e_024,0.791824;0.785656;0.784386;0.764731;0.756910,"**Tuples > Tuples are immutable**
+
+A tuple1 is a sequence of values much like a list. The values stored in a tuple can be any type, and they are indexed by integers. The important difference is that tuples are immutable. Tuples are also comparable and hashable so we can sort lists of them and use tuples as key values in Python dictionaries.
+
+Syntactically, a tuple is a comma-separated list of values:
+
+```python
+>>> t = 'a', 'b', 'c', 'd', 'e'
+```
+
+Although it is not necessary, it is common to enclose tuples in parentheses to help us quickly identify tuples when we look at Python code:
+
+```python
+>>> t = ('a', 'b', 'c', 'd', 'e')
+```
+
+To create a tuple with a single element, you have to include the final comma:
+
+```python
+>>> t1 = ('a',)
+>>> type(t1)
+<class 'tuple'>
+```
+
+Without the comma Python treats `('a')` as an expression with a string in parentheses that evaluates to a string:
+
+```python
+>>> t2 = ('a')
+>>> type(t2)
+<class 'str'>
+```
+
+Another way to construct a tuple is the built-in function `tuple`. With no argument, it creates an empty tuple:
+
+```python
+>>> t = tuple()
+>>> print(t)
+()
+```",PY4E - Python for Everybody,15.132,0.2500,1.0000,true
+P05,dense,What does the `input()` built-in function return by default in Python 3?,T03_py4e_001;T03_tp3_002,T03_py4e_001;T10_py4e_002;T03_tp3_002;T10_pydoc_003;T13_pydoc_001,0.817773;0.801372;0.793884;0.775976;0.774877,"**Variables, expressions, and statements > Asking the user for input**
+
+Sometimes we would like to take the value for a variable from the user via their keyboard. Python provides a built-in function called `input` that gets input from the keyboard1. When this function is called, the program stops and waits for the user to type something. When the user presses `Return` or `Enter`, the program resumes and `input` returns what the user typed as a string.
+
+```python
+>>> inp = input()
+Some silly stuff
+>>> print(inp)
+Some silly stuff
+```
+
+Before getting input from the user, it is a good idea to print a prompt telling the user what to input. You can pass a string to `input` to be displayed to the user before pausing for input:
+
+```python
+>>> name = input('What is your name?\n')
+What is your name?
+Chuck
+>>> print(name)
+Chuck
+```
+
+The sequence `\n` at the end of the prompt represents a newline, which is a special character that causes a line break. That’s why the user’s input appears below the prompt.
+
+If you expect the user to type an integer, you can try to convert the return value to `int` using the `int()` function:
+
+```python
+>>> prompt = 'What...is the airspeed velocity of an unladen swallow?\n'
+>>> speed = input(prompt)
+What...is the airspeed velocity of an unladen swallow?
+17
+>>> int(speed)
+17
+>>> int(speed) + 5
+22
+```",PY4E - Python for Everybody,16.331,1.0000,1.0000,true
+P06,dense,"What is the output of `print('Python', '3', sep='-', end='!')`?",T03_orig_001;T03_orig_002;T03_tp3_001,T13_py4e_004;T03_orig_001;T10_tp3_021;T04_orig_002;T03_pydoc_004,0.807819;0.806395;0.805091;0.801056;0.800271,"**Files > Text files and lines**
+
+In Python, we represent the newline character as a backslash-n in string constants. Even though this looks like two characters, it is actually a single character. When we look at the variable by entering “stuff” in the interpreter, it shows us the `\n` in the string, but when we use `print` to show the string, we see the string broken into two lines by the newline character.
+
+```python
+>>> stuff = 'Hello\nWorld!'
+>>> stuff
+'Hello\nWorld!'
+>>> print(stuff)
+Hello
+World!
+>>> stuff = 'X\nY'
+>>> print(stuff)
+X
+Y
+>>> len(stuff)
+3
+```
+
+You can also see that the length of the string `X\nY` is three characters because the newline character is a single character.
+
+So when we look at the lines in a file, we need to imagine that there is a special invisible character called the newline at the end of each line that marks the end of the line.
+
+So the newline character separates the characters in the file into lines.",PY4E - Python for Everybody,21.774,0.3333,0.5000,true
+P07,dense,What is the result of the expression `2 ** 3 ** 2`?,T04_orig_002;T04_py4e_002,T04_orig_002;T04_py4e_002;T04_tp3_003;T04_tp3_002;T10_tp3_003,0.759365;0.753427;0.746249;0.738139;0.723890,"**Operators > Operator precedence**
+
+When an expression has several operators, Python applies them in a fixed order, not simply left to right:
+
+```python
+print(2 + 3 * 4)
+print((2 + 3) * 4)
+print(2 ** 3 ** 2)
+print(-2 ** 2)
+print(10 - 4 - 3)
+```
+
+Output:
+```text
+14
+20
+512
+-4
+3
+```
+
+- `*`, `/`, `//` and `%` are applied before `+` and `-`.
+- `**` is applied first of all, and it groups from the right: `2 ** 3 ** 2` is `2 ** 9`.
+- `-2 ** 2` is `-(2 ** 2)`, because `**` binds more tightly than the minus sign.
+- Operators of the same level, such as `-` and `-`, go left to right: `(10 - 4) - 3`.
+- Comparisons come after arithmetic, and `not`, `and`, `or` come last, in that order.
+
+When in doubt, add parentheses: they make the order explicit and the code easier to read.",Operator precedence,18.429,1.0000,1.0000,true
+P08,dense,What is the difference between `is` and `==` in Python?,,T04_tp3_006;T05_orig_004;T04_orig_001;T08_tp3_009;T04_py4e_004,0.859979;0.842795;0.841880;0.828652;0.824998,"**5. Conditionals and Recursion > 5.2. Boolean Expressions**
+
+A boolean expression is an expression that is either true or false. For example, the following expressions use the equals operator, `==`, which compares two values and produces `True` if they are equal and `False` otherwise:
+
+```python
+5 == 5
+```
+
+Output:
+```text
+True
+```
+
+```python
+5 == 7
+```
+
+Output:
+```text
+False
+```
+
+A common error is to use a single equal sign (`=`) instead of a double equal sign (`==`). Remember that `=` assigns a value to a variable and `==` compares two values.
+
+```python
+x = 5
+y = 7
+```
+
+```python
+x == y
+```
+
+Output:
+```text
+False
+```
+
+`True` and `False` are special values that belong to the type `bool`; they are not strings:
+
+```python
+type(True)
+```
+
+Output:
+```text
+<class 'bool'>
+```
+
+```python
+type(False)
+```
+
+Output:
+```text
+<class 'bool'>
+```
+
+The `==` operator is one of the relational operators; the others are:
+
+```python
+x != y               # x is not equal to y
+```
+
+Output:
+```text
+True
+```
+
+```python
+x > y                # x is greater than y
+```
+
+Output:
+```text
+False
+```
+
+```python
+x < y               # x is less than to y
+```
+
+Output:
+```text
+True
+```
+
+```python
+x >= y               # x is greater than or equal to y
+```
+
+Output:
+```text
+False
+```
+
+```python
+x <= y               # x is less than or equal to y
+```
+
+Output:
+```text
+True
+```",5. Conditionals and Recursion — Think Python,18.080,,,false
+P09,dense,"What does the following snippet evaluate to?
+```python
+x = 10
+if x > 15:
+    print('A')
+elif x == 10:
+    print('B')
+else:
+    print('C')
+```",T05_py4e_004;T05_py4e_005;T05_pydoc_001;T05_tp3_003;T05_tp3_004,T05_tp3_002;T05_py4e_001;T05_pydoc_001;T05_orig_004;T05_py4e_003,0.853234;0.851660;0.850750;0.843011;0.837660,"**5. Conditionals and Recursion > 5.5. The `else` clause**
+
+An `if` statement can have a second part, called an `else` clause. The syntax looks like this:
+
+```python
+if x % 2 == 0:
+    print('x is even')
+else:
+    print('x is odd')
+```
+
+Output:
+```text
+x is odd
+```
+
+If the condition is true, the first indented statement runs; otherwise, the second indented statement runs.
+
+In this example, if `x` is even, the remainder when `x` is divided by `2` is `0`, so the condition is true and the program displays `x is even`. If `x` is odd, the remainder is `1`, so the condition is false, and the program displays `x is odd`.
+
+Since the condition must be true or false, exactly one of the alternatives will run. The alternatives are called branches.",5. Conditionals and Recursion — Think Python,28.962,0.2000,0.3333,true
+P10,dense,What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?,T05_tp3_001;T11_orig_012,T06_py4e_003;T05_orig_004;T10_tp3_014;T05_orig_003;T12_orig_005,0.724381;0.723753;0.722744;0.721177;0.721004,"**Iteration > The `while` statement**
+
+This type of flow is called a loop because the third step loops back around to the top. We call each time we execute the body of the loop an iteration. For the above loop, we would say, “It had five iterations”, which means that the body of the loop was executed five times.
+
+The body of the loop should change the value of one or more variables so that eventually the condition becomes false and the loop terminates. We call the variable that changes each time the loop executes and controls when the loop finishes the iteration variable. If there is no iteration variable, the loop will repeat forever, resulting in an infinite loop.",PY4E - Python for Everybody,20.321,0.0000,0.0000,true
+P11,dense,"What will `range(1, 10, 2)` produce when unpacked into a list?",T06_orig_005;T06_pydoc_004,T06_pydoc_004;T06_pydoc_005;T06_orig_005;T06_tp3_001;T08_py4e_001,0.799948;0.799734;0.783612;0.761687;0.745781,"**4. More Control Flow Tools > 4.3. The `range()` Function**
+
+If you do need to iterate over a sequence of numbers, the built-in function `range()` comes in handy. It generates arithmetic progressions:
+
+```python
+>>> for i in range(5):
+...     print(i)
+...
+0
+1
+2
+3
+4
+```
+
+The given end point is never part of the generated sequence; `range(10)` generates 10 values, the legal indices for items of a sequence of length 10. It is possible to let the range start at another number, or to specify a different increment (even negative; sometimes this is called the ‘step’):
+
+```python
+>>> list(range(5, 10))
+[5, 6, 7, 8, 9]
+
+>>> list(range(0, 10, 3))
+[0, 3, 6, 9]
+
+>>> list(range(-10, -100, -30))
+[-10, -40, -70]
+```
+
+To iterate over the indices of a sequence, you can combine `range()` and `len()` as follows:
+
+```python
+>>> a = ['Mary', 'had', 'a', 'little', 'lamb']
+>>> for i in range(len(a)):
+...     print(i, a[i])
+...
+0 Mary
+1 had
+2 a
+3 little
+4 lamb
+```
+
+In most such cases, however, it is convenient to use the `enumerate()` function, see Looping Techniques.
+
+A strange thing happens if you just print a range:
+
+```python
+>>> range(10)
+range(0, 10)
+```",4. More Control Flow Tools — Python 3.15.2 documentation,19.648,1.0000,1.0000,true
+P12,dense,What triggers the `else` block of a `for` loop in Python?,T05_pydoc_002;T06_pydoc_007,T06_pydoc_007;T06_py4e_008;T06_orig_006;T06_tp3_001;T05_py4e_001,0.861382;0.816928;0.816276;0.813701;0.813462,"**4. More Control Flow Tools > 4.5. `else` Clauses on Loops**
+
+In a `for` or `while` loop the `break` statement may be paired with an `else` clause. If the loop finishes without executing the `break`, the `else` clause executes.
+
+In a `for` loop, the `else` clause is executed after the loop finishes its final iteration, that is, if no break occurred.
+
+In a `while` loop, it’s executed after the loop’s condition becomes false.
+
+In either kind of loop, the `else` clause is not executed if the loop was terminated by a `break`. Of course, other ways of ending the loop early, such as a `return` or a raised exception, will also skip execution of the `else` clause.
+
+This is exemplified in the following `for` loop, which searches for prime numbers:
+
+```python
+>>> for n in range(2, 10):
+...     for x in range(2, n):
+...         if n % x == 0:
+...             print(n, 'equals', x, '*', n//x)
+...             break
+...     else:
+...         # loop fell through without finding a factor
+...         print(n, 'is a prime number')
+...
+2 is a prime number
+3 is a prime number
+4 equals 2 * 2
+5 is a prime number
+6 equals 2 * 3
+7 is a prime number
+8 equals 2 * 4
+9 equals 3 * 3
+```",4. More Control Flow Tools — Python 3.15.2 documentation,18.522,0.5000,1.0000,true
+P13,dense,What is the value of `s[::-1]` if `s = 'hello'`?,T02_tp3_001,T04_orig_002;T05_orig_003;T07_pydoc_005;T07_py4e_012;T08_tp3_002,0.719729;0.717743;0.717506;0.715298;0.714645,"**Operators > Operator precedence**
+
+When an expression has several operators, Python applies them in a fixed order, not simply left to right:
+
+```python
+print(2 + 3 * 4)
+print((2 + 3) * 4)
+print(2 ** 3 ** 2)
+print(-2 ** 2)
+print(10 - 4 - 3)
+```
+
+Output:
+```text
+14
+20
+512
+-4
+3
+```
+
+- `*`, `/`, `//` and `%` are applied before `+` and `-`.
+- `**` is applied first of all, and it groups from the right: `2 ** 3 ** 2` is `2 ** 9`.
+- `-2 ** 2` is `-(2 ** 2)`, because `**` binds more tightly than the minus sign.
+- Operators of the same level, such as `-` and `-`, go left to right: `(10 - 4) - 3`.
+- Comparisons come after arithmetic, and `not`, `and`, `or` come last, in that order.
+
+When in doubt, add parentheses: they make the order explicit and the code easier to read.",Operator precedence,19.949,0.0000,0.0000,true
+P14,dense,"What is the result of `'-'.join(['a', 'b', 'c'])`?",T07_orig_001;T08_py4e_011,T08_py4e_011;T07_orig_001;T08_tp3_003;T08_py4e_006;T03_orig_002,0.807994;0.795049;0.766219;0.762068;0.759525,"**Lists > Lists and strings**
+
+`join` is the inverse of `split`. It takes a list of strings and concatenates the elements. `join` is a string method, so you have to invoke it on the delimiter and pass the list as a parameter:
+
+```python
+>>> t = ['pining', 'for', 'the', 'fjords']
+>>> delimiter = ' '
+>>> delimiter.join(t)
+'pining for the fjords'
+```
+
+In this case the delimiter is a space character, so `join` puts a space between words. To concatenate strings without spaces, you can use the empty string, ““, as a delimiter.",PY4E - Python for Everybody,20.033,1.0000,1.0000,true
+P15,dense,"What is the result of `len({1, 2, 2, 3, 3, 3})`?",,T08_py4e_004;T09_tp3_002;T06_tp3_001;T11_pydoc_002;T11_orig_006,0.730670;0.723233;0.711094;0.706830;0.701155,"**Lists > List operations**
+
+The `+` operator concatenates lists:
+
+```python
+>>> a = [1, 2, 3]
+>>> b = [4, 5, 6]
+>>> c = a + b
+>>> print(c)
+[1, 2, 3, 4, 5, 6]
+```
+
+Similarly, the `*` operator repeats a list a given number of times:
+
+```python
+>>> [0] * 4
+[0, 0, 0, 0]
+>>> [1, 2, 3] * 3
+[1, 2, 3, 1, 2, 3, 1, 2, 3]
+```
+
+The first example repeats four times. The second example repeats the list three times.",PY4E - Python for Everybody,19.486,,,false
+P16,dense,How do you append the elements of list `b` to list `a` in-place?,T08_py4e_006;T08_pydoc_005;T08_tp3_005,T08_py4e_006;T08_pydoc_004;T08_py4e_004;T08_pydoc_007;T08_tp3_005,0.759524;0.753908;0.743861;0.740672;0.740604,"**Lists > List methods**
+
+Python provides methods that operate on lists. For example, `append` adds a new element to the end of a list:
+
+```python
+>>> t = ['a', 'b', 'c']
+>>> t.append('d')
+>>> print(t)
+['a', 'b', 'c', 'd']
+```
+
+`extend` takes a list as an argument and appends all of the elements:
+
+```python
+>>> t1 = ['a', 'b', 'c']
+>>> t2 = ['d', 'e']
+>>> t1.extend(t2)
+>>> print(t1)
+['a', 'b', 'c', 'd', 'e']
+```
+
+This example leaves `t2` unmodified.
+
+`sort` arranges the elements of the list from low to high:
+
+```python
+>>> t = ['d', 'c', 'e', 'b', 'a']
+>>> t.sort()
+>>> print(t)
+['a', 'b', 'c', 'd', 'e']
+```
+
+Most list methods are void; they modify the list and return `None`. If you accidentally write `t = t.sort()`, you will be disappointed with the result.",PY4E - Python for Everybody,18.206,0.6667,1.0000,true
+P17,dense,"What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",T09_py4e_004;T09_py4e_005;T09_pydoc_002,T09_pydoc_002;T09_tp3_009;T09_tp3_002;T09_py4e_009;T09_tp3_001,0.856558;0.820652;0.812176;0.789985;0.788388,"**5. Data Structures > 5.5. Dictionaries**
+
+The main operations on a dictionary are storing a value with some key and extracting the value given the key. It is also possible to delete a key:value pair with `del`. If you store using a key that is already in use, the old value associated with that key is forgotten.
+
+Extracting a value for a non-existent key by subscripting (`d[key]`) raises a `KeyError`. To avoid getting this error when trying to access a possibly non-existent key, use the `get()` method instead, which returns `None` (or a specified default value) if the key is not in the dictionary.
+
+Performing `list(d)` on a dictionary returns a list of all the keys used in the dictionary, in insertion order (if you want it sorted, just use `sorted(d)` instead). To check whether a single key is in the dictionary, use the `in` keyword.",5. Data Structures — Python 3.15.2 documentation,18.579,0.3333,1.0000,true
+P18,dense,Which method returns a set-like view of a dictionary's key-value pairs?,T09_py4e_001;T09_py4e_002;T09_py4e_010;T09_pydoc_001;T09_pydoc_002,T08_py4e_025;T09_tp3_004;T09_pydoc_001;T09_tp3_001;T08_tp3_022,0.785140;0.764914;0.758904;0.758432;0.756637,"**Tuples > Multiple assignment with dictionaries**
+
+Combining `items`, tuple assignment, and `for`, you can see a nice code pattern for traversing the keys and values of a dictionary in a single loop:
+
+```python
+d = {'a':10, 'b':1, 'c':22}
+for key, val in d.items():
+    print(val, key)
+```
+
+This loop has two iteration variables because `items` returns a list of tuples and `key, val` is a tuple assignment that successively iterates through each of the key-value pairs in the dictionary.
+
+For each iteration through the loop, both `key` and `val` are advanced to the next key-value pair in the dictionary (still in hash order).
+
+The output of this loop is:
+
+```python
+10 a
+1 b
+22 c
+```
+
+Again, it is in hash key order (i.e., no particular order).
+
+If we combine these two techniques, we can print out the contents of a dictionary sorted by the value stored in each key-value pair.",PY4E - Python for Everybody,15.550,0.2000,0.3333,true
+P19,dense,"What will the following code output?
+```python
+def func(a, b=[]):
+    b.append(a)
+    return b
+
+print(func(1))
+print(func(2))
+```",T08_py4e_015;T10_pydoc_004;T10_pydoc_007,T10_pydoc_007;T10_py4e_012;T08_py4e_015;T10_pydoc_005;T10_tp3_013,0.830274;0.821235;0.821178;0.808504;0.803623,"**4.9. More on Defining Functions > 4.9.1. Default Argument Values**
+
+Important warning: The default value is evaluated only once. This makes a difference when the default is a mutable object such as a list, dictionary, or instances of most classes. For example, the following function accumulates the arguments passed to it on subsequent calls:
+
+```python
+def f(a, L=[]):
+    L.append(a)
+    return L
+
+print(f(1))
+print(f(2))
+print(f(3))
+```
+
+This will print
+
+```python
+[1]
+[1, 2]
+[1, 2, 3]
+```
+
+If you don’t want the default to be shared between subsequent calls, you can write the function like this instead:
+
+```python
+def f(a, L=None):
+    if L is None:
+        L = []
+    L.append(a)
+    return L
+```",4. More Control Flow Tools — Python 3.15.2 documentation,25.354,0.6667,1.0000,true
+P20,dense,What does `*args` and `**kwargs` represent in a function definition signature?,,T10_pydoc_009;T10_pydoc_008;T10_tp3_006;T10_tp3_004;T10_pydoc_010,0.769851;0.769272;0.754354;0.753947;0.742287,"**4.9. More on Defining Functions > 4.9.2. Keyword Arguments**
+
+In a function call, keyword arguments must follow positional arguments. All the keyword arguments passed must match one of the arguments accepted by the function (e.g. `actor` is not a valid argument for the `parrot` function), and their order is not important. This also includes non-optional arguments (e.g. `parrot(voltage=1000)` is valid too). No argument may receive a value more than once. Here’s an example that fails due to this restriction:
+
+```python
+>>> def function(a):
+...     pass
+...
+>>> function(0, a=0)
+Traceback (most recent call last):
+  File ""<stdin>"", line 1, in <module>
+TypeError: function() got multiple values for argument 'a'
+```
+
+When a final formal parameter of the form `**name` is present, it receives a dictionary (see Mapping types — dict, frozendict) containing all keyword arguments except for those corresponding to a formal parameter. This may be combined with a formal parameter of the form `*name` (described in the next subsection) which receives a tuple containing the positional arguments beyond the formal parameter list. (`*name` must occur before `**name`.) For example, if we define a function like this:
+
+```python
+def cheeseshop(kind, *arguments, **keywords):
+    print(""-- Do you have any"", kind, ""?"")
+    print(""-- I'm sorry, we're all out of"", kind)
+    for arg in arguments:
+        print(arg)
+    print(""-"" * 40)
+    for kw in keywords:
+        print(kw, "":"", keywords[kw])
+```",4. More Control Flow Tools — Python 3.15.2 documentation,16.433,,,false
+P21,dense,What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?,T11_orig_006;T11_pydoc_001;T11_pydoc_003,T05_tp3_002;T04_tp3_007;T05_orig_004;T06_pydoc_006;T04_orig_001,0.790277;0.783692;0.771262;0.762271;0.760458,"**5. Conditionals and Recursion > 5.5. The `else` clause**
+
+An `if` statement can have a second part, called an `else` clause. The syntax looks like this:
+
+```python
+if x % 2 == 0:
+    print('x is even')
+else:
+    print('x is odd')
+```
+
+Output:
+```text
+x is odd
+```
+
+If the condition is true, the first indented statement runs; otherwise, the second indented statement runs.
+
+In this example, if `x` is even, the remainder when `x` is divided by `2` is `0`, so the condition is true and the program displays `x is even`. If `x` is odd, the remainder is `1`, so the condition is false, and the program displays `x is odd`.
+
+Since the condition must be true or false, exactly one of the alternatives will run. The alternatives are called branches.",5. Conditionals and Recursion — Think Python,16.463,0.0000,0.0000,true
+P22,dense,"Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?",T11_orig_006;T11_orig_010;T11_pydoc_002;T11_pydoc_005,T11_pydoc_005;T11_orig_006;T11_orig_010;T08_pydoc_001;T08_py4e_005,0.778887;0.741358;0.737735;0.711607;0.698013,"**5.1. More on Lists > 5.1.4. Nested List Comprehensions**
+
+The initial expression in a list comprehension can be any arbitrary expression, including another list comprehension.
+
+Consider the following example of a 3x4 matrix implemented as a list of 3 lists of length 4:
+
+```python
+>>> matrix = [
+...     [1, 2, 3, 4],
+...     [5, 6, 7, 8],
+...     [9, 10, 11, 12],
+... ]
+```
+
+The following list comprehension will transpose rows and columns:
+
+```python
+>>> [[row[i] for row in matrix] for i in range(4)]
+[[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
+```
+
+As we saw in the previous section, the inner list comprehension is evaluated in the context of the `for` that follows it, so this example is equivalent to:
+
+```python
+>>> transposed = []
+>>> for i in range(4):
+...     transposed.append([row[i] for row in matrix])
+...
+>>> transposed
+[[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
+```
+
+Which, in turn, is the same as:
+
+```python
+>>> transposed = []
+>>> for i in range(4):
+...     # the following 3 lines implement the nested listcomp
+...     transposed_row = []
+...     for row in matrix:
+...         transposed_row.append(row[i])
+...     transposed.append(transposed_row)
+...
+>>> transposed
+[[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
+```",5. Data Structures — Python 3.15.2 documentation,19.824,0.7500,1.0000,true
+P23,dense,Which clause in a `try...except` block executes strictly when no exceptions are raised?,T12_pydoc_002;T12_pydoc_009,T12_py4e_003;T12_pydoc_009;T12_pydoc_003;T12_orig_005;T12_pydoc_006,0.839108;0.827105;0.805159;0.799706;0.787368,"**Conditional execution > Catching exceptions using try and except**
+
+Handling an exception with a `try` statement is called catching an exception. In this example, the `except` clause prints an error message. In general, catching an exception gives you a chance to fix the problem, or try again, or at least end the program gracefully.",PY4E - Python for Everybody,16.623,0.5000,0.5000,true
+P24,dense,What block is guaranteed to run regardless of whether an exception was raised or handled?,T12_orig_005;T12_pydoc_009;T12_pydoc_010,T12_py4e_003;T12_pydoc_007;T12_pydoc_009;T12_pydoc_006;T12_pydoc_003,0.764925;0.760830;0.758541;0.752153;0.723276,"**Conditional execution > Catching exceptions using try and except**
+
+Handling an exception with a `try` statement is called catching an exception. In this example, the `except` clause prints an error message. In general, catching an exception gives you a chance to fix the problem, or try again, or at least end the program gracefully.",PY4E - Python for Everybody,17.812,0.3333,0.3333,true
+P25,dense,Why is using the `with open(...) as f:` context manager preferred for file operations?,T13_orig_001;T13_pydoc_008,T13_pydoc_001;T13_pydoc_002;T13_py4e_002;T13_pydoc_003;T12_py4e_005,0.765663;0.742112;0.738801;0.730703;0.730075,"**7. Input and output > 7.2. Reading and writing files**
+
+`open()` returns a file object, and is most commonly used with two positional arguments: `open(filename, mode)`
+
+```python
+>>> f = open('workfile', 'w')
+```
+
+The first argument is a string containing the filename. The second argument is another string containing a few characters describing the way in which the file will be used. Mode can be `'r'` when the file will only be read, `'w'` for only writing (an existing file with the same name will be erased), and `'a'` opens the file for appending; any data written to the file is automatically added to the end. `'r+'` opens the file for both reading and writing. The mode argument is optional; `'r'` will be assumed if it’s omitted.
+
+Normally, files are opened in text mode, that means, you read and write strings from and to the file, which are encoded in a specific encoding. If encoding is not specified, the default is UTF-8 (see `open()`). Appending a `'b'` to the mode opens the file in binary mode. Binary mode data is read and written as `bytes` objects. You can not specify encoding when opening file in binary mode.",7. Input and output — Python 3.15.2 documentation,19.089,0.0000,0.0000,true
+P26,dense,"What does the mode `'a'` do in `open('data.txt', 'a')`?",T13_orig_002;T13_py4e_002;T13_pydoc_001,T13_pydoc_001;T13_py4e_002;T13_orig_003;T13_py4e_005;T13_py4e_008,0.852788;0.778068;0.758457;0.754283;0.753665,"**7. Input and output > 7.2. Reading and writing files**
+
+`open()` returns a file object, and is most commonly used with two positional arguments: `open(filename, mode)`
+
+```python
+>>> f = open('workfile', 'w')
+```
+
+The first argument is a string containing the filename. The second argument is another string containing a few characters describing the way in which the file will be used. Mode can be `'r'` when the file will only be read, `'w'` for only writing (an existing file with the same name will be erased), and `'a'` opens the file for appending; any data written to the file is automatically added to the end. `'r+'` opens the file for both reading and writing. The mode argument is optional; `'r'` will be assumed if it’s omitted.
+
+Normally, files are opened in text mode, that means, you read and write strings from and to the file, which are encoded in a specific encoding. If encoding is not specified, the default is UTF-8 (see `open()`). Appending a `'b'` to the mode opens the file in binary mode. Binary mode data is read and written as `bytes` objects. You can not specify encoding when opening file in binary mode.",7. Input and output — Python 3.15.2 documentation,19.782,0.6667,1.0000,true
+P01,hybrid,Who created the Python programming language and in what year was it first released?,,T01_py4e_011;T01_py4e_010;T01_py4e_002;T01_py4e_003;T01_py4e_008,0.032522;0.031319;0.031010;0.029643;0.029572,"**Why should you learn to write programs? > Terminology: Interpreter and compiler**
+
+Now at this point in our discussion of compilers and interpreters, you should be wondering a bit about the Python interpreter itself. What language is it written in? Is it written in a compiled language? When we type “python”, what exactly is happening?
+
+The Python interpreter is written in a high-level language called “C”. So Python is a program itself and it is compiled into machine code. When you installed Python on your computer (or the vendor installed it), you copied a machine-code copy of the translated Python program onto your system. In Windows, the executable machine code for Python itself is likely in a file with a name like:
+
+```python
+C:\Python35\python.exe
+```
+
+That is more than you really need to know to be a Python programmer, but sometimes it pays to answer those little nagging questions right at the beginning.",PY4E - Python for Everybody,24.795,,,false
+P02,hybrid,Which of the following statements about Python's execution model is true?,T05_py4e_001;T10_py4e_007,T05_py4e_001;T05_py4e_003;T10_py4e_007;T05_py4e_002;T04_py4e_004,0.032018;0.031025;0.030777;0.029211;0.027584,"**Conditional execution > Conditional execution**
+
+In order to write useful programs, we almost always need the ability to check conditions and change the behavior of the program accordingly. Conditional statements give us this ability. The simplest form is the `if` statement:
+
+```python
+if x > 0 :
+    print('x is positive')
+```
+
+The boolean expression after the `if` statement is called the condition. We end the `if` statement with a colon character (:) and the line(s) after the if statement are indented.
+
+If the logical condition is true, then the indented statement gets executed. If the logical condition is false, the indented statement is skipped.
+
+`if` statements have the same structure as function definitions or `for` loops1. The statement consists of a header line that ends with the colon character (:) followed by an indented block. Statements like this are called compound statements because they stretch across more than one line.
+
+```python
+if x > y:
+    print(x)
+    print(y)
+```",PY4E - Python for Everybody,23.325,1.0000,1.0000,true
+P03,hybrid,What will be the output of `type(3 / 2)` in Python 3?,T02_py4e_001;T02_tp3_003,T02_tp3_003;T02_py4e_001;T02_pydoc_001;T01_tp3_006;T08_tp3_013,0.032018;0.030622;0.029199;0.029083;0.027783,"**1. Programming as a way of thinking > 1.5. Values and types**
+
+So far we’ve seen three kinds of values:
+
+- `2` is an integer,
+- `42.0` is a floating-point number, and
+- `'Hello'` is a string.
+
+A kind of value is called a type. Every value has a type – or we sometimes say it “belongs to” a type.
+
+Python provides a function called `type` that tells you the type of any value. The type of an integer is `int`.
+
+```python
+type(2)
+```
+
+Output:
+```text
+<class 'int'>
+```
+
+The type of a floating-point number is `float`.
+
+```python
+type(42.0)
+```
+
+Output:
+```text
+<class 'float'>
+```
+
+And the type of a string is `str`.
+
+```python
+type('Hello, World!')
+```
+
+Output:
+```text
+<class 'str'>
+```
+
+The types `int`, `float`, and `str` can be used as functions. For example, `int` can take a floating-point number and convert it to an integer (always rounding down).
+
+```python
+int(42.9)
+```
+
+Output:
+```text
+42
+```
+
+And `float` can convert an integer to a floating-point value.
+
+```python
+float(42)
+```
+
+Output:
+```text
+42.0
+```
+
+Now, here’s something that can be confusing. What do you get if you put a sequence of digits in quotes?
+
+```python
+'126'
+```
+
+Output:
+```text
+'126'
+```
+
+It looks like a number, but it is actually a string.
+
+```python
+type('126')
+```
+
+Output:
+```text
+<class 'str'>
+```
+
+If you try to use it like a number, you might get an error.
+
+```python
+'126' / 3
+```
+
+Output:
+```text
+TypeError: unsupported operand type(s) for /: 'str' and 'int'
+```",1. Programming as a way of thinking — Think Python,24.369,1.0000,1.0000,true
+P04,hybrid,Which of the following variables is immutable in Python?,T07_py4e_005;T07_tp3_004;T08_py4e_019;T08_py4e_028,T08_py4e_019;T07_py4e_005;T08_tp3_015;T08_py4e_023;T02_tp3_005,0.032266;0.031319;0.030159;0.029211;0.028543,"**Tuples > Tuples are immutable**
+
+A tuple1 is a sequence of values much like a list. The values stored in a tuple can be any type, and they are indexed by integers. The important difference is that tuples are immutable. Tuples are also comparable and hashable so we can sort lists of them and use tuples as key values in Python dictionaries.
+
+Syntactically, a tuple is a comma-separated list of values:
+
+```python
+>>> t = 'a', 'b', 'c', 'd', 'e'
+```
+
+Although it is not necessary, it is common to enclose tuples in parentheses to help us quickly identify tuples when we look at Python code:
+
+```python
+>>> t = ('a', 'b', 'c', 'd', 'e')
+```
+
+To create a tuple with a single element, you have to include the final comma:
+
+```python
+>>> t1 = ('a',)
+>>> type(t1)
+<class 'tuple'>
+```
+
+Without the comma Python treats `('a')` as an expression with a string in parentheses that evaluates to a string:
+
+```python
+>>> t2 = ('a')
+>>> type(t2)
+<class 'str'>
+```
+
+Another way to construct a tuple is the built-in function `tuple`. With no argument, it creates an empty tuple:
+
+```python
+>>> t = tuple()
+>>> print(t)
+()
+```",PY4E - Python for Everybody,22.872,0.5000,1.0000,true
+P05,hybrid,What does the `input()` built-in function return by default in Python 3?,T03_py4e_001;T03_tp3_002,T03_py4e_001;T03_tp3_002;T10_pydoc_003;T10_py4e_002;T10_pydoc_006,0.032787;0.032002;0.030550;0.030018;0.027367,"**Variables, expressions, and statements > Asking the user for input**
+
+Sometimes we would like to take the value for a variable from the user via their keyboard. Python provides a built-in function called `input` that gets input from the keyboard1. When this function is called, the program stops and waits for the user to type something. When the user presses `Return` or `Enter`, the program resumes and `input` returns what the user typed as a string.
+
+```python
+>>> inp = input()
+Some silly stuff
+>>> print(inp)
+Some silly stuff
+```
+
+Before getting input from the user, it is a good idea to print a prompt telling the user what to input. You can pass a string to `input` to be displayed to the user before pausing for input:
+
+```python
+>>> name = input('What is your name?\n')
+What is your name?
+Chuck
+>>> print(name)
+Chuck
+```
+
+The sequence `\n` at the end of the prompt represents a newline, which is a special character that causes a line break. That’s why the user’s input appears below the prompt.
+
+If you expect the user to type an integer, you can try to convert the return value to `int` using the `int()` function:
+
+```python
+>>> prompt = 'What...is the airspeed velocity of an unladen swallow?\n'
+>>> speed = input(prompt)
+What...is the airspeed velocity of an unladen swallow?
+17
+>>> int(speed)
+17
+>>> int(speed) + 5
+22
+```",PY4E - Python for Everybody,24.589,1.0000,1.0000,true
+P06,hybrid,"What is the output of `print('Python', '3', sep='-', end='!')`?",T03_orig_001;T03_orig_002;T03_tp3_001,T03_orig_001;T03_orig_002;T10_tp3_021;T13_py4e_004;T03_tp3_001,0.032258;0.030282;0.029958;0.029052;0.026667,"**Input and Output > print() with sep and end**
+
+`print()` shows values on the screen. Give it several values separated by commas and it prints them with one space between them, then starts a new line.
+
+```python
+print(""Score:"", 42, ""points"")
+```
+
+Output:
+```text
+Score: 42 points
+```
+
+Two keyword arguments change this formatting:
+- `sep` is the text placed between the values (default: one space).
+- `end` is the text printed after the last value (default: a newline, `""\n""`).
+
+```python
+print(""2024"", ""06"", ""15"", sep=""-"")
+print(""Loading"", end=""..."")
+print(""done"")
+```
+
+Output:
+```text
+2024-06-15
+Loading...done
+```
+
+`sep` and `end` must be written by name (`sep=`, `end=`). Without the name, an extra string is simply printed as one more value: `print(""a"", ""b"", ""-"")` prints `a b -`.",print() with sep and end,26.424,1.0000,1.0000,true
+P07,hybrid,What is the result of the expression `2 ** 3 ** 2`?,T04_orig_002;T04_py4e_002,T04_py4e_002;T01_tp3_006;T03_tp3_001;T02_py4e_007;T04_py4e_006,0.032002;0.030092;0.029287;0.027972;0.027693,"**Variables, expressions, and statements > Order of operations**
+
+When more than one operator appears in an expression, the order of evaluation depends on the rules of precedence. For mathematical operators, Python follows mathematical convention. The acronym PEMDAS is a useful way to remember the rules:
+
+- Parentheses have the highest precedence and can be used to force an expression to evaluate in the order you want. Since expressions in parentheses are evaluated first, `2 * (3-1)` is 4, and `(1+1)**(5-2)` is 8. You can also use parentheses to make an expression easier to read, as in `(minute * 100) / 60`, even if it doesn’t change the result.
+- Exponentiation has the next highest precedence, so `2**1+1` is 3, not 4, and `3*1**3` is 3, not 27.
+- Multiplication and Division have the same precedence, which is higher than Addition and Subtraction, which also have the same precedence. So `2*3-1` is 5, not 4, and `6+4/2` is 8, not 5.
+- Operators with the same precedence are evaluated from left to right. So the expression `5-3-1` is 1, not 3, because the `5-3` happens first and then `1` is subtracted from 2.
+
+When in doubt, always put parentheses in your expressions to make sure the computations are performed in the order you intend.",PY4E - Python for Everybody,23.676,0.5000,1.0000,true
+P08,hybrid,What is the difference between `is` and `==` in Python?,,T05_orig_004;T08_py4e_014;T06_pydoc_002;T02_py4e_001;T04_py4e_005,0.025138;0.024860;0.024394;0.023037;0.022739,"**Conditional Statements (if, elif, else) > Using = instead of == in a condition**
+
+**Common mistake: `=` instead of `==` in a condition**
+
+`=` stores a value; `==` compares two values. A condition needs a comparison, so this is an error:
+
+```text
+>>> if x = 5:
+SyntaxError: invalid syntax. Maybe you meant '==' or ':=' instead of '='?
+```
+
+The correct version:
+
+```python
+x = 5
+if x == 5:
+    print(""x is five"")
+```
+
+Output:
+```text
+x is five
+```
+
+(The exact wording of the error message varies a little between Python versions, but it always points at the `=`.)",Using = instead of == in a condition,23.531,,,false
+P09,hybrid,"What does the following snippet evaluate to?
+```python
+x = 10
+if x > 15:
+    print('A')
+elif x == 10:
+    print('B')
+else:
+    print('C')
+```",T05_py4e_004;T05_py4e_005;T05_pydoc_001;T05_tp3_003;T05_tp3_004,T05_pydoc_001;T05_py4e_004;T05_tp3_003;T05_orig_004;T05_tp3_002,0.031746;0.031099;0.029911;0.029911;0.029380,"**4. More Control Flow Tools > 4.1. `if` Statements**
+
+Perhaps the most well-known statement type is the `if` statement. For example:
+
+```python
+>>> x = int(input(""Please enter an integer: ""))
+Please enter an integer: 42
+>>> if x < 0:
+...     x = 0
+...     print('Negative changed to zero')
+... elif x == 0:
+...     print('Zero')
+... elif x == 1:
+...     print('Single')
+... else:
+...     print('More')
+...
+More
+```
+
+There can be zero or more `elif` parts, and the `else` part is optional. The keyword ‘`elif`’ is short for ‘else if’, and is useful to avoid excessive indentation. An `if` … `elif` … `elif` … sequence is a substitute for the `switch` or `case` statements found in other languages.
+
+If you’re comparing the same value to several constants, or checking for specific types or attributes, you may also find the `match` statement useful. For more details see match Statements.",4. More Control Flow Tools — Python 3.15.2 documentation,33.987,0.6000,1.0000,true
+P10,hybrid,What is the value of `val` after running: `val = 'Pass' if 5 > 3 else 'Fail'`?,T05_tp3_001;T11_orig_012,T12_orig_005;T05_orig_004;T05_pydoc_002;T05_tp3_001;T06_pydoc_007,0.030536;0.030018;0.028577;0.028043;0.027253,"**Exception Handling > else and finally**
+
+After `except`, a `try` statement can have two more clauses:
+- `else` runs only when **no** exception happened in the `try` block.
+- `finally` runs **always**, whether there was an exception or not. It is used for clean-up.
+
+```python
+for text in [""5"", ""x""]:
+    try:
+        n = int(text)
+    except ValueError:
+        print(""bad input:"", text)
+    else:
+        print(""converted:"", n)
+    finally:
+        print(""done with"", text)
+```
+
+Output:
+```text
+converted: 5
+done with 5
+bad input: x
+done with x
+```
+
+Putting the ""success"" code in `else` keeps the `try` block small, so the `except` only catches errors from the line that can actually fail.",else and finally,26.326,0.5000,0.2500,true
+P11,hybrid,"What will `range(1, 10, 2)` produce when unpacked into a list?",T06_orig_005;T06_pydoc_004,T06_pydoc_004;T06_orig_005;T11_pydoc_005;T06_pydoc_005;T11_pydoc_001,0.032787;0.031498;0.030622;0.030622;0.029958,"**4. More Control Flow Tools > 4.3. The `range()` Function**
+
+If you do need to iterate over a sequence of numbers, the built-in function `range()` comes in handy. It generates arithmetic progressions:
+
+```python
+>>> for i in range(5):
+...     print(i)
+...
+0
+1
+2
+3
+4
+```
+
+The given end point is never part of the generated sequence; `range(10)` generates 10 values, the legal indices for items of a sequence of length 10. It is possible to let the range start at another number, or to specify a different increment (even negative; sometimes this is called the ‘step’):
+
+```python
+>>> list(range(5, 10))
+[5, 6, 7, 8, 9]
+
+>>> list(range(0, 10, 3))
+[0, 3, 6, 9]
+
+>>> list(range(-10, -100, -30))
+[-10, -40, -70]
+```
+
+To iterate over the indices of a sequence, you can combine `range()` and `len()` as follows:
+
+```python
+>>> a = ['Mary', 'had', 'a', 'little', 'lamb']
+>>> for i in range(len(a)):
+...     print(i, a[i])
+...
+0 Mary
+1 had
+2 a
+3 little
+4 lamb
+```
+
+In most such cases, however, it is convenient to use the `enumerate()` function, see Looping Techniques.
+
+A strange thing happens if you just print a range:
+
+```python
+>>> range(10)
+range(0, 10)
+```",4. More Control Flow Tools — Python 3.15.2 documentation,24.694,1.0000,1.0000,true
+P12,hybrid,What triggers the `else` block of a `for` loop in Python?,T05_pydoc_002;T06_pydoc_007,T06_pydoc_007;T12_orig_005;T05_tp3_001;T06_py4e_008;T05_pydoc_002,0.032787;0.030579;0.030077;0.029643;0.028577,"**4. More Control Flow Tools > 4.5. `else` Clauses on Loops**
+
+In a `for` or `while` loop the `break` statement may be paired with an `else` clause. If the loop finishes without executing the `break`, the `else` clause executes.
+
+In a `for` loop, the `else` clause is executed after the loop finishes its final iteration, that is, if no break occurred.
+
+In a `while` loop, it’s executed after the loop’s condition becomes false.
+
+In either kind of loop, the `else` clause is not executed if the loop was terminated by a `break`. Of course, other ways of ending the loop early, such as a `return` or a raised exception, will also skip execution of the `else` clause.
+
+This is exemplified in the following `for` loop, which searches for prime numbers:
+
+```python
+>>> for n in range(2, 10):
+...     for x in range(2, n):
+...         if n % x == 0:
+...             print(n, 'equals', x, '*', n//x)
+...             break
+...     else:
+...         # loop fell through without finding a factor
+...         print(n, 'is a prime number')
+...
+2 is a prime number
+3 is a prime number
+4 equals 2 * 2
+5 is a prime number
+6 equals 2 * 3
+7 is a prime number
+8 equals 2 * 4
+9 equals 3 * 3
+```",4. More Control Flow Tools — Python 3.15.2 documentation,23.594,1.0000,1.0000,true
+P13,hybrid,What is the value of `s[::-1]` if `s = 'hello'`?,T02_tp3_001,T05_tp3_008;T03_pydoc_004;T02_py4e_001;T07_py4e_004;T07_pydoc_005,0.027402;0.026598;0.025253;0.025053;0.024348,"**6. Return Values > 6.3. Return values and conditionals**
+
+If Python did not provide `abs`, we could write it like this.
+
+```python
+def absolute_value(x):
+    if x < 0:
+        return -x
+    else:
+        return x
+```
+
+If `x` is negative, the first `return` statement returns `-x` and the function ends immediately. Otherwise, the second `return` statement returns `x` and the function ends. So this function is correct.
+
+However, if you put `return` statements in a conditional, you have to make sure that every possible path through the program hits a `return` statement. For example, here’s an incorrect version of `absolute_value`.
+
+```python
+def absolute_value_wrong(x):
+    if x < 0:
+        return -x
+    if x > 0:
+        return x
+```
+
+Here’s what happens if we call this function with `0` as an argument.
+
+```python
+absolute_value_wrong(0)
+```
+
+We get nothing! Here’s the problem: when `x` is `0`, neither condition is true, and the function ends without hitting a `return` statement, which means that the return value is `None`, so the interactive Python prompt displays nothing.
+
+As another example, here’s a version of `absolute_value` with an extra `return` statement at the end.
+
+```python
+def absolute_value_extra_return(x):
+    if x < 0:
+        return -x
+    else:
+        return x
+
+    return 'This is dead code'
+```",6. Return Values — Think Python,24.741,0.0000,0.0000,true
+P14,hybrid,"What is the result of `'-'.join(['a', 'b', 'c'])`?",T07_orig_001;T08_py4e_011,T08_tp3_003;T08_py4e_006;T08_py4e_011;T08_tp3_008;T08_tp3_005,0.030798;0.030777;0.030679;0.029551;0.029236,"**9. Lists > 9.3. List slices**
+
+The slice operator works on lists the same way it works on strings. The following example selects the second and third elements from a list of four letters.
+
+```python
+letters = ['a', 'b', 'c', 'd']
+letters[1:3]
+```
+
+Output:
+```text
+['b', 'c']
+```
+
+If you omit the first index, the slice starts at the beginning.
+
+```python
+letters[:2]
+```
+
+Output:
+```text
+['a', 'b']
+```
+
+If you omit the second, the slice goes to the end.
+
+```python
+letters[2:]
+```
+
+Output:
+```text
+['c', 'd']
+```
+
+So if you omit both, the slice is a copy of the whole list.
+
+```python
+letters[:]
+```
+
+Output:
+```text
+['a', 'b', 'c', 'd']
+```
+
+Another way to copy a list is to use the `list` function.
+
+```python
+list(letters)
+```
+
+Output:
+```text
+['a', 'b', 'c', 'd']
+```
+
+Because `list` is the name of a built-in function, you should avoid using it as a variable name.",9. Lists — Think Python,25.589,0.5000,0.3333,true
+P15,hybrid,"What is the result of `len({1, 2, 2, 3, 3, 3})`?",,T11_pydoc_002;T09_tp3_002;T07_py4e_002;T08_orig_001;T10_tp3_021,0.029139;0.026767;0.026553;0.025992;0.025801,"**5.1. More on Lists > 5.1.3. List Comprehensions**
+
+A list comprehension consists of brackets containing an expression followed by a `for` clause, then zero or more `for` or `if` clauses. The result will be a new list resulting from evaluating the expression in the context of the `for` and `if` clauses which follow it. For example, this listcomp combines the elements of two lists if they are not equal:
+
+```python
+>>> [(x, y) for x in [1,2,3] for y in [3,1,4] if x != y]
+[(1, 3), (1, 4), (2, 3), (2, 1), (2, 4), (3, 1), (3, 4)]
+```
+
+And it’s equivalent to:
+
+```python
+>>> combs = []
+>>> for x in [1,2,3]:
+...     for y in [3,1,4]:
+...         if x != y:
+...             combs.append((x, y))
+...
+>>> combs
+[(1, 3), (1, 4), (2, 3), (2, 1), (2, 4), (3, 1), (3, 4)]
+```
+
+Note how the order of the `for` and `if` statements is the same in both these snippets.",5. Data Structures — Python 3.15.2 documentation,25.474,,,false
+P16,hybrid,How do you append the elements of list `b` to list `a` in-place?,T08_py4e_006;T08_pydoc_005;T08_tp3_005,T08_py4e_006;T08_tp3_005;T08_pydoc_002;T08_py4e_015;T08_py4e_003,0.032522;0.031778;0.029851;0.029199;0.028205,"**Lists > List methods**
+
+Python provides methods that operate on lists. For example, `append` adds a new element to the end of a list:
+
+```python
+>>> t = ['a', 'b', 'c']
+>>> t.append('d')
+>>> print(t)
+['a', 'b', 'c', 'd']
+```
+
+`extend` takes a list as an argument and appends all of the elements:
+
+```python
+>>> t1 = ['a', 'b', 'c']
+>>> t2 = ['d', 'e']
+>>> t1.extend(t2)
+>>> print(t1)
+['a', 'b', 'c', 'd', 'e']
+```
+
+This example leaves `t2` unmodified.
+
+`sort` arranges the elements of the list from low to high:
+
+```python
+>>> t = ['d', 'c', 'e', 'b', 'a']
+>>> t.sort()
+>>> print(t)
+['a', 'b', 'c', 'd', 'e']
+```
+
+Most list methods are void; they modify the list and return `None`. If you accidentally write `t = t.sort()`, you will be disappointed with the result.",PY4E - Python for Everybody,25.002,0.6667,1.0000,true
+P17,hybrid,"What does `d.get('key', 0)` return if `'key'` is not in dictionary `d`?",T09_py4e_004;T09_py4e_005;T09_pydoc_002,T09_pydoc_002;T09_tp3_009;T08_py4e_025;T09_tp3_002;T09_py4e_004,0.032522;0.031054;0.030303;0.029762;0.029727,"**5. Data Structures > 5.5. Dictionaries**
+
+The main operations on a dictionary are storing a value with some key and extracting the value given the key. It is also possible to delete a key:value pair with `del`. If you store using a key that is already in use, the old value associated with that key is forgotten.
+
+Extracting a value for a non-existent key by subscripting (`d[key]`) raises a `KeyError`. To avoid getting this error when trying to access a possibly non-existent key, use the `get()` method instead, which returns `None` (or a specified default value) if the key is not in the dictionary.
+
+Performing `list(d)` on a dictionary returns a list of all the keys used in the dictionary, in insertion order (if you want it sorted, just use `sorted(d)` instead). To check whether a single key is in the dictionary, use the `in` keyword.",5. Data Structures — Python 3.15.2 documentation,26.785,0.6667,1.0000,true
+P18,hybrid,Which method returns a set-like view of a dictionary's key-value pairs?,T09_py4e_001;T09_py4e_002;T09_py4e_010;T09_pydoc_001;T09_pydoc_002,T09_pydoc_001;T08_py4e_025;T09_tp3_004;T09_py4e_002;T09_py4e_001,0.032266;0.031545;0.030835;0.030579;0.030310,"**5. Data Structures > 5.5. Dictionaries**
+
+Another useful data type built into Python is the dictionary (see Mapping types — dict, frozendict). Dictionaries are sometimes found in other languages as “associative memories” or “associative arrays”. Unlike sequences, which are indexed by a range of numbers, dictionaries are indexed by keys, which can be any immutable type; strings and numbers can always be keys. Tuples can be used as keys if they contain only strings, numbers, or tuples; if a tuple contains any mutable object either directly or indirectly, it cannot be used as a key. You can’t use lists as keys, since lists can be modified in place using index assignments, slice assignments, or methods like `append()` and `extend()`.
+
+It is best to think of a dictionary as a set of key: value pairs, with the requirement that the keys are unique (within one dictionary). A pair of braces creates an empty dictionary: `{}`. Placing a comma-separated list of key:value pairs within the braces adds initial key:value pairs to the dictionary; this is also the way dictionaries are written on output.",5. Data Structures — Python 3.15.2 documentation,24.500,0.6000,1.0000,true
+P19,hybrid,"What will the following code output?
+```python
+def func(a, b=[]):
+    b.append(a)
+    return b
+
+print(func(1))
+print(func(2))
+```",T08_py4e_015;T10_pydoc_004;T10_pydoc_007,T10_pydoc_007;T10_py4e_012;T08_py4e_015;T08_py4e_016;T08_py4e_006,0.032018;0.032002;0.031258;0.030077;0.029907,"**4.9. More on Defining Functions > 4.9.1. Default Argument Values**
+
+Important warning: The default value is evaluated only once. This makes a difference when the default is a mutable object such as a list, dictionary, or instances of most classes. For example, the following function accumulates the arguments passed to it on subsequent calls:
+
+```python
+def f(a, L=[]):
+    L.append(a)
+    return L
+
+print(f(1))
+print(f(2))
+print(f(3))
+```
+
+This will print
+
+```python
+[1]
+[1, 2]
+[1, 2, 3]
+```
+
+If you don’t want the default to be shared between subsequent calls, you can write the function like this instead:
+
+```python
+def f(a, L=None):
+    if L is None:
+        L = []
+    L.append(a)
+    return L
+```",4. More Control Flow Tools — Python 3.15.2 documentation,33.437,0.6667,1.0000,true
+P20,hybrid,What does `*args` and `**kwargs` represent in a function definition signature?,,T10_tp3_004;T10_tp3_006;T10_py4e_002;T10_py4e_006;T12_pydoc_004,0.030777;0.027501;0.027480;0.027425;0.026920,"**3. Functions > 3.1. Defining new functions**
+
+A function definition specifies the name of a new function and the sequence of statements that run when the function is called. Here’s an example:
+
+```python
+def print_lyrics():
+    print(""I'm a lumberjack, and I'm okay."")
+    print(""I sleep all night and I work all day."")
+```
+
+`def` is a keyword that indicates that this is a function definition. The name of the function is `print_lyrics`. Anything that’s a legal variable name is also a legal function name.
+
+The empty parentheses after the name indicate that this function doesn’t take any arguments.
+
+The first line of the function definition is called the header – the rest is called the body. The header has to end with a colon and the body has to be indented. By convention, indentation is always four spaces. The body of this function is two print statements; in general, the body of a function can contain any number of statements of any kind.
+
+Defining a function creates a function object, which we can display like this.
+
+```python
+print_lyrics
+```
+
+Output:
+```text
+<function print_lyrics at 0x...>
+```
+
+The output indicates that `print_lyrics` is a function that takes no arguments. `__main__` is the name of the module that contains `print_lyrics`.
+
+Now that we’ve defined a function, we can call it the same way we call built-in functions.
+
+```python
+print_lyrics()
+```
+
+Output:
+```text
+I'm a lumberjack, and I'm okay.
+I sleep all night and I work all day.
+```
+
+When the function runs, it executes the statements in the body, which display the first two lines of “The Lumberjack Song”.",3. Functions — Think Python,24.824,,,false
+P21,hybrid,What is the output of `[x ** 2 for x in range(5) if x % 2 == 0]`?,T11_orig_006;T11_pydoc_001;T11_pydoc_003,T06_pydoc_006;T04_tp3_007;T05_tp3_002;T05_orig_004;T11_pydoc_002,0.031010;0.030835;0.030679;0.029206;0.028814,"**4. More Control Flow Tools > 4.4. `break` and `continue` Statements**
+
+The `break` statement breaks out of the innermost enclosing `for` or `while` loop:
+
+```python
+>>> for n in range(2, 10):
+...     for x in range(2, n):
+...         if n % x == 0:
+...             print(f""{n} equals {x} * {n//x}"")
+...             break
+...
+4 equals 2 * 2
+6 equals 2 * 3
+8 equals 2 * 4
+9 equals 3 * 3
+```
+
+The `continue` statement continues with the next iteration of the loop:
+
+```python
+>>> for num in range(2, 10):
+...     if num % 2 == 0:
+...         print(f""Found an even number {num}"")
+...         continue
+...     print(f""Found an odd number {num}"")
+...
+Found an even number 2
+Found an odd number 3
+Found an even number 4
+Found an odd number 5
+Found an even number 6
+Found an odd number 7
+Found an even number 8
+Found an odd number 9
+```",4. More Control Flow Tools — Python 3.15.2 documentation,26.708,0.0000,0.0000,true
+P22,hybrid,"Which expression flattens a 2D matrix `[[1, 2], [3, 4]]` into `[1, 2, 3, 4]`?",T11_orig_006;T11_orig_010;T11_pydoc_002;T11_pydoc_005,T11_pydoc_005;T11_orig_010;T11_orig_006;T11_pydoc_002;T11_pydoc_003,0.032787;0.032002;0.032002;0.030550;0.028992,"**5.1. More on Lists > 5.1.4. Nested List Comprehensions**
+
+The initial expression in a list comprehension can be any arbitrary expression, including another list comprehension.
+
+Consider the following example of a 3x4 matrix implemented as a list of 3 lists of length 4:
+
+```python
+>>> matrix = [
+...     [1, 2, 3, 4],
+...     [5, 6, 7, 8],
+...     [9, 10, 11, 12],
+... ]
+```
+
+The following list comprehension will transpose rows and columns:
+
+```python
+>>> [[row[i] for row in matrix] for i in range(4)]
+[[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
+```
+
+As we saw in the previous section, the inner list comprehension is evaluated in the context of the `for` that follows it, so this example is equivalent to:
+
+```python
+>>> transposed = []
+>>> for i in range(4):
+...     transposed.append([row[i] for row in matrix])
+...
+>>> transposed
+[[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
+```
+
+Which, in turn, is the same as:
+
+```python
+>>> transposed = []
+>>> for i in range(4):
+...     # the following 3 lines implement the nested listcomp
+...     transposed_row = []
+...     for row in matrix:
+...         transposed_row.append(row[i])
+...     transposed.append(transposed_row)
+...
+>>> transposed
+[[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
+```",5. Data Structures — Python 3.15.2 documentation,27.667,1.0000,1.0000,true
+P23,hybrid,Which clause in a `try...except` block executes strictly when no exceptions are raised?,T12_pydoc_002;T12_pydoc_009,T12_pydoc_009;T12_pydoc_003;T12_py4e_003;T12_pydoc_002;T12_pydoc_006,0.032522;0.031498;0.030679;0.030622;0.029877,"**8. Errors and Exceptions > 8.7. Defining Clean-up Actions**
+
+- If an exception occurs during execution of the `try` clause, the exception may be handled by an `except` clause. If the exception is not handled by an `except` clause, the exception is re-raised after the `finally` clause has been executed.
+- An exception could occur during execution of an `except` or `else` clause. Again, the exception is re-raised after the `finally` clause has been executed.
+- If the `finally` clause executes a `break`, `continue` or `return` statement, exceptions are not re-raised. This can be confusing and is therefore discouraged. From version 3.14 the compiler emits a `SyntaxWarning` for it (see PEP 765).
+- If the `try` statement reaches a `break`, `continue` or `return` statement, the `finally` clause will execute just prior to the `break`, `continue` or `return` statement’s execution.
+- If a `finally` clause includes a `return` statement, the returned value will be the one from the `finally` clause’s `return` statement, not the value from the `try` clause’s `return` statement. This can be confusing and is therefore discouraged. From version 3.14 the compiler emits a `SyntaxWarning` for it (see PEP 765).
+
+For example:
+
+```python
+>>> def bool_return():
+...     try:
+...         return True
+...     finally:
+...         return False
+...
+>>> bool_return()
+False
+```",8. Errors and Exceptions — Python 3.15.2 documentation,24.973,1.0000,1.0000,true
+P24,hybrid,What block is guaranteed to run regardless of whether an exception was raised or handled?,T12_orig_005;T12_pydoc_009;T12_pydoc_010,T12_pydoc_007;T12_pydoc_009;T12_pydoc_002;T12_pydoc_004;T12_orig_005,0.032522;0.032002;0.030303;0.029514;0.029469,"**8. Errors and Exceptions > 8.4. Raising Exceptions**
+
+The `raise` statement allows the programmer to force a specified exception to occur. For example:
+
+```python
+>>> raise NameError('HiThere')
+Traceback (most recent call last):
+  File ""<stdin>"", line 1, in <module>
+    raise NameError('HiThere')
+NameError: HiThere
+```
+
+The sole argument to `raise` indicates the exception to be raised. This must be either an exception instance or an exception class (a class that derives from `BaseException`, such as `Exception` or one of its subclasses). If an exception class is passed, it will be implicitly instantiated by calling its constructor with no arguments:
+
+```python
+raise ValueError  # shorthand for 'raise ValueError()'
+```
+
+If you need to determine whether an exception was raised but don’t intend to handle it, a simpler form of the `raise` statement allows you to re-raise the exception:
+
+```python
+>>> try:
+...     raise NameError('HiThere')
+... except NameError:
+...     print('An exception flew by!')
+...     raise
+...
+An exception flew by!
+Traceback (most recent call last):
+  File ""<stdin>"", line 2, in <module>
+    raise NameError('HiThere')
+NameError: HiThere
+```",8. Errors and Exceptions — Python 3.15.2 documentation,24.228,0.6667,0.5000,true
+P25,hybrid,Why is using the `with open(...) as f:` context manager preferred for file operations?,T13_orig_001;T13_pydoc_008,T13_pydoc_002;T13_pydoc_001;T13_pydoc_008;T13_orig_001;T13_py4e_005,0.031754;0.031545;0.030622;0.030092;0.028992,"**7. Input and output > 7.2. Reading and writing files**
+
+In text mode, the default when reading is to convert platform-specific line endings (`\n` on Unix, `\r\n` on Windows) to just `\n`. When writing in text mode, the default is to convert occurrences of `\n` back to platform-specific line endings. This behind-the-scenes modification to file data is fine for text files, but will corrupt binary data like that in `JPEG` or `EXE` files. Be very careful to use binary mode when reading and writing such files.
+
+It is good practice to use the `with` keyword when dealing with file objects. The advantage is that the file is properly closed after its suite finishes, even if an exception is raised at some point. Using `with` is also much shorter than writing equivalent `try`-`finally` blocks:
+
+```python
+>>> with open('workfile') as f:
+...     read_data = f.read()
+
+>>> # We can check that the file has been automatically closed.
+>>> f.closed
+True
+```
+
+If you’re not using the `with` keyword, then you should call `f.close()` to close the file and immediately free up any system resources used by it.
+
+Warning: Calling `f.write()` without using the `with` keyword or calling `f.close()` might result in the arguments of `f.write()` not being completely written to the disk, even if the program exits successfully.",7. Input and output — Python 3.15.2 documentation,26.193,1.0000,0.3333,true
+P26,hybrid,"What does the mode `'a'` do in `open('data.txt', 'a')`?",T13_orig_002;T13_py4e_002;T13_pydoc_001,T13_py4e_002;T13_pydoc_001;T13_py4e_005;T13_tp3_004;T13_py4e_012,0.032522;0.032018;0.031010;0.030366;0.029643,"**Files > Opening files**
+
+When we want to read or write a file (say on your hard drive), we first must open the file. Opening the file communicates with your operating system, which knows where the data for each file is stored. When you open a file, you are asking the operating system to find the file by name and make sure the file exists. In this example, we open the file mbox.txt, which should be stored in the same folder that you are in when you start Python.
+
+```python
+>>> fhand = open('mbox.txt')
+>>> print(fhand)
+<_io.TextIOWrapper name='mbox.txt' mode='r' encoding='cp1252'>
+```
+
+If the `open` is successful, the operating system returns us a file handle. The file handle is not the actual data contained in the file, but instead it is a “handle” that we can use to read the data. You are given a handle if the requested file exists and you have the proper permissions to read the file.
+
+If the file does not exist, `open` will fail with a traceback and you will not get a handle to access the contents of the file:
+
+```python
+>>> fhand = open('stuff.txt')
+Traceback (most recent call last):
+File ""<stdin>"", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: 'stuff.txt'
+```
+
+Note: this example reads `mbox.txt`, `stuff.txt`, a sample data file from the original textbook. To try it yourself, create a small text file with that name (any lines of text will do) in the same folder as your program, or use your own file.",PY4E - Python for Everybody,25.684,0.6667,1.0000,true

@@ -21,11 +21,13 @@ from agents.tutor_agent import create_tutor_node, clean_tutor_output
 from agents.assessment_agent import create_assessment_node, load_all_mcqs
 from agents.error_analysis_agent import ErrorAnalysisAgent
 from agents.root_cause_agent import (
-    DEFAULT_METHOD, DEFAULT_PRESET, METHOD_LABELS, RootCauseAgent, format_hypotheses, resolve_weights,
+    DEFAULT_METHOD, DEFAULT_PRESET, METHOD_LABELS, RootCauseAgent, format_hypotheses, format_root_cause,
+    resolve_weights,
     summarize_comparison,
 )
 from agents.pedagogy_controller import record_assessment_outcome, resolve_topic_id
 from agents.struggle_tracker import recent_learning_topics
+from agents.chat_memory import history_messages, lesson_entry, quiz_entry, remember
 
 # --- Configuration & File Path Constants ---
 # Every start()/resume() call appends its agent trace here (one JSON line per call, one file
@@ -235,8 +237,13 @@ class AdaptiveTutorWorkflow:
         )
 
         if student_kb:
+            # Keep this exchange in the chat memory (latest 3, summarised).
+            student_kb = remember(student_kb, lesson_entry(
+                state.get("user_input"), response_text, topic_id, strategy,
+                result.get("conversation_mode"), result.get("answer_verdict"),
+            ))
             self._save_student_kb(student_kb)
-        
+
         return {
             "student_kb": student_kb,
             "round_log": [{
@@ -412,6 +419,10 @@ class AdaptiveTutorWorkflow:
                 if is_root_topic:
                     # Keep what every method/weight set picked, to evaluate them later.
                     event["root_cause_comparison"] = compact_comparison
+            student_kb = remember(student_kb, quiz_entry(
+                state.get("user_input"), topic_ids, f"{correct_count}/{total}",
+                format_root_cause(root_cause) if root_cause else "",
+            ))
             self._save_student_kb(student_kb)
             self._log(
                 "Pedagogy Controller", f"Recorded quiz outcome for {', '.join(per_topic)}",
@@ -518,14 +529,15 @@ class AdaptiveTutorWorkflow:
         thread_id = thread_id or f"{student_id}-session"
         student_kb = load_student_kb(student_id, self.db_filepath)
         
-        formatted_messages = []
-        if chat_history:
-            for m in chat_history:
-                if m["role"] == "user":
-                    formatted_messages.append(HumanMessage(content=m["content"]))
-                else:
-                    formatted_messages.append(AIMessage(content=m["content"]))
-        
+        # Earlier messages: by default the student's chat memory from the KB (latest 3
+        # exchanges, summarised). An explicit chat_history (role/content dicts) overrides it.
+        if chat_history is None:
+            formatted_messages = history_messages(student_kb)
+        else:
+            formatted_messages = [
+                HumanMessage(content=m["content"]) if m["role"] == "user" else AIMessage(content=m["content"])
+                for m in chat_history
+            ]
         formatted_messages.append(HumanMessage(content=user_input))
 
         initial_state = {
@@ -549,6 +561,13 @@ class AdaptiveTutorWorkflow:
             "tutor_question": "",
         }
         return self._invoke(initial_state, thread_id)
+
+    def clear_chat_memory(self, student_id: str) -> None:
+        """Forget the stored chat memory (used by "Reset Chat / Session")."""
+        student_kb = load_student_kb(student_id, self.db_filepath)
+        if student_kb and student_kb.get("chat_memory"):
+            student_kb["chat_memory"] = []
+            self._save_student_kb(student_kb)
 
     def resume(self, thread_id: str, answers: dict) -> dict:
         return self._invoke(Command(resume=answers), thread_id)

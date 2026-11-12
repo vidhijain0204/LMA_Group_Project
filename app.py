@@ -48,8 +48,6 @@ if "waiting_for_interrupt" not in st.session_state:
 if "pending_trace" not in st.session_state:
     st.session_state.pending_trace = []
 
-# Number of earlier chat messages sent with each request, so the agents see the conversation.
-CHAT_HISTORY_MESSAGES = 6
 TOPIC_NAMES = load_catalog()["topic_names"]
 
 
@@ -120,18 +118,24 @@ def render_root_cause_details(details: dict) -> None:
         comparison = details.get("comparison")
         if comparison:
             primary = (details.get("root_cause") or {}).get("subtopic_id")
-            rows = []
+            rows, votes = [], {}
             for group, label in (("methods", "Method"), ("presets", "Weight preset"), ("ablations", "Ablation")):
                 for name, entry in comparison[group].items():
                     root = entry if group == "methods" else entry.get("root_cause")
+                    topic = f"{root['topic_id']} {root.get('topic_name') or ''}".strip() if root else "—"
+                    subtopic = f"{root['subtopic_id']} {root['name']}" if root else "—"
                     rows.append({
                         "Type": label,
                         "Name": METHOD_LABELS.get(name, name),
-                        "Root cause": f"{root['subtopic_id']} {root['name']}" if root else "—",
-                        "P": root.get("probability") if root else None,
-                        "Agrees with selected": bool(root) and root["subtopic_id"] == primary,
+                        "Selected topic": topic,
+                        "Selected subtopic": subtopic,
+                        "Same as shown reason": bool(root) and root["subtopic_id"] == primary,
                     })
+                    if root:
+                        votes.setdefault((topic, subtopic), []).append(name)
             st.markdown("**What each method / weight combination picks on this quiz**")
+            for (topic, subtopic), names in sorted(votes.items(), key=lambda item: -len(item[1])):
+                st.markdown(f"- **{topic} → {subtopic}** — picked by {len(names)} of {len(rows)}")
             st.dataframe(rows, hide_index=True, width="stretch")
 
 
@@ -249,6 +253,7 @@ with st.sidebar:
 
     st.divider()
     if st.button("Reset Chat / Session"):
+        workflow.clear_chat_memory(st.session_state.student_id)
         st.session_state.messages = []
         st.session_state.waiting_for_interrupt = None
         st.session_state.pending_trace = []
@@ -373,15 +378,11 @@ else:
             st.markdown(user_prompt)
 
         with st.spinner("Processing request..."):
-            # Recent chat history (without the message just typed, which is sent as user_input).
-            history = [
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages[:-1][-CHAT_HISTORY_MESSAGES:]
-            ]
+            # Earlier messages come from the student's chat memory in the KB
+            # (latest 3 exchanges, stored as summaries) — see agents/chat_memory.py.
             result = workflow.start(
                 student_id=st.session_state.student_id,
                 user_input=user_prompt,
-                chat_history=history,
                 thread_id=st.session_state.thread_id,
             )
 

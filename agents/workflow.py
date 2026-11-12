@@ -1,5 +1,8 @@
+import json
 import operator
+import os
 import time
+from datetime import datetime
 from typing import TypedDict, Literal, Any, Annotated, Optional
 from agents.llm_factory import get_llm
 
@@ -22,8 +25,12 @@ from agents.root_cause_agent import (
     summarize_comparison,
 )
 from agents.pedagogy_controller import record_assessment_outcome, resolve_topic_id
+from agents.struggle_tracker import recent_learning_topics
 
 # --- Configuration & File Path Constants ---
+# Every start()/resume() call appends its agent trace here (one JSON line per call, one file
+# per thread), so a study session can be reviewed after the browser is closed.
+TRACE_DIR = "data/traces"
 MAX_ITERATIONS = 3
 QUIZ_SIZE = 10
 
@@ -39,6 +46,8 @@ class AgentState(TypedDict):
     topic_focus: list
     orchestrator_instruction: str
     orchestrator_reasoning: str
+    conversation_mode: str          # "new_request" or "follow_up" (answer to the tutor's question)
+    tutor_question: str             # the question being answered, for a follow-up
     # per-round data
     student_kb: Optional[dict]
     active_quiz_questions: list
@@ -109,7 +118,15 @@ class AdaptiveTutorWorkflow:
         update = command.update or {}
         self._log(
             "Orchestrator", f"Routed to {command.goto}",
-            {"user_message": state.get("user_input"), "student_kb": self._kb_summary(state.get("student_kb"))},
+            {
+                "user_message": state.get("user_input"),
+                "chat_history": [
+                    f"{'student' if isinstance(m, HumanMessage) else 'tutor'}: {str(m.content)[:120]}"
+                    for m in state.get("messages", [])[:-1]
+                ],
+                "recent_learning_topics": recent_learning_topics(state.get("student_kb")),
+                "student_kb": self._kb_summary(state.get("student_kb")),
+            },
             {
                 "next_agent": command.goto,
                 "topic_focus": update.get("topic_focus"),
@@ -204,10 +221,15 @@ class AdaptiveTutorWorkflow:
         )
         logged_turn = ((student_kb or {}).get("learning_conversations") or [None])[-1]
         self._log(
-            "Tutor Agent", "Generated explanation",
+            "Tutor Agent",
+            "Evaluated the student's answer and continued the lesson"
+            if result.get("conversation_mode") == "follow_up" else "Generated explanation",
             {"topic_focus": topic_focus, "instruction": state.get("orchestrator_instruction"),
-             "strategy": strategy, "student_message": state.get("user_input")},
+             "strategy": strategy, "student_message": state.get("user_input"),
+             "conversation_mode": result.get("conversation_mode"),
+             "answering_tutor_question": state.get("tutor_question") or None},
             {"response_preview": response_text[:600] + ("…" if len(response_text) > 600 else ""),
+             "answer_verdict": result.get("answer_verdict"),
              "learning_turn_logged": logged_turn},
             started,
         )
@@ -229,6 +251,8 @@ class AdaptiveTutorWorkflow:
                 "response_text": response_text,
                 "pedagogy_strategy": result["pedagogy_strategy"],
                 "pedagogy_reason": result["pedagogy_reason"],
+                "conversation_mode": result.get("conversation_mode"),
+                "answer_verdict": result.get("answer_verdict"),
             },
             "last_active_agent": "tutor_agent"
         }
@@ -286,11 +310,11 @@ class AdaptiveTutorWorkflow:
 
         total = len(quiz_questions)
         accuracy = round(correct_count / total, 2) if total > 0 else 0.0
-        topic_id = resolve_topic_id(
-            state.get("topic_focus", ["unknown"])[0]
-            if state.get("topic_focus")
-            else "unknown"
-        )
+        # A quiz can cover several topics (e.g. the topics of the last 3 tutor conversations).
+        topic_focus = state.get("topic_focus") or ["unknown"]
+        if not isinstance(topic_focus, list):
+            topic_focus = [str(topic_focus)]
+        topic_ids = list(dict.fromkeys(resolve_topic_id(t) for t in topic_focus))
         self._log(
             "Assessment Agent", f"Received answers and graded quiz: {correct_count}/{len(quiz_questions)}",
             {"answers": answers},
@@ -298,13 +322,26 @@ class AdaptiveTutorWorkflow:
         )
 
         started = time.perf_counter()
-        analysis = self.error_analysis_agent.analyze(
-            quiz_questions, answers or {}, topic_id=topic_id
-        )
+        # Each question is credited to the first quiz topic it covers, so a question tagged with
+        # two quiz topics is not counted twice.
+        questions_by_topic = {topic_id: [] for topic_id in topic_ids}
+        for q in quiz_questions:
+            tags = set(q.get("related_topics", [])) | {str(s).split(".")[0] for s in q.get("related_subtopics", [])}
+            owner = next((t for t in topic_ids if t in tags), topic_ids[0])
+            questions_by_topic[owner].append(q)
+        per_topic = {
+            topic_id: self.error_analysis_agent.analyze(qs, answers or {}, topic_id=topic_id)
+            for topic_id, qs in questions_by_topic.items() if qs
+        }
+        errors = [error for result in per_topic.values() for error in result["errors"]]
         self._log(
-            "Error Analysis Agent", f"{len(analysis['errors'])} error signal(s)",
-            {"topic_id": topic_id, "wrong_questions": [q.get("prob_id") for q in wrong_problems]},
-            {"topic_accuracy": analysis["topic_accuracy"], "errors": analysis["errors"]},
+            "Error Analysis Agent", f"{len(errors)} error signal(s) over {len(per_topic)} topic(s)",
+            {"topics": topic_ids, "wrong_questions": [q.get("prob_id") for q in wrong_problems]},
+            {
+                "accuracy_per_topic": {t: r["topic_accuracy"] for t, r in per_topic.items()},
+                "questions_per_topic": {t: len(qs) for t, qs in questions_by_topic.items()},
+                "errors": errors,
+            },
             started,
         )
 
@@ -347,26 +384,43 @@ class AdaptiveTutorWorkflow:
             started,
         )
         if student_kb:
-            student_kb = record_assessment_outcome(
-                student_kb,
-                topic_id,
-                analysis["topic_accuracy"],
-                [error["signal_id"] for error in analysis["errors"]],
-                {
-                    error["signal_id"]: error["description"]
-                    for error in analysis["errors"]
-                },
-                question_results=root_cause_result["responses"],
-                root_cause=root_cause,
+            # One assessment event per quiz topic (its accuracy updates that topic's mastery).
+            # The root cause is stored once, on the event of the topic it belongs to.
+            responses_by_id = {r["prob_id"]: r for r in root_cause_result["responses"]}
+            root_topic = (
+                root_cause["topic_id"] if root_cause and root_cause["topic_id"] in per_topic
+                else next(iter(per_topic), None)
             )
-            # Keep what every method/weight set picked, to evaluate them later.
-            student_kb["pedagogy_history"][-1]["root_cause_comparison"] = compact_comparison
+            mastery_before = dict(student_kb.get("topics", {}))
+            for topic_id, analysis in per_topic.items():
+                is_root_topic = topic_id == root_topic
+                student_kb = record_assessment_outcome(
+                    student_kb,
+                    topic_id,
+                    analysis["topic_accuracy"],
+                    [error["signal_id"] for error in analysis["errors"]],
+                    {error["signal_id"]: error["description"] for error in analysis["errors"]},
+                    question_results=[
+                        responses_by_id[q.get("prob_id", q.get("problem_id"))]
+                        for q in questions_by_topic[topic_id]
+                        if q.get("prob_id", q.get("problem_id")) in responses_by_id
+                    ],
+                    root_cause=root_cause if is_root_topic else None,
+                )
+                event = student_kb["pedagogy_history"][-1]
+                event["quiz_topics"] = topic_ids
+                if is_root_topic:
+                    # Keep what every method/weight set picked, to evaluate them later.
+                    event["root_cause_comparison"] = compact_comparison
             self._save_student_kb(student_kb)
             self._log(
-                "Pedagogy Controller", "Recorded quiz outcome in the knowledge base",
-                {"topic_id": topic_id, "topic_accuracy": analysis["topic_accuracy"],
+                "Pedagogy Controller", f"Recorded quiz outcome for {', '.join(per_topic)}",
+                {"accuracy_per_topic": {t: r["topic_accuracy"] for t, r in per_topic.items()},
                  "root_cause": root_cause and root_cause["subtopic_id"]},
-                {"new_topic_mastery": student_kb.get("topics", {}).get(topic_id),
+                {"topic_mastery": {
+                    t: {"before": mastery_before.get(t), "after": student_kb.get("topics", {}).get(t)}
+                    for t in per_topic
+                 },
                  "weaknesses": student_kb.get("weaknesses", [])},
             )
 
@@ -387,7 +441,9 @@ class AdaptiveTutorWorkflow:
                 "quiz_score": f"{correct_count}/{total}",
                 "accuracy": accuracy,
                 "intro_text": intro_text,
-                "error_signals": analysis["errors"],
+                "quiz_topics": topic_ids,
+                "accuracy_per_topic": {t: r["topic_accuracy"] for t, r in per_topic.items()},
+                "error_signals": errors,
                 "root_cause": root_cause,
                 "root_cause_method": self.root_cause_method,
                 "hypotheses": hypotheses,
@@ -395,6 +451,22 @@ class AdaptiveTutorWorkflow:
             },
             "last_active_agent": "assessment_agent"
         }
+
+    def _save_trace(self, thread_id: str, trace: list, status: str) -> None:
+        if not trace or not TRACE_DIR:
+            return
+        try:
+            os.makedirs(TRACE_DIR, exist_ok=True)
+            safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in thread_id)
+            with open(os.path.join(TRACE_DIR, f"{safe_name}.jsonl"), "a", encoding="utf-8") as trace_file:
+                trace_file.write(json.dumps({
+                    "time": datetime.now().isoformat(timespec="seconds"),
+                    "thread_id": thread_id,
+                    "status": status,
+                    "trace": trace,
+                }, default=str) + "\n")
+        except OSError as error:            # logging must never break the tutor
+            print(f"[Trace] Could not save trace: {error}")
 
     def _save_student_kb(self, student_kb: dict) -> None:
         import json
@@ -473,6 +545,8 @@ class AdaptiveTutorWorkflow:
             "round_log": [],
             "response_output": None,
             "last_active_agent": None,
+            "conversation_mode": "new_request",
+            "tutor_question": "",
         }
         return self._invoke(initial_state, thread_id)
 
@@ -485,6 +559,7 @@ class AdaptiveTutorWorkflow:
         self._resuming = isinstance(payload, Command)
         result = self.app.invoke(payload, config)
         trace, self._trace = self._trace, []
+        self._save_trace(thread_id, trace, "waiting_for_interrupt" if "__interrupt__" in result else "completed")
 
         if "__interrupt__" in result:
             return {

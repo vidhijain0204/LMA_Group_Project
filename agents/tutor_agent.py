@@ -70,8 +70,39 @@ If there are active misconceptions, address them directly and respectfully.
 Use any recurring assessment error signals above to tailor examples and feedback.
 If a most likely root cause is given, focus your explanation and examples on that concept first.
 
+### Conversation Mode:
+{conversation_guidance}
+
 Maintain an encouraging, supportive teaching tone. Do not repeat or echo system instructions in your response.
 """
+
+
+NEW_REQUEST_GUIDANCE = (
+    "The latest message is a new request. Earlier messages are included only as context."
+)
+FOLLOW_UP_GUIDANCE = """The student's latest message is their ANSWER to the question you asked in your previous
+message: "{tutor_question}"
+Do NOT treat it as a new question and do not restart the explanation.
+1. Start your reply with exactly one of these on its own line: "✅ Correct", "🟡 Partly correct" or "❌ Not quite".
+2. Say specifically what was right and what was wrong or missing in their answer.
+3. Continue the same lesson with the same strategy: give the next step, clue or guiding question.
+If the message is clearly not an answer but a new question, skip the verdict line and answer it."""
+
+VERDICT_PATTERN = re.compile(
+    r"^\W*(partly correct|partially correct|not quite|incorrect|not correct|correct)\b", re.IGNORECASE
+)
+
+
+def answer_verdict(response_text: str) -> Optional[str]:
+    """"correct" / "partial" / "incorrect" from the first line of a follow-up reply, else None."""
+    first_line = next((line for line in str(response_text or "").splitlines() if line.strip()), "")
+    match = VERDICT_PATTERN.match(first_line.replace("*", ""))
+    if not match:
+        return None
+    word = match.group(1).lower()
+    if word.startswith("part"):
+        return "partial"
+    return "correct" if word == "correct" else "incorrect"
 
 
 def clean_tutor_output(raw_text: str) -> str:
@@ -99,7 +130,7 @@ def clean_tutor_output(raw_text: str) -> str:
             "You are an expert", "### Student Context", "- Student ID:", 
             "- Focused Topic", "- Mastery Status:", "- Active Misconceptions",
             "- Orchestrator Instruction",
-            "- Most Likely Root Cause", "### STRICT PEDAGOGICAL", "- If Score", "Maintain an encouraging"
+            "- Most Likely Root Cause", "### STRICT PEDAGOGICAL", "### Conversation Mode", "- If Score", "Maintain an encouraging"
         ]):
             continue
         filtered_lines.append(line)
@@ -117,13 +148,28 @@ def create_tutor_node(enable_kb_context: bool = True):
         if not isinstance(topic_focus, list):
             topic_focus = [str(topic_focus)]
         instruction = state.get("orchestrator_instruction", "Explain the concept clearly.")
+        follow_up = state.get("conversation_mode") == "follow_up"
+        tutor_question = state.get("tutor_question", "")
 
         if enable_kb_context:
             mastery_tag, mastery_score, misconceptions = get_student_topic_context(student_kb, topic_focus)
             topic_id = resolve_topic_id(topic_focus[0] if topic_focus else "Python Basics")
-            pedagogy_strategy, strategy_reason = choose_teaching_strategy(
-                student_kb, topic_id, mastery_score
+            previous_lesson = next(
+                (
+                    event for event in reversed(student_kb.get("pedagogy_history", []) if student_kb else [])
+                    if event.get("event") == "lesson" and event.get("topic_id") == topic_id
+                ),
+                None,
             )
+            if follow_up and previous_lesson:
+                # Same lesson, same strategy: switching mid-dialogue would break e.g. a
+                # self-explanation exchange.
+                pedagogy_strategy = previous_lesson["strategy"]
+                strategy_reason = "Continuing the same lesson: the student is answering the tutor's question."
+            else:
+                pedagogy_strategy, strategy_reason = choose_teaching_strategy(
+                    student_kb, topic_id, mastery_score
+                )
             learning_signals = recent_error_context(student_kb, topic_id)
             root_cause = latest_root_cause(student_kb, topic_id)
         else:
@@ -152,6 +198,10 @@ def create_tutor_node(enable_kb_context: bool = True):
                     f"{root_cause['subtopic_id']} {root_cause['name']} ({root_cause['reason']})"
                     if root_cause else "None identified yet"
                 ),
+                conversation_guidance=(
+                    FOLLOW_UP_GUIDANCE.format(tutor_question=tutor_question or "(see previous message)")
+                    if follow_up else NEW_REQUEST_GUIDANCE
+                ),
             )
         )
 
@@ -159,7 +209,10 @@ def create_tutor_node(enable_kb_context: bool = True):
         raw_content = response.content.strip()
         actual_content = clean_tutor_output(raw_content)
 
+        verdict = answer_verdict(actual_content) if follow_up else None
         result = {
+            "conversation_mode": "follow_up" if follow_up else "new_request",
+            "answer_verdict": verdict,
             "messages": [AIMessage(content=actual_content)],
             "last_active_agent": "tutor_agent",
             "pedagogy_strategy": pedagogy_strategy,
@@ -180,7 +233,10 @@ def create_tutor_node(enable_kb_context: bool = True):
                 (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)),
                 "",
             )
-            updated_kb = record_learning_turn(student_kb, topic_id, student_text, previous_strategy)
+            updated_kb = record_learning_turn(
+                student_kb, topic_id, student_text, previous_strategy,
+                reply_to_tutor=follow_up, answer_verdict=verdict, context_text=tutor_question,
+            )
             result["student_kb"] = record_lesson_strategy(
                 updated_kb, topic_id, pedagogy_strategy, strategy_reason
             )

@@ -1,9 +1,11 @@
 import json
 import os
 import re
-from typing import List, Optional, TypedDict, Any
+from typing import Any, List, Optional, Tuple, TypedDict
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langgraph.types import Command
+
+from agents.struggle_tracker import RECENT_TURNS_FOR_QUIZ, recent_learning_topics, topics_mentioned
 
 
 
@@ -42,6 +44,8 @@ class AgentState(TypedDict):
     last_active_agent: Optional[str]
     orchestrator_instruction: str
     orchestrator_reasoning: str
+    conversation_mode: str
+    tutor_question: str
 
 
 def load_student_kb(student_id: str, db_path: str = SKB_FILE_PATH) -> Optional[dict]:
@@ -64,7 +68,11 @@ Your job is to analyze the student's message, student knowledge base, and route 
 ### Available Agents & Intents:
 1. `diagnosis`: Use ONLY if the student is brand new and needs their initial onboarding diagnostic test.
 2. `tutor_agent`: Use if the student asks for concept explanations, syntax help, or coding guidance.
-3. `assessment_quiz`: Use if the student asks for a quiz, test, challenge, or wants to check their mastery/scores on a topic.
+3. `assessment_quiz`: Use if the student asks for a quiz, test, challenge or assessment, says they are ready to be assessed, or wants to check their mastery/scores on a topic.
+
+Earlier messages of the conversation are included: use them to understand follow-up questions
+("explain that again", "what about the second example?"). If the tutor's last message asked the
+student a question and the student answers it, route to `tutor_agent` with the same topic.
 
 ### Topic Catalog Reference:
 {topics_summary}
@@ -77,143 +85,102 @@ Respond in strict JSON format with keys:
 """
 
 
+def choose_quiz_topics(user_text: str, llm_topics, student_kb: Optional[dict]) -> Tuple[List[str], str]:
+    """Topics for a quiz request, and where they came from.
+
+    1. Topics the student names in the message ("quiz on lists and loops").
+    2. Otherwise ("ready for assessment"), the topics of the last 3 tutor conversations.
+    3. Otherwise, whatever topic the LLM suggested.
+    """
+    named = topics_mentioned(user_text)
+    if named:
+        return named, f"topics named in the request: {', '.join(named)}"
+    recent = recent_learning_topics(student_kb, RECENT_TURNS_FOR_QUIZ)
+    if recent:
+        return recent, (
+            f"no topic named, so the topics of the last {RECENT_TURNS_FOR_QUIZ} tutor "
+            f"conversations: {', '.join(recent)}"
+        )
+    llm_topics = llm_topics if isinstance(llm_topics, list) else [llm_topics]
+    return [str(t) for t in llm_topics if t] or ["T01"], "no topic named and no learning history, so the LLM's topic"
+
+
+QUIZ_REQUEST = re.compile(r"\b(quiz|test me|assess\w*|exam|ready for)\b", re.IGNORECASE)
+FOLLOW_UP_MODE = "follow_up"
+FOLLOW_UP_INSTRUCTION = (
+    "The student is answering the question you asked in your previous message. Evaluate that "
+    "answer and continue the same lesson; do not treat it as a new question."
+)
+
+
+def detect_follow_up(state: dict, student_kb: Optional[dict]) -> Optional[dict]:
+    """Is the new message the student's reply to a question the tutor just asked?
+
+    True when all of these hold:
+    - the last thing that happened for this student was a tutor lesson (not a quiz),
+    - the previous chat message is from the tutor and ends with a question,
+    - the new message does not request a quiz and does not name a different topic.
+    Returns the lesson to continue ({"topic_id", "strategy", "tutor_question"}) or None.
+    """
+    messages = state.get("messages", [])
+    if len(messages) < 2 or not isinstance(messages[-2], AIMessage):
+        return None
+    tutor_message = str(messages[-2].content)
+    # The tutor must END with a question (headings like "What is a list?" don't count).
+    closing_lines = [
+        line for line in tutor_message.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ][-3:]
+    if not any("?" in line for line in closing_lines):
+        return None
+    history = (student_kb or {}).get("pedagogy_history", [])
+    if not history or history[-1].get("event") != "lesson":
+        return None
+    lesson = history[-1]
+    text = state.get("user_input") or str(messages[-1].content)
+    if QUIZ_REQUEST.search(text):
+        return None
+    named = topics_mentioned(text)
+    if named and lesson.get("topic_id") not in named:
+        return None
+    question = next(line.strip() for line in reversed(closing_lines) if "?" in line)
+    return {"topic_id": lesson.get("topic_id"), "strategy": lesson.get("strategy"), "tutor_question": question[:300]}
+
+
+def parse_decision(raw_content: str) -> dict:
+    """Extract the JSON routing decision from the LLM output (thinking and code fences removed)."""
+    content = raw_content.replace("\xa0", " ")
+    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+    if "<think>" in content:                      # thinking cut off before it closed
+        content = content.split("<think>")[0].strip()
+    if "```json" in content:
+        content = content.split("```json", 1)[1].split("```", 1)[0].strip()
+    elif "```" in content:
+        content = content.split("```", 1)[1].split("```", 1)[0].strip()
+    json_start, json_end = content.find("{"), content.rfind("}")
+    if json_start == -1 or json_end == -1:
+        raise ValueError("No JSON object found in LLM response")
+    decision = json.loads(content[json_start:json_end + 1])
+    if not {"next_agent", "topic_focus", "instruction", "reasoning"}.issubset(decision):
+        raise ValueError("Missing required JSON keys")
+    return decision
+
+
 def create_orchestrator_node(llm=None):
-    """
-    Create the orchestrator node.
-
-    An LLM can be injected for testing.
-    If none is provided, load the actual local LLM.
-    """
-
+    """Create the orchestrator node. An LLM can be injected for testing; otherwise the local
+    LLM is loaded."""
     if llm is None:
         from agents.llm_factory import get_llm
         llm = get_llm("router", enable_thinking=True)
 
     topics_summary = "Python Basics, Control Flow, Data Structures, Functions, OOP"
-
     if os.path.exists(TOPICS_FILE_PATH):
         try:
             with open(TOPICS_FILE_PATH, "r", encoding="utf-8") as f:
-                t_list = json.load(f)
-                topics_summary = ", ".join(
-                    [f"{t['topic_id']}: {t['name']}" for t in t_list]
-                )
+                topics_summary = ", ".join(f"{t['topic_id']}: {t['name']}" for t in json.load(f))
         except Exception:
             pass
 
-    def orchestrator_node(state: AgentState) -> Command:
-        student_id = state.get("student_id", "S001")
-
-        student_kb = (
-            state["student_kb"]
-            if "student_kb" in state
-            else load_student_kb(student_id)
-        )
-
-        if not student_kb:
-            print(
-                f"\n🧭 [ORCHESTRATOR] New student {student_id} "
-                f"(no knowledge base) -> {DIAGNOSIS_NODE}"
-            )
-
-            return Command(
-                goto=DIAGNOSIS_NODE,
-                update={
-                    "student_id": student_id,
-                    "student_kb": None,
-                    "topic_focus": [],
-                    "orchestrator_instruction": "Run the onboarding diagnostic test.",
-                    "orchestrator_reasoning": "New student: no knowledge base record found.",
-                    "last_active_agent": "orchestrator",
-                },
-            )
-
-        sys_msg = SystemMessage(
-            content=ORCHESTRATOR_SYSTEM_PROMPT.format(
-                topics_summary=topics_summary
-            )
-        )
-
-        response = llm.invoke([sys_msg] + state["messages"])
-        raw_content = response.content.strip()
-
-        try:
-            content = raw_content.replace("\xa0", " ")
-
-            content = re.sub(
-                r"<think>.*?</think>",
-                "",
-                content,
-                flags=re.DOTALL,
-            ).strip()
-
-            if "<think>" in content:
-                content = content.split("<think>")[0].strip()
-
-            if "```json" in content:
-                content = content.split("```json", 1)[1].split("```", 1)[0].strip()
-            elif "```" in content:
-                content = content.split("```", 1)[1].split("```", 1)[0].strip()
-
-            json_start = content.find("{")
-            json_end = content.rfind("}")
-
-            if json_start == -1 or json_end == -1:
-                raise ValueError("No JSON object found in LLM response")
-
-            decision = json.loads(content[json_start:json_end + 1])
-
-            required_keys = {
-                "next_agent",
-                "topic_focus",
-                "instruction",
-                "reasoning",
-            }
-
-            if not required_keys.issubset(decision.keys()):
-                raise ValueError("Missing required JSON keys")
-
-            print("Orchestrator Decision:", decision)
-
-        except Exception as parse_err:
-            print(
-                f"[ORCHESTRATOR PARSE ERROR]: "
-                f"{parse_err} | Raw: {raw_content}"
-            )
-
-            decision = {
-                "next_agent": "tutor_agent",
-                "topic_focus": ["Variables and Data Types"],
-                "instruction": "Explain concept clearly.",
-                "reasoning": "Fallback routing due to parse error.",
-            }
-
-        next_agent = normalize_route(decision.get("next_agent"))
-
-        if next_agent == DIAGNOSIS_NODE:
-            next_agent = TUTOR_NODE
-
-        topic_focus = decision.get(
-            "topic_focus", ["Variables and Data Types"]
-        )
-        instruction = decision.get("instruction", "Explain concept.")
-        reasoning = decision.get("reasoning", "Direct routing.")
-
-        return Command(
-            goto=next_agent,
-            update={
-                "student_id": student_id,
-                "student_kb": student_kb,
-                "topic_focus": topic_focus,
-                "orchestrator_instruction": instruction,
-                "orchestrator_reasoning": reasoning,
-                "last_active_agent": "orchestrator",
-            },
-        )
-
-    return orchestrator_node
-
-        
     def orchestrator_node(state: AgentState) -> Command:
         student_id = state.get("student_id", "S001")
         # workflow.start() has already looked the student up (None = not in the database);
@@ -221,8 +188,7 @@ def create_orchestrator_node(llm=None):
         student_kb = state["student_kb"] if "student_kb" in state else load_student_kb(student_id)
 
         # A student without a knowledge base record has never taken the diagnostic test.
-        # Onboard them first, whatever they typed: this is a fact from the database, not
-        # something the LLM can infer from the message.
+        # Onboard them first, whatever they typed.
         if not student_kb:
             print(f"\n🧭 [ORCHESTRATOR] New student {student_id} (no knowledge base) -> {DIAGNOSIS_NODE}")
             return Command(
@@ -237,90 +203,65 @@ def create_orchestrator_node(llm=None):
                 },
             )
 
-        sys_msg = SystemMessage(
-            content=ORCHESTRATOR_SYSTEM_PROMPT.format(
-                topics_summary=topics_summary
+        # The student is answering the tutor's last question: continue that lesson directly,
+        # without asking the LLM (which would treat the answer as a brand-new request).
+        follow_up = detect_follow_up(state, student_kb)
+        if follow_up:
+            reasoning = (
+                f"Student is replying to the tutor's question on {follow_up['topic_id']} "
+                f"(strategy: {follow_up['strategy']}); continuing the same lesson."
             )
-        )
+            print(f"\n🧭 [ORCHESTRATOR] Follow-up reply -> {TUTOR_NODE} | {reasoning}")
+            return Command(
+                goto=TUTOR_NODE,
+                update={
+                    "student_id": student_id,
+                    "student_kb": student_kb,
+                    "topic_focus": [follow_up["topic_id"]],
+                    "orchestrator_instruction": FOLLOW_UP_INSTRUCTION,
+                    "orchestrator_reasoning": reasoning,
+                    "conversation_mode": FOLLOW_UP_MODE,
+                    "tutor_question": follow_up["tutor_question"],
+                    "last_active_agent": "orchestrator",
+                },
+            )
 
+        sys_msg = SystemMessage(content=ORCHESTRATOR_SYSTEM_PROMPT.format(topics_summary=topics_summary))
+        # state["messages"] holds the recent chat history followed by the current message.
         response = llm.invoke([sys_msg] + state["messages"])
         raw_content = response.content.strip()
-
         try:
-            content = raw_content.replace("\xa0", " ")
-
-            # Remove reasoning blocks
-            content = re.sub(
-                r"<think>.*?</think>",
-                "",
-                content,
-                flags=re.DOTALL
-            ).strip()
-
-            # Handle incomplete/unclosed think blocks
-            if "<think>" in content:
-                content = content.split("<think>")[0].strip()
-
-            # Extract JSON from markdown code blocks
-            if "```json" in content:
-                content = content.split("```json", 1)[1].split("```", 1)[0].strip()
-            elif "```" in content:
-                content = content.split("```", 1)[1].split("```", 1)[0].strip()
-
-            # Extract JSON object
-            json_start = content.find("{")
-            json_end = content.rfind("}")
-
-            if json_start == -1 or json_end == -1:
-                raise ValueError("No JSON object found in LLM response")
-
-            content = content[json_start:json_end + 1]
-
-            decision = json.loads(content)
-
-            # Validate required fields
-            required_keys = {
-                "next_agent",
-                "topic_focus",
-                "instruction",
-                "reasoning"
-            }
-
-            if not required_keys.issubset(decision.keys()):
-                raise ValueError("Missing required JSON keys")
-
+            decision = parse_decision(raw_content)
             print("✅ Orchestrator Decision:", decision)
-
         except Exception as parse_err:
-            print(
-                f"⚠️ [ORCHESTRATOR PARSE ERROR]: "
-                f"{parse_err} | Raw: {raw_content}"
-            )
-
+            print(f"⚠️ [ORCHESTRATOR PARSE ERROR]: {parse_err} | Raw: {raw_content}")
             decision = {
                 "next_agent": "tutor_agent",
                 "topic_focus": ["Variables and Data Types"],
                 "instruction": "Explain concept clearly.",
-                "reasoning": "Fallback routing due to parse error."
+                "reasoning": "Fallback routing due to parse error.",
             }
 
-        # Continue with your existing routing logic here
-
-
-        # Translate the LLM's label into a node that exists in the graph.
+        # Translate the LLM's label into a node that exists in the graph. Existing students have
+        # already taken the diagnosis (it is allowed only once), so that falls back to the tutor.
         next_agent = normalize_route(decision.get("next_agent"))
-
-        # Existing students have already taken the diagnosis, and DiagnosisAgent refuses a
-        # second attempt, so a "diagnosis" decision for them falls back to the tutor.
         if next_agent == DIAGNOSIS_NODE:
             next_agent = TUTOR_NODE
 
-        topic_focus = decision.get("topic_focus", ["Variables and Data Types"])
+        topic_focus = decision.get("topic_focus") or ["Variables and Data Types"]
+        if not isinstance(topic_focus, list):
+            topic_focus = [str(topic_focus)]
         instruction = decision.get("instruction", "Explain concept.")
         reasoning = decision.get("reasoning", "Direct routing.")
 
-        print(f"\n🧭 [ORCHESTRATOR] Routing to -> {next_agent} | Topic: {topic_focus} | Reason: {reasoning}")
+        if next_agent == ASSESSMENT_NODE:
+            user_text = state.get("user_input") or next(
+                (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)), ""
+            )
+            topic_focus, source = choose_quiz_topics(user_text, topic_focus, student_kb)
+            reasoning = f"{reasoning} | Quiz topics: {source}"
 
+        print(f"\n🧭 [ORCHESTRATOR] Routing to -> {next_agent} | Topic: {topic_focus} | Reason: {reasoning}")
         return Command(
             goto=next_agent,
             update={
@@ -329,8 +270,10 @@ def create_orchestrator_node(llm=None):
                 "topic_focus": topic_focus,
                 "orchestrator_instruction": instruction,
                 "orchestrator_reasoning": reasoning,
-                "last_active_agent": "orchestrator"
-            }
+                "conversation_mode": "new_request",
+                "tutor_question": "",
+                "last_active_agent": "orchestrator",
+            },
         )
 
     return orchestrator_node

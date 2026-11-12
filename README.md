@@ -30,8 +30,6 @@ The newly added implementation files are:
 - `agents/error_analysis_agent.py` — analyzes quiz answers, limits error signals and
   topic accuracy to the requested topic where question metadata permits, and maps
   incorrect answers to misconception tags or related subtopics.
-- `tests/test_pedagogy_controller.py` — tests initial strategy selection, low-score
-  switching, recurring error signals, and topic-aware error analysis.
 
 Existing files updated for this implementation include:
 
@@ -118,18 +116,6 @@ Then launch the app as described below. Note that the current `requirements.txt`
 lists the previous Transformers/Hugging Face dependencies and does not yet include
 `mlx-lm` or `langchain-openai`; install the backend packages explicitly as above.
 
-### Verification and Experimental Results
-
-The five isolated controller/error-analysis tests passed in the current environment.
-They cover mastery-based initialization, waiting for two low assessments before
-switching, recurring-error prioritization, and topic-aware error analysis. A full
-`unittest discover` run could not complete here because `langchain_openai` is not
-installed, which prevents importing the model-backed tutor and workflow tests.
-
-These are implementation and rule-level tests, not a model-backed classroom trial:
-no simulated student study, comparative learning-gain measurement, or fine-tuning
-experiment has been run. Strategy adaptation therefore describes the implemented
-rules, not a measured improvement in student outcomes.
 
 # AI Python Tutoring System
 
@@ -141,16 +127,14 @@ The project is designed to:
 - route requests to the right agent,
 - explain Python topics with personalization,
 - generate adaptive MCQ quizzes based on student ability,
-- run as a Streamlit web app or as standalone Python scripts.
+- run as a Streamlit web app.
 
 ## What is in this directory?
 
 - `app.py` — main Streamlit app for the student-facing tutor experience.
-- `main.py` — lightweight sample script that runs the tutor agent directly on a few example questions.
 - `agents/` — all agent logic and orchestration.
 - `data/` — JSON course data, question banks, and student knowledge base.
 - `models/` — model/schema definitions for the student knowledge base.
-- `tests/` — unit tests for retriever and orchestrator behavior.
 - `requirements.txt` — Python dependencies.
 - `mid_report.pdf` and `part1_flow.jpeg` — project report and architecture diagram.
 
@@ -192,13 +176,7 @@ The system is built around a LangGraph workflow:
 │   └── skb_database.json        # Student knowledge base records
 ├── models/
 │   └── skb_schema.py            # Pydantic schema for student KB
-├── tests/
-│   ├── test_course_retriever.py
-│   ├── test_orchestrator.py
-│   ├── test_tutor.py
-│   └── test_pedagogy_controller.py
 ├── app.py                       # Streamlit tutor UI
-├── main.py                      # Quick example runner
 ├── requirements.txt             # Python deps
 ├── mid_report.pdf               # Project report PDF
 ├── part1_flow.jpeg              # Architecture diagram
@@ -236,13 +214,6 @@ python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 ```
 
-Then verify the project entry points work:
-
-```bash
-python3 -m unittest discover -s tests -q
-```
-
-This repository uses the standard library `unittest` runner rather than `pytest`.
 
 ## How to run the app
 
@@ -293,17 +264,6 @@ When a student already exists:
 - the orchestrator examines the user message,
 - chooses whether to tutor or quiz,
 - uses topic score information to personalize explanations and challenge level.
-
-## How to run the example script
-
-The repository includes a quick sample runner:
-
-```bash
-cd /path/to/LMA_Group_Project
-python3 main.py
-```
-
-This script creates a `TutorAgent`, runs several example questions, and prints responses. It is a simple way to validate that the tutoring pipeline is working without launching the Streamlit UI.
 
 ## How the components work
 
@@ -431,21 +391,6 @@ and inspect entries like:
 
 If you want to reset a student profile, remove the matching record from this file or create a new student ID.
 
-## Testing
-
-The project includes a few lightweight checks for the major components.
-
-Run:
-
-```bash
-cd /path/to/LMA_Group_Project
-python3 -m unittest discover -s tests -q
-```
-
-The suite includes course retriever, orchestrator, tutor, pedagogy-controller, and
-error-analysis checks. The current backend also requires `langchain-openai` to import
-the model-backed tutor and workflow.
-
 ## Common issues and fixes
 
 ### Cannot connect to the local model
@@ -518,18 +463,6 @@ The primary entry point for users is:
 
 ```bash
 python3 -m streamlit run app.py
-```
-
-The most direct offline validation is:
-
-```bash
-python3 main.py
-```
-
-and the code-level validation is:
-
-```bash
-python3 -m unittest discover -s tests -q
 ```
 
 If you want to customize the system, start by editing the files in the `agents/` folder and the JSON datasets in `data/`.

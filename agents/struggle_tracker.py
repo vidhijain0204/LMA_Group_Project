@@ -11,8 +11,9 @@ the root-cause agent:
     RA  Re-asking             the student asked about this subtopic 2+ times
     TR  Turns to resolve      many back-and-forth turns were needed on the topic
     HR  Hint requests         share of turns asking for a hint or the answer
-    WS  Wrong self-explanation   after a hints/self-explanation lesson the student was still
-                                 confused or asked for the answer (a rule-based proxy)
+    WS  Wrong self-explanation   the tutor judged the student's answer to its question partly
+                                 correct or wrong, or after a hints/self-explanation lesson the
+                                 student was still confused or asked for the answer
     SW  Strategy switches     the pedagogy controller had to change strategy on the topic
 
 The detection is rule-based (regular expressions and keyword overlap) so it is fast,
@@ -131,8 +132,15 @@ def record_learning_turn(
     student_text: str,
     previous_strategy: Optional[str] = None,
     topics_filepath: str = TOPICS_FILEPATH,
+    reply_to_tutor: bool = False,
+    answer_verdict: Optional[str] = None,
+    context_text: str = "",
 ) -> dict:
-    """Log one student message sent to the tutor, with its struggle flags."""
+    """Log one student message sent to the tutor, with its struggle flags.
+
+    For a reply to the tutor's question, `answer_verdict` is the tutor's judgement of the answer
+    ("correct" / "partial" / "incorrect") and `context_text` is the question that was answered;
+    it is used to find the subtopic when the answer itself names none ("it prints 5")."""
     updated = deepcopy(student_kb)
     if not str(student_text or "").strip():
         return updated
@@ -140,11 +148,16 @@ def record_learning_turn(
     turns = updated.setdefault("learning_conversations", [])
     turns.append({
         "topic_id": topic_id,
-        "subtopic_ids": map_subtopics(student_text, topic_id, topics_filepath),
+        "subtopic_ids": (
+            map_subtopics(student_text, topic_id, topics_filepath)
+            or map_subtopics(context_text, topic_id, topics_filepath)
+        ),
         "text": str(student_text).strip()[:300],
         "confusion": flags["confusion"],
         "hint_request": flags["hint_request"],
         "after_strategy": previous_strategy,
+        "reply_to_tutor": bool(reply_to_tutor),
+        "answer_verdict": answer_verdict,
         "created_at": datetime.now().isoformat(timespec="seconds"),
     })
     updated["learning_conversations"] = turns[-MAX_LOGGED_TURNS:]
@@ -174,7 +187,11 @@ def learning_struggle(
         and (not turn.get("subtopic_ids") or subtopic_id in turn["subtopic_ids"])
     ]
     explicit_turns = [turn for turn in turns if subtopic_id in turn.get("subtopic_ids", [])]
-    eligible = [turn for turn in turns if turn.get("after_strategy") in SELF_EXPLANATION_STRATEGIES]
+    # Answers to the tutor's questions, plus any message after a hints / self-explanation lesson.
+    eligible = [
+        turn for turn in turns
+        if turn.get("answer_verdict") or turn.get("after_strategy") in SELF_EXPLANATION_STRATEGIES
+    ]
 
     count = len(turns)
     components = {
@@ -183,8 +200,12 @@ def learning_struggle(
         "TR": min(1.0, max(0, count - 2) / 4),
         "HR": sum(turn.get("hint_request", False) for turn in turns) / count if count else 0.0,
         "WS": (
-            sum(turn.get("confusion", False) or turn.get("hint_request", False) for turn in eligible)
-            / len(eligible)
+            sum(
+                turn.get("answer_verdict") in ("partial", "incorrect")
+                or (turn.get("answer_verdict") != "correct"
+                    and (turn.get("confusion", False) or turn.get("hint_request", False)))
+                for turn in eligible
+            ) / len(eligible)
             if eligible else 0.0
         ),
         "SW": min(1.0, strategy_switches(student_kb, topic_id) / 2),
@@ -196,3 +217,57 @@ def learning_struggle(
         "turns": count,
         "examples": [turn["text"] for turn in turns if turn.get("confusion") or turn.get("hint_request")][-2:],
     }
+
+
+# ------------------------------------------------------------------ quiz topic selection
+RECENT_TURNS_FOR_QUIZ = 3
+
+
+# How students name each topic. Plain "if" and "set" are left out on purpose: they are ordinary
+# English words ("check if I'm ready", "a set of questions").
+TOPIC_ALIASES = {
+    "T01": r"introduction to python|interpreter",
+    "T02": r"variables?|data ?types?",
+    "T03": r"input|output",
+    "T04": r"operators?",
+    "T05": r"if[- /]?else|if[- ]statements?|elif|conditionals?|conditional statements?",
+    "T06": r"loops?|while|for[- ]loops?",
+    "T07": r"strings?",
+    "T08": r"lists?(?! comprehensions?)|tuples?|sets",
+    "T09": r"dict(ionary|ionaries|s)?",
+    "T10": r"functions?|def",
+    "T11": r"comprehensions?",
+    "T12": r"exceptions?|try[- /]except|error handling",
+    "T13": r"files?|file handling",
+}
+_TOPIC_PATTERNS = {tid: re.compile(rf"\b(?:{alias})\b", re.IGNORECASE) for tid, alias in TOPIC_ALIASES.items()}
+
+
+def topics_mentioned(text: str, topics_filepath: str = TOPICS_FILEPATH) -> List[str]:
+    """Topic ids the message names explicitly, in the order they appear:
+    "quiz on lists and loops" -> [T08, T06]; "ready for assessment" -> []."""
+    text = str(text or "")
+    valid = load_catalog(topics_filepath)["topic_names"]
+    positions = {}
+    for match in re.finditer(r"\bT\d{2}\b", text.upper()):
+        if match.group(0) in valid:
+            positions.setdefault(match.group(0), match.start())
+    for tid, pattern in _TOPIC_PATTERNS.items():
+        match = pattern.search(text)
+        if match and tid in valid:
+            positions.setdefault(tid, match.start())
+    return sorted(positions, key=positions.get)
+
+
+def recent_learning_topics(
+    student_kb: Optional[dict],
+    turns: int = RECENT_TURNS_FOR_QUIZ,
+    topics_filepath: str = TOPICS_FILEPATH,
+) -> List[str]:
+    """Distinct topics of the student's last `turns` tutor conversations, oldest first."""
+    valid = load_catalog(topics_filepath)["topic_names"]
+    recent = [
+        turn.get("topic_id") for turn in (student_kb or {}).get("learning_conversations", [])
+        if turn.get("topic_id") in valid
+    ][-turns:]
+    return list(dict.fromkeys(recent))

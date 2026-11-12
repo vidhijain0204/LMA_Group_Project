@@ -8,6 +8,7 @@ from pathlib import Path
 from agents.workflow import AdaptiveTutorWorkflow
 from agents.orchestrator import load_student_kb, SKB_FILE_PATH
 from agents.diagnosis_agent import DiagnosisAgent
+from agents.struggle_tracker import load_catalog
 from agents.root_cause_agent import (
     DEFAULT_PRESET, METHOD_LABELS, METHODS, PARAM_LABELS, PARAMS, WEIGHT_PRESETS, SIGNS,
 )
@@ -46,6 +47,16 @@ if "waiting_for_interrupt" not in st.session_state:
 # Agent steps of a start() call that paused for a diagnosis/quiz; shown with the final answer.
 if "pending_trace" not in st.session_state:
     st.session_state.pending_trace = []
+
+# Number of earlier chat messages sent with each request, so the agents see the conversation.
+CHAT_HISTORY_MESSAGES = 6
+TOPIC_NAMES = load_catalog()["topic_names"]
+
+
+def topic_label(topic_ids) -> str:
+    topic_ids = topic_ids if isinstance(topic_ids, list) else [topic_ids]
+    return ", ".join(f"{t} {TOPIC_NAMES.get(t, '')}".strip() for t in topic_ids)
+
 
 # =====================================================================
 # AGENT FLOW & ROOT CAUSE RENDERING
@@ -214,6 +225,10 @@ with st.sidebar:
                     )
                     st.markdown(f"- Quiz on {entry.get('quiz_topic_id', '?')}: {summary}")
 
+        with st.expander("🗂️ Full knowledge base (stored values)"):
+            st.caption(f"Saved in {SKB_FILE_PATH} · last update {kb.get('latest_update_time', '-')}")
+            st.json(kb, expanded=1)
+
         with st.expander("View Topic Scores"):
             for tid, score in kb.get("topics", {}).items():
                 st.progress(score, text=f"{tid}: {score}")
@@ -287,7 +302,7 @@ if interrupt_payload:
                     st.rerun()
 
     elif int_type == "quiz":
-        st.warning(f"🎯 **Adaptive Quiz Challenge** — Topic: {interrupt_payload.get('topic_focus')}")
+        st.warning(f"🎯 **Adaptive Quiz Challenge** — Topics: {topic_label(interrupt_payload.get('topic_focus') or [])}")
         st.markdown(interrupt_payload.get("intro_text", ""))
         
         questions = interrupt_payload.get("questions", [])
@@ -320,6 +335,12 @@ if interrupt_payload:
                         f"📊 **Quiz Completed!** Score: {res.get('quiz_score')} "
                         f"(Accuracy: {res.get('accuracy', 0.0):.0%})"
                     )
+                    per_topic = res.get("accuracy_per_topic") or {}
+                    if per_topic:
+                        score_msg += "\n\n" + " · ".join(
+                            f"{topic_label(t)}: **{'-' if acc is None else f'{acc:.0%}'}**"
+                            for t, acc in per_topic.items()
+                        )
                     root_cause = res.get("root_cause")
                     if root_cause:
                         # One line: topic -> subtopic -> reason.
@@ -352,10 +373,16 @@ else:
             st.markdown(user_prompt)
 
         with st.spinner("Processing request..."):
+            # Recent chat history (without the message just typed, which is sent as user_input).
+            history = [
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages[:-1][-CHAT_HISTORY_MESSAGES:]
+            ]
             result = workflow.start(
                 student_id=st.session_state.student_id,
                 user_input=user_prompt,
-                thread_id=st.session_state.thread_id
+                chat_history=history,
+                thread_id=st.session_state.thread_id,
             )
 
             # Check if workflow hit an interrupt (diagnosis or quiz)
@@ -366,6 +393,11 @@ else:
             else:
                 # Normal completion (Tutor response or summary)
                 response_text = result.get("response_text", "I am here to help you learn Python!")
+                if result.get("conversation_mode") == "follow_up":
+                    response_text = (
+                        f"_↩️ Continuing the lesson ({result.get('pedagogy_strategy', '').replace('_', ' ')}) "
+                        f"— your reply was taken as an answer to my question._\n\n{response_text}"
+                    )
                 st.session_state.messages.append({
                     "role": "assistant",
                     "content": response_text,

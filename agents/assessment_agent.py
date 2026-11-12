@@ -68,34 +68,45 @@ def determine_target_difficulty(student_kb: Optional[dict], topic_focus: str) ->
         return 0.5  
 
 
-def select_adaptive_mcqs(topic_focus: str, student_kb: Optional[dict], limit: int = 10) -> List[Dict[str, Any]]:
+def _covers_topic(question: dict, topic_id: str) -> bool:
+    return topic_id in question.get("related_topics", []) or any(
+        str(sub).startswith(f"{topic_id}.") for sub in question.get("related_subtopics", [])
+    )
+
+
+def split_quota(limit: int, parts: int) -> List[int]:
+    """10 questions over 3 topics -> [4, 3, 3]."""
+    return [limit // parts + (i < limit % parts) for i in range(parts)]
+
+
+def select_adaptive_mcqs(topic_focus, student_kb: Optional[dict], limit: int = 10) -> List[Dict[str, Any]]:
+    """Pick `limit` questions spread evenly over the topics in `topic_focus` (a topic or a list of
+    topics). Each topic's questions are matched to that topic's difficulty for this student."""
     all_mcqs = load_all_mcqs()
-    target_tid = get_topic_id_from_name(topic_focus)
-    target_diff = determine_target_difficulty(student_kb, topic_focus)
+    focus = topic_focus if isinstance(topic_focus, list) else [topic_focus]
+    topic_ids = list(dict.fromkeys(get_topic_id_from_name(t) for t in focus if t)) or ["T01"]
 
-    filtered = []
-    for q in all_mcqs:
-        related_tops = [str(t).lower() for t in q.get("related_topics", [])]
-        related_subs = [str(s).lower() for s in q.get("related_subtopics", [])]
-        
-        if target_tid.lower() in related_tops or any(target_tid.lower() in sub for sub in related_subs) or not related_tops:
-            filtered.append(q)
+    selected, used = [], set()
 
-    if len(filtered) < limit:
-        filtered = all_mcqs
+    def take(pool, count, target_diff):
+        pool = [q for q in pool if q["prob_id"] not in used]
+        pool.sort(key=lambda q: abs(float(q.get("difficulty", 0.5)) - target_diff))
+        candidates = pool[:count * 2]
+        random.shuffle(candidates)
+        for q in candidates[:count]:
+            selected.append(q)
+            used.add(q["prob_id"])
 
-    filtered.sort(key=lambda x: abs(float(x.get("difficulty", 0.5)) - target_diff))
+    for topic_id, quota in zip(topic_ids, split_quota(limit, len(topic_ids))):
+        take([q for q in all_mcqs if _covers_topic(q, topic_id)], quota,
+             determine_target_difficulty(student_kb, topic_id))
 
-    selected = filtered[:limit * 2]
-    random.shuffle(selected)
-    
-    final_selection = selected[:limit]
-    
-    if len(final_selection) < limit and len(all_mcqs) >= limit:
-        remaining = [q for q in all_mcqs if q not in final_selection]
-        final_selection.extend(random.sample(remaining, min(limit - len(final_selection), len(remaining))))
-
-    return final_selection
+    # A topic with too few questions: fill from the other chosen topics, then from the whole bank.
+    if len(selected) < limit:
+        take([q for q in all_mcqs if any(_covers_topic(q, t) for t in topic_ids)], limit - len(selected), 0.5)
+    if len(selected) < limit:
+        take(all_mcqs, limit - len(selected), 0.5)
+    return selected
 
 
 def clean_llm_output(raw_text: str) -> str:
@@ -129,7 +140,7 @@ def keep_introduction_only(text: str) -> str:
 
 
 ASSESSMENT_SYSTEM_PROMPT = """You are an expert AI Assessment Coach.
-The student is taking a personalized quiz on: {topic_focus}.
+The student is taking a personalized quiz on: {topic_focus}.\n(If several topics are listed, the quiz mixes questions from all of them.)
 Student Mastery Score: {mastery_score} (Target Test Difficulty: {difficulty_label}).
 Orchestrator Directive: {orchestrator_instruction}
 
@@ -145,14 +156,16 @@ def create_assessment_node():
     def assessment_node(state: dict) -> dict:
         student_id = state.get("student_id", "Unknown")
         student_kb = state.get("student_kb")
-        topic_focus_list = state.get("topic_focus", ["Python Basics"])
-        topic_focus = topic_focus_list[0] if topic_focus_list else "Python Basics"
+        topic_focus_list = state.get("topic_focus") or ["Python Basics"]
+        if not isinstance(topic_focus_list, list):
+            topic_focus_list = [str(topic_focus_list)]
         instruction = state.get("orchestrator_instruction", "Provide a practice quiz.")
 
         scores = student_kb.get("topics", {}) if student_kb else {}
-        topic_id = get_topic_id_from_name(topic_focus)
-        score = scores.get(topic_id, 0.5)
-        
+        topic_ids = list(dict.fromkeys(get_topic_id_from_name(t) for t in topic_focus_list))
+        topic_focus = ", ".join(topic_ids)
+        score = round(sum(float(scores.get(t, 0.5)) for t in topic_ids) / len(topic_ids), 2)
+
         if score >= 0.8:
             diff_label = "Advanced / Hard"
         elif score < 0.4:
@@ -160,7 +173,7 @@ def create_assessment_node():
         else:
             diff_label = "Intermediate / Medium"
 
-        quiz_questions = select_adaptive_mcqs(topic_focus, student_kb, limit=10)
+        quiz_questions = select_adaptive_mcqs(topic_ids, student_kb, limit=10)
 
         sys_msg = SystemMessage(
             content=ASSESSMENT_SYSTEM_PROMPT.format(
@@ -177,7 +190,7 @@ def create_assessment_node():
             intro_text = (f"Here is a quiz tailored to your current level on {topic_focus}. "
                           "Take your time and good luck!")
 
-        print(f"\n🎯 [ASSESSMENT AGENT] Generated 10 MCQs for Topic: {topic_focus} | Target Difficulty: {diff_label}")
+        print(f"\n🎯 [ASSESSMENT AGENT] Generated {len(quiz_questions)} MCQs for topics: {topic_focus} | Target Difficulty: {diff_label}")
 
         return {
             "messages": [AIMessage(content=intro_text)],

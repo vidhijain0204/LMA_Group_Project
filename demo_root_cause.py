@@ -13,7 +13,7 @@ from copy import deepcopy
 
 from agents.orchestrator import SKB_FILE_PATH, load_student_kb
 from agents.pedagogy_controller import record_lesson_strategy
-from agents.root_cause_agent import RootCauseAgent, format_hypotheses
+from agents.root_cause_agent import RootCauseAgent, format_hypotheses, format_root_cause, summarize_comparison
 from agents.struggle_tracker import load_catalog, record_learning_turn
 
 student_id = sys.argv[1] if len(sys.argv) > 1 else "S001"
@@ -51,14 +51,15 @@ for q in bank:
 print(f"\nQuiz: {len(bank)} questions, simulated weakness in {target}; "
       f"wrong answers: {sum(answers[q['prob_id']] != q['correct_option'] for q in bank)}")
 
-# 3. Hypotheses and root cause.
-result = RootCauseAgent().analyze(bank, answers, kb)
+# 3. Hypotheses and root cause, then what every method / weight set picks on the same quiz.
+agent = RootCauseAgent()
+result = agent.analyze(bank, answers, kb)
 print("\n" + format_hypotheses(result))
 for h in result["hypotheses"]:
     print(f"   {h['subtopic_id']} struggle components: {h['struggle_components']}")
-root = result["root_cause"]
-if root:
-    print(f"\n=> Root cause: {root['subtopic_id']} {root['name']} (P={root['probability']:.2f})")
-    print(f"   Reason: {root['reason']}")
-else:
-    print("\n=> No wrong answers, so no root cause.")
+print("\n=> " + format_root_cause(result["root_cause"]))
+
+print("\nMethod / weight comparison (simulated true cause: " + target + "):")
+for group, picks in summarize_comparison(agent.compare(bank, answers, kb)).items():
+    for name, sid in picks.items():
+        print(f"   {group:<10} {name:<32} -> {sid}  {'OK' if sid == target else ''}")

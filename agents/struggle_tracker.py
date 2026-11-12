@@ -74,9 +74,10 @@ def load_catalog(topics_filepath: str = TOPICS_FILEPATH) -> dict:
     with open(topics_filepath, "r", encoding="utf-8") as topic_file:
         topics = json.load(topic_file)
 
-    subtopic_names, subtopic_topic, prerequisites, topic_subtopics = {}, {}, {}, {}
+    subtopic_names, subtopic_topic, prerequisites, topic_subtopics, topic_names = {}, {}, {}, {}, {}
     for topic in topics:
         topic_id = topic["topic_id"]
+        topic_names[topic_id] = topic.get("name", topic_id)
         prerequisites[topic_id] = list(topic.get("prerequisites", []))
         topic_subtopics[topic_id] = []
         for subtopic in topic.get("subconcepts", []):
@@ -97,6 +98,7 @@ def load_catalog(topics_filepath: str = TOPICS_FILEPATH) -> dict:
 
     return {
         "subtopic_names": subtopic_names,
+        "topic_names": topic_names,
         "subtopic_topic": subtopic_topic,
         "prerequisites": prerequisites,
         "topic_subtopics": topic_subtopics,

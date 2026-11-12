@@ -4,7 +4,13 @@ from unittest.mock import patch
 from langchain_core.messages import AIMessage, HumanMessage
 
 from agents.pedagogy_controller import latest_root_cause, record_assessment_outcome
-from agents.root_cause_agent import RootCauseAgent
+from agents.root_cause_agent import (
+    PARAMS,
+    WEIGHT_PRESETS,
+    RootCauseAgent,
+    ablation_weights,
+    summarize_comparison,
+)
 from agents.struggle_tracker import (
     detect_struggle,
     learning_struggle,
@@ -115,6 +121,66 @@ class RootCauseAgentTests(unittest.TestCase):
         self.assertEqual(again["hypotheses"][0]["params"]["RP"], 1.0)
 
 
+class MethodAndWeightTests(unittest.TestCase):
+    def setUp(self):
+        self.agent = RootCauseAgent()
+        # T13.1 has the most wrong answers; T13.2 has the lowest stored mastery.
+        self.questions = [
+            question("q1", ["T13.1", "T13.3"]),
+            question("q2", ["T13.1", "T13.4"]),
+            question("q3", ["T13.2", "T13.5"]),
+        ]
+        self.answers = {"q1": "B", "q2": "B", "q3": "B"}
+        self.kb = {"student_id": "S-test", "topics": {"T13": 0.6},
+                   "skills": {"T13.1": 0.8, "T13.2": 0.1, "T13.3": 0.7, "T13.4": 0.7, "T13.5": 0.7}}
+
+    def test_no_kb_picks_most_wrong_and_ignores_kb(self):
+        result = self.agent.analyze(self.questions, self.answers, self.kb, method="no_kb")
+        self.assertEqual(result["root_cause"]["subtopic_id"], "T13.1")
+        self.assertEqual(result["root_cause"]["method"], "no_kb")
+        self.assertEqual(result["hypotheses"], [])
+
+    def test_kb_low_score_picks_lowest_mastery(self):
+        result = self.agent.analyze(self.questions, self.answers, self.kb, method="kb_low_score")
+        self.assertEqual(result["root_cause"]["subtopic_id"], "T13.2")
+        self.assertIn("0.10", result["root_cause"]["reason"])
+
+    def test_summary_is_topic_subtopic_reason(self):
+        root = self.agent.analyze(self.questions, self.answers, self.kb)["root_cause"]
+        self.assertTrue(root["summary"].startswith("T13 File Handling → "))
+        self.assertEqual(root["summary"].count("→"), 2)
+
+    def test_hypothesis_uses_only_the_five_parameters(self):
+        result = self.agent.analyze(self.questions, self.answers, self.kb)
+        for h in result["hypotheses"]:
+            self.assertEqual(set(h["params"]), set(PARAMS))
+            self.assertLessEqual(h["contributions"]["CE"], 0)
+
+    def test_weights_change_the_scores(self):
+        mastery_only = {key: 0.0 for key in PARAMS}
+        mastery_only["PM"] = 1.0
+        result = self.agent.analyze(self.questions, self.answers, self.kb, weights=mastery_only)
+        self.assertEqual(result["preset"], "custom")
+        # With only PM' (1 - mastery), the lowest-mastery candidate wins.
+        top = result["hypotheses"][0]
+        self.assertEqual(top["score"], top["params"]["PM"])
+        self.assertEqual(top["mastery"], min(h["mastery"] for h in result["hypotheses"]))
+
+    def test_ablation_drops_one_parameter_and_keeps_total(self):
+        weights = ablation_weights(WEIGHT_PRESETS["balanced"], "LS")
+        self.assertEqual(weights["LS"], 0.0)
+        self.assertAlmostEqual(sum(weights.values()), 1.0, places=3)
+
+    def test_compare_runs_every_method_preset_and_ablation(self):
+        comparison = self.agent.compare(self.questions, self.answers, self.kb)
+        compact = summarize_comparison(comparison)
+        self.assertEqual(set(compact["methods"]), {"no_kb", "kb_low_score", "hypothesis"})
+        self.assertEqual(set(compact["presets"]), set(WEIGHT_PRESETS))
+        self.assertEqual(len(compact["ablations"]), len(PARAMS))
+        self.assertEqual(compact["methods"]["no_kb"], "T13.1")
+        self.assertEqual(compact["methods"]["kb_low_score"], "T13.2")
+
+
 class IntegrationTests(unittest.TestCase):
     def test_tutor_logs_learning_turn_and_uses_root_cause(self):
         class MockTutor:
@@ -172,6 +238,10 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(output["response_output"]["root_cause"]["subtopic_id"], "T13.1")
         self.assertEqual(saved[-1]["root_cause_history"][-1]["subtopic_id"], "T13.1")
         self.assertEqual(saved[-1]["pedagogy_history"][-1]["responses"][0]["chosen"], "B")
+        self.assertIn("methods", saved[-1]["pedagogy_history"][-1]["root_cause_comparison"])
+        agents = [step["agent"] for step in workflow._trace]
+        for agent in ("Assessment Agent", "Error Analysis Agent", "Root Cause Agent", "Pedagogy Controller"):
+            self.assertIn(agent, agents)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,9 @@ from pathlib import Path
 from agents.workflow import AdaptiveTutorWorkflow
 from agents.orchestrator import load_student_kb, SKB_FILE_PATH
 from agents.diagnosis_agent import DiagnosisAgent
+from agents.root_cause_agent import (
+    DEFAULT_PRESET, METHOD_LABELS, METHODS, PARAM_LABELS, PARAMS, WEIGHT_PRESETS, SIGNS,
+)
 
 # =====================================================================
 # PAGE CONFIGURATION
@@ -40,6 +43,92 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "waiting_for_interrupt" not in st.session_state:
     st.session_state.waiting_for_interrupt = None
+# Agent steps of a start() call that paused for a diagnosis/quiz; shown with the final answer.
+if "pending_trace" not in st.session_state:
+    st.session_state.pending_trace = []
+
+# =====================================================================
+# AGENT FLOW & ROOT CAUSE RENDERING
+# =====================================================================
+AGENT_ICONS = {
+    "Orchestrator": "🧭",
+    "Diagnosis Agent": "🩺",
+    "Pedagogy Controller": "🧠",
+    "Tutor Agent": "👩‍🏫",
+    "Assessment Agent": "🎯",
+    "Error Analysis Agent": "🧪",
+    "Root Cause Agent": "🔎",
+}
+
+
+def render_trace(trace: list) -> None:
+    """Collapsible timeline of the agents that ran, with the input and output of each step."""
+    if not trace:
+        return
+    total_ms = sum(step.get("duration_ms") or 0 for step in trace)
+    path = []
+    for step in trace:
+        if not path or path[-1] != step["agent"]:
+            path.append(step["agent"])
+    with st.expander(f"🛰️ Agent flow · {len(trace)} steps · {total_ms / 1000:.1f}s"):
+        st.caption(" → ".join(f"{AGENT_ICONS.get(a, '⚙️')} {a}" for a in path))
+        for index, step in enumerate(trace, 1):
+            with st.container(border=True):
+                duration = f" · `{step['duration_ms']} ms`" if step.get("duration_ms") is not None else ""
+                st.markdown(
+                    f"**{index}. {AGENT_ICONS.get(step['agent'], '⚙️')} {step['agent']}** — "
+                    f"{step['title']}{duration}"
+                )
+                tab_in, tab_out = st.tabs(["📥 Input", "📤 Output"])
+                with tab_in:
+                    st.json(step.get("input") or {}, expanded=1)
+                with tab_out:
+                    st.json(step.get("output") or {}, expanded=1)
+
+
+def render_root_cause_details(details: dict) -> None:
+    """Hypothesis parameters and what each method / weight set picked, for evaluation."""
+    if not details:
+        return
+    with st.expander("📐 Root-cause evidence & method comparison"):
+        hypotheses = details.get("hypotheses") or []
+        if hypotheses:
+            st.markdown("**Hypotheses (top 3 candidate subtopics)**")
+            st.dataframe(
+                [
+                    {
+                        "Hypothesis": f"{h['subtopic_id']} {h['name']}",
+                        **{("PM'" if k == "PM" else k): h["params"][k] for k in PARAMS},
+                        "Score": h["score"],
+                        "P(H)": h["probability"],
+                    }
+                    for h in hypotheses
+                ],
+                hide_index=True, width="stretch",
+            )
+        comparison = details.get("comparison")
+        if comparison:
+            primary = (details.get("root_cause") or {}).get("subtopic_id")
+            rows = []
+            for group, label in (("methods", "Method"), ("presets", "Weight preset"), ("ablations", "Ablation")):
+                for name, entry in comparison[group].items():
+                    root = entry if group == "methods" else entry.get("root_cause")
+                    rows.append({
+                        "Type": label,
+                        "Name": METHOD_LABELS.get(name, name),
+                        "Root cause": f"{root['subtopic_id']} {root['name']}" if root else "—",
+                        "P": root.get("probability") if root else None,
+                        "Agrees with selected": bool(root) and root["subtopic_id"] == primary,
+                    })
+            st.markdown("**What each method / weight combination picks on this quiz**")
+            st.dataframe(rows, hide_index=True, width="stretch")
+
+
+def render_message(message: dict) -> None:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        render_root_cause_details(message.get("root_cause_details"))
+        render_trace(message.get("trace"))
 
 # =====================================================================
 # SIDEBAR: STUDENT PROFILE & CONTROLS
@@ -54,7 +143,35 @@ with st.sidebar:
         st.session_state.thread_id = f"{input_id.strip()}-session"
         st.session_state.messages = []
         st.session_state.waiting_for_interrupt = None
+        st.session_state.pending_trace = []
         st.rerun()
+
+    st.divider()
+
+    # Root-cause settings: which method decides the stored root cause, and with which weights.
+    with st.expander("🔎 Root-cause settings"):
+        method = st.selectbox(
+            "Method", METHODS, index=METHODS.index("hypothesis"),
+            format_func=lambda m: METHOD_LABELS[m],
+        )
+        preset_names = list(WEIGHT_PRESETS)
+        preset = st.selectbox("Weight preset", preset_names, index=preset_names.index(DEFAULT_PRESET))
+        custom = st.toggle("Custom weights", value=False)
+        weights = dict(WEIGHT_PRESETS[preset])
+        if custom:
+            for key in PARAMS:
+                weights[key] = st.slider(
+                    f"{'−' if SIGNS[key] < 0 else '+'} {PARAM_LABELS[key]} ({key})",
+                    0.0, 1.0, float(weights[key]), 0.05, key=f"w_{key}",
+                )
+        st.caption(
+            "Score(H) = " + " ".join(
+                f"{'−' if SIGNS[k] < 0 else '+'} {weights[k]:.2f}·{'PM′' if k == 'PM' else k}" for k in PARAMS
+            ).lstrip("+ ")
+        )
+        workflow.root_cause_method = method
+        workflow.root_cause_preset = preset
+        workflow.root_cause_weights = weights if custom else None
 
     st.divider()
 
@@ -92,11 +209,10 @@ with st.sidebar:
         if root_causes:
             with st.expander("Root causes of quiz errors"):
                 for entry in reversed(root_causes[-5:]):
-                    st.markdown(
-                        f"- Quiz on {entry.get('quiz_topic_id', '?')}: "
-                        f"**{entry.get('subtopic_id')} {entry.get('name')}** "
-                        f"(P={entry.get('probability', 0):.2f}) - {entry.get('reason', '')}"
+                    summary = entry.get("summary") or (
+                        f"{entry.get('subtopic_id')} {entry.get('name')} → {entry.get('reason', '')}"
                     )
+                    st.markdown(f"- Quiz on {entry.get('quiz_topic_id', '?')}: {summary}")
 
         with st.expander("View Topic Scores"):
             for tid, score in kb.get("topics", {}).items():
@@ -113,12 +229,14 @@ with st.sidebar:
             )
             if result.get("status") == "waiting_for_interrupt":
                 st.session_state.waiting_for_interrupt = result["payload"]
+                st.session_state.pending_trace = result.get("trace", [])
                 st.rerun()
 
     st.divider()
     if st.button("Reset Chat / Session"):
         st.session_state.messages = []
         st.session_state.waiting_for_interrupt = None
+        st.session_state.pending_trace = []
         st.rerun()
 
 # =====================================================================
@@ -129,8 +247,7 @@ st.markdown(f"Chatting as **{st.session_state.student_id}**. Ask questions, requ
 
 # Display chat history
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    render_message(message)
 
 # Check if graph is interrupted (e.g. waiting for diagnosis test or quiz answers)
 interrupt_payload = st.session_state.waiting_for_interrupt
@@ -160,7 +277,13 @@ if interrupt_payload:
                 with st.spinner("Processing diagnostic test and building Knowledge Base..."):
                     res = workflow.resume(st.session_state.thread_id, submitted_answers)
                     st.session_state.waiting_for_interrupt = None
-                    st.success("🎉 Knowledge base initialized successfully!")
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": "🎉 **Diagnostic completed** — your knowledge base is ready. "
+                                   "Ask a question or request a quiz!",
+                        "trace": st.session_state.pending_trace + res.get("trace", []),
+                    })
+                    st.session_state.pending_trace = []
                     st.rerun()
 
     elif int_type == "quiz":
@@ -193,34 +316,32 @@ if interrupt_payload:
                     res = workflow.resume(st.session_state.thread_id, quiz_answers)
                     st.session_state.waiting_for_interrupt = None
                     
-                    score_msg = f"📊 **Quiz Completed!** Score: {res.get('quiz_score')} (Accuracy: {res.get('accuracy', 0.0) * 100}%)"
-                    error_areas = list(dict.fromkeys(
-                        error.get("description", "")
-                        for error in res.get("error_signals", [])
-                        if error.get("description")
-                    ))
-                    if error_areas:
-                        score_msg += "\n\nAreas to revisit: " + ", ".join(error_areas[:4])
-                    hypotheses = res.get("hypotheses") or []
+                    score_msg = (
+                        f"📊 **Quiz Completed!** Score: {res.get('quiz_score')} "
+                        f"(Accuracy: {res.get('accuracy', 0.0):.0%})"
+                    )
                     root_cause = res.get("root_cause")
                     if root_cause:
+                        # One line: topic -> subtopic -> reason.
                         score_msg += (
-                            f"\n\n🔎 **Most likely root cause:** {root_cause['subtopic_id']} "
-                            f"{root_cause['name']} (P={root_cause['probability']:.2f}), because "
-                            f"{root_cause['reason']}."
+                            f"\n\n🔎 **Actual reason for the MCQ errors** "
+                            f"_({METHOD_LABELS[res.get('root_cause_method', 'hypothesis')]})_\n\n"
+                            f"> **{root_cause['topic_id']} {root_cause.get('topic_name', '')}** → "
+                            f"**{root_cause['subtopic_id']} {root_cause['name']}** → {root_cause['reason']}"
                         )
-                        score_msg += (
-                            "\n\n| Hypothesis | QE | CE | DS | RP | ST | LS | PM' | PW | Score | P |"
-                            "\n|---|---|---|---|---|---|---|---|---|---|---|"
-                        )
-                        for h in hypotheses:
-                            p = h["params"]
-                            score_msg += (
-                                f"\n| {h['subtopic_id']} {h['name']} | {p['QE']:.2f} | {p['CE']:.2f} | "
-                                f"{p['DS']:.2f} | {p['RP']:.2f} | {p['ST']:.2f} | {p['LS']:.2f} | "
-                                f"{p['PM']:.2f} | {p['PW']:.2f} | {h['score']:+.3f} | {h['probability']:.2f} |"
-                            )
-                    st.session_state.messages.append({"role": "assistant", "content": score_msg})
+                    elif res.get("accuracy") == 1.0:
+                        score_msg += "\n\n✅ No wrong answers — nothing to diagnose."
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": score_msg,
+                        "root_cause_details": root_cause and {
+                            "root_cause": root_cause,
+                            "hypotheses": res.get("hypotheses"),
+                            "comparison": res.get("comparison"),
+                        },
+                        "trace": st.session_state.pending_trace + res.get("trace", []),
+                    })
+                    st.session_state.pending_trace = []
                     st.rerun()
 
 else:
@@ -240,9 +361,14 @@ else:
             # Check if workflow hit an interrupt (diagnosis or quiz)
             if result.get("status") == "waiting_for_interrupt":
                 st.session_state.waiting_for_interrupt = result["payload"]
+                st.session_state.pending_trace = result.get("trace", [])
                 st.rerun()
             else:
                 # Normal completion (Tutor response or summary)
                 response_text = result.get("response_text", "I am here to help you learn Python!")
-                st.session_state.messages.append({"role": "assistant", "content": response_text})
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response_text,
+                    "trace": result.get("trace", []),
+                })
                 st.rerun()

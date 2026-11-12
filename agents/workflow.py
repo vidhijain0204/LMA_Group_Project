@@ -1,10 +1,12 @@
 import operator
+import time
 from typing import TypedDict, Literal, Any, Annotated, Optional
 from agents.llm_factory import get_llm
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import interrupt, Command
+from langgraph.errors import GraphInterrupt
 from langchain_core.messages import HumanMessage, AIMessage
 
 from agents.orchestrator import (
@@ -15,7 +17,10 @@ from agents.diagnosis_agent import DiagnosisAgent
 from agents.tutor_agent import create_tutor_node, clean_tutor_output
 from agents.assessment_agent import create_assessment_node, load_all_mcqs
 from agents.error_analysis_agent import ErrorAnalysisAgent
-from agents.root_cause_agent import RootCauseAgent, format_hypotheses
+from agents.root_cause_agent import (
+    DEFAULT_METHOD, DEFAULT_PRESET, METHOD_LABELS, RootCauseAgent, format_hypotheses, resolve_weights,
+    summarize_comparison,
+)
 from agents.pedagogy_controller import record_assessment_outcome, resolve_topic_id
 
 # --- Configuration & File Path Constants ---
@@ -47,6 +52,11 @@ class AgentState(TypedDict):
 
 
 class AdaptiveTutorWorkflow:
+    # Root-cause configuration; app.py sets these from the sidebar before each run.
+    root_cause_method = DEFAULT_METHOD
+    root_cause_preset = DEFAULT_PRESET
+    root_cause_weights = None            # custom weights; None = use the preset
+
     def __init__(self, db_filepath: str = SKB_FILE_PATH):
         self.db_filepath = db_filepath
         self.diagnosis_agent = DiagnosisAgent(db_filepath=db_filepath)
@@ -57,27 +67,85 @@ class AdaptiveTutorWorkflow:
         self.error_analysis_agent = ErrorAnalysisAgent()
         self.root_cause_agent = RootCauseAgent()
 
+        # Steps executed during the current start()/resume() call, returned to the UI.
+        self._trace = []
+
         self.checkpointer = MemorySaver()
         self.app = self._build_graph()
+
+    # ------------------------------------------------------------------ trace
+    def _log(self, agent: str, title: str, inputs: dict, outputs: dict, started: float = None) -> None:
+        """Record one agent step (who ran, with which input, and what it produced)."""
+        if not hasattr(self, "_trace"):
+            self._trace = []
+        self._trace.append({
+            "agent": agent,
+            "title": title,
+            "input": inputs,
+            "output": outputs,
+            "duration_ms": round((time.perf_counter() - started) * 1000) if started else None,
+        })
+
+    @staticmethod
+    def _kb_summary(student_kb: Optional[dict]) -> dict:
+        if not student_kb:
+            return {"registered": False}
+        return {
+            "registered": True,
+            "topics": student_kb.get("topics", {}),
+            "weaknesses": student_kb.get("weaknesses", []),
+            "lessons": sum(e.get("event") == "lesson" for e in student_kb.get("pedagogy_history", [])),
+            "quizzes": sum(e.get("event") == "assessment" for e in student_kb.get("pedagogy_history", [])),
+            "learning_turns": len(student_kb.get("learning_conversations", [])),
+        }
 
     # ------------------------------------------------------------------ nodes
     # The orchestrator routes by returning Command(goto=<node name>). The annotation lists the
     # possible targets so LangGraph knows the graph's edges (e.g. when drawing it).
     def orchestrator_node(self, state: AgentState) -> Command[Literal["diagnosis", "tutor_agent", "assessment_agent"]]:
         print("\n🔵 [Orchestrator] Analyzing student status and intent...")
-        return self.orchestrator_node_fn(state)
+        started = time.perf_counter()
+        command = self.orchestrator_node_fn(state)
+        update = command.update or {}
+        self._log(
+            "Orchestrator", f"Routed to {command.goto}",
+            {"user_message": state.get("user_input"), "student_kb": self._kb_summary(state.get("student_kb"))},
+            {
+                "next_agent": command.goto,
+                "topic_focus": update.get("topic_focus"),
+                "instruction": update.get("orchestrator_instruction"),
+                "reasoning": update.get("orchestrator_reasoning"),
+            },
+            started,
+        )
+        return command
 
     def diagnosis_node(self, state: AgentState) -> dict:
         print("\n🟢 [Diagnosis] Administering diagnostic assessment test...")
-        answers = interrupt({
-            "type": "diagnosis",
-            "student_id": state["student_id"],
-            "questions": self.diagnosis_agent.get_questions(),
-        })
-        
+        questions = self.diagnosis_agent.get_questions()
+        try:
+            answers = interrupt({
+                "type": "diagnosis",
+                "student_id": state["student_id"],
+                "questions": questions,
+            })
+        except GraphInterrupt:
+            self._log("Diagnosis Agent", "Paused: waiting for diagnostic answers",
+                      {"student_id": state["student_id"]},
+                      {"questions_sent": [q["problem_id"] for q in questions]})
+            raise
+
+        started = time.perf_counter()
         new_kb = self.diagnosis_agent.administer_test(state["student_id"], answers)
         skb_dict = new_kb.model_dump(mode="json")
-        
+        self._log(
+            "Diagnosis Agent", "Graded diagnostic test and created the knowledge base",
+            {"answers": answers},
+            {"topics": skb_dict["topics"], "strengths": skb_dict["strengths"],
+             "weaknesses": skb_dict["weaknesses"], "misconceptions": skb_dict["active_misconceptions"]},
+            started,
+        )
+
         return {
             "student_kb": skb_dict,
             "round_log": [{
@@ -96,6 +164,7 @@ class AdaptiveTutorWorkflow:
 
     def tutor_node(self, state: AgentState) -> dict:
         print(f"\n🟡 [Tutor] Handling explanation request for topic: {state.get('topic_focus')}")
+        started = time.perf_counter()
         result = self.tutor_node_fn(state)
         response_text = result["messages"][-1].content
         student_kb = result.get("student_kb", state.get("student_kb"))
@@ -126,6 +195,23 @@ class AdaptiveTutorWorkflow:
             print(f"\n🧠 [Pedagogy] Continuing teaching strategy: {strategy_label}")
         print(f"   - Reason: {result['pedagogy_reason']}")
 
+        self._log(
+            "Pedagogy Controller", f"Strategy: {strategy_label}",
+            {"topic_id": topic_id, "previous_strategy": previous_strategy,
+             "topic_mastery": (state.get("student_kb") or {}).get("topics", {}).get(topic_id)},
+            {"strategy": strategy, "changed": previous_strategy not in (None, strategy),
+             "reason": result["pedagogy_reason"]},
+        )
+        logged_turn = ((student_kb or {}).get("learning_conversations") or [None])[-1]
+        self._log(
+            "Tutor Agent", "Generated explanation",
+            {"topic_focus": topic_focus, "instruction": state.get("orchestrator_instruction"),
+             "strategy": strategy, "student_message": state.get("user_input")},
+            {"response_preview": response_text[:600] + ("…" if len(response_text) > 600 else ""),
+             "learning_turn_logged": logged_turn},
+            started,
+        )
+
         if student_kb:
             self._save_student_kb(student_kb)
         
@@ -149,16 +235,29 @@ class AdaptiveTutorWorkflow:
 
     def assessment_quiz_node(self, state: AgentState) -> dict:
         print(f"\n🟣 [Assessment] Generating adaptive quiz for topic: {state.get('topic_focus')}")
+        started = time.perf_counter()
         result = self.assessment_node_fn(state)
         intro_text = result["messages"][-1].content
         quiz_questions = result["active_quiz_questions"]
+        # On resume LangGraph re-runs this node from the top; only log the selection the first time.
+        if not getattr(self, "_resuming", False):
+            self._log(
+                "Assessment Agent", "Selected adaptive quiz questions",
+                {"topic_focus": state.get("topic_focus"), "instruction": state.get("orchestrator_instruction")},
+                {"question_ids": [q.get("prob_id", q.get("problem_id")) for q in quiz_questions], "intro": intro_text},
+                started,
+            )
 
-        answers = interrupt({
-            "type": "quiz",
-            "topic_focus": state.get("topic_focus"),
-            "intro_text": intro_text,
-            "questions": quiz_questions,
-        })
+        try:
+            answers = interrupt({
+                "type": "quiz",
+                "topic_focus": state.get("topic_focus"),
+                "intro_text": intro_text,
+                "questions": quiz_questions,
+            })
+        except GraphInterrupt:
+            self._log("Assessment Agent", "Paused: waiting for quiz answers", {}, {"questions": len(quiz_questions)})
+            raise
 
         # When the student submits, LangGraph runs this node again from the top, and the random
         # selection above picks a new set of questions. Grade the questions the student actually
@@ -192,22 +291,61 @@ class AdaptiveTutorWorkflow:
             if state.get("topic_focus")
             else "unknown"
         )
+        self._log(
+            "Assessment Agent", f"Received answers and graded quiz: {correct_count}/{len(quiz_questions)}",
+            {"answers": answers},
+            {"graded": graded_details, "accuracy": round(correct_count / len(quiz_questions), 2) if quiz_questions else 0.0},
+        )
+
+        started = time.perf_counter()
         analysis = self.error_analysis_agent.analyze(
             quiz_questions, answers or {}, topic_id=topic_id
         )
+        self._log(
+            "Error Analysis Agent", f"{len(analysis['errors'])} error signal(s)",
+            {"topic_id": topic_id, "wrong_questions": [q.get("prob_id") for q in wrong_problems]},
+            {"topic_accuracy": analysis["topic_accuracy"], "errors": analysis["errors"]},
+            started,
+        )
+
         student_kb = state.get("student_kb")
-        # Hypothesis testing on the top 3 low-scoring subtopics, using this quiz, earlier quizzes,
-        # the tutor conversation and the knowledge base. Runs before the outcome is recorded so
-        # "recent quizzes" means quizzes before this one.
-        root_cause_result = self.root_cause_agent.analyze(quiz_questions, answers or {}, student_kb)
+        # Root cause of the errors, using the configured method (no_kb / kb_low_score /
+        # hypothesis). Runs before the outcome is recorded so "recent quizzes" means quizzes
+        # before this one. compare() runs every method and weight set on the same quiz.
+        started = time.perf_counter()
+        weights = resolve_weights(self.root_cause_weights, self.root_cause_preset)
+        root_cause_result = self.root_cause_agent.analyze(
+            quiz_questions, answers or {}, student_kb,
+            method=self.root_cause_method, preset=self.root_cause_preset, weights=self.root_cause_weights,
+        )
+        comparison = self.root_cause_agent.compare(
+            quiz_questions, answers or {}, student_kb, base_preset=self.root_cause_preset,
+        )
+        # The hypothesis table is always shown, even when another method is selected.
+        hypotheses = root_cause_result["hypotheses"] or self.root_cause_agent.analyze(
+            quiz_questions, answers or {}, student_kb,
+            method="hypothesis", preset=self.root_cause_preset, weights=self.root_cause_weights,
+        )["hypotheses"]
         root_cause = root_cause_result["root_cause"]
+        compact_comparison = summarize_comparison(comparison)
         if root_cause:
             print("\n🔎 [Root Cause] Hypotheses for this quiz's errors:")
-            print(format_hypotheses(root_cause_result))
-            print(
-                f"   => Root cause: {root_cause['subtopic_id']} {root_cause['name']} "
-                f"(P={root_cause['probability']:.2f}) - {root_cause['reason']}"
-            )
+            print(format_hypotheses({"hypotheses": hypotheses}))
+            print(f"   => [{METHOD_LABELS[self.root_cause_method]}] {root_cause['summary']}")
+        self._log(
+            "Root Cause Agent", f"{METHOD_LABELS[self.root_cause_method]}",
+            {
+                "method": self.root_cause_method,
+                "preset": self.root_cause_preset,
+                "weights": weights,
+                "wrong_answers": [
+                    {"prob_id": r["prob_id"], "chosen": r["chosen"], "correct": r["correct"], "subtopics": r["subtopics"]}
+                    for r in root_cause_result["responses"] if not r["is_correct"]
+                ],
+            },
+            {"root_cause": root_cause, "hypotheses": hypotheses, "comparison": compact_comparison},
+            started,
+        )
         if student_kb:
             student_kb = record_assessment_outcome(
                 student_kb,
@@ -221,7 +359,16 @@ class AdaptiveTutorWorkflow:
                 question_results=root_cause_result["responses"],
                 root_cause=root_cause,
             )
+            # Keep what every method/weight set picked, to evaluate them later.
+            student_kb["pedagogy_history"][-1]["root_cause_comparison"] = compact_comparison
             self._save_student_kb(student_kb)
+            self._log(
+                "Pedagogy Controller", "Recorded quiz outcome in the knowledge base",
+                {"topic_id": topic_id, "topic_accuracy": analysis["topic_accuracy"],
+                 "root_cause": root_cause and root_cause["subtopic_id"]},
+                {"new_topic_mastery": student_kb.get("topics", {}).get(topic_id),
+                 "weaknesses": student_kb.get("weaknesses", [])},
+            )
 
         return {
             "student_kb": student_kb,
@@ -242,7 +389,9 @@ class AdaptiveTutorWorkflow:
                 "intro_text": intro_text,
                 "error_signals": analysis["errors"],
                 "root_cause": root_cause,
-                "hypotheses": root_cause_result["hypotheses"],
+                "root_cause_method": self.root_cause_method,
+                "hypotheses": hypotheses,
+                "comparison": comparison,
             },
             "last_active_agent": "assessment_agent"
         }
@@ -332,16 +481,21 @@ class AdaptiveTutorWorkflow:
 
     def _invoke(self, payload, thread_id: str) -> dict:
         config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 50}
+        self._trace = []
+        self._resuming = isinstance(payload, Command)
         result = self.app.invoke(payload, config)
+        trace, self._trace = self._trace, []
 
         if "__interrupt__" in result:
             return {
                 "status": "waiting_for_interrupt",
                 "thread_id": thread_id,
                 "payload": result["__interrupt__"][0].value,
+                "trace": trace,
             }
         return {
-            "thread_id": thread_id, 
+            "thread_id": thread_id,
             **(result.get("response_output") or {}),
-            "round_log": result.get("round_log", [])
+            "round_log": result.get("round_log", []),
+            "trace": trace,
         }

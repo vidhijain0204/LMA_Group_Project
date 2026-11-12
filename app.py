@@ -9,6 +9,7 @@ from agents.workflow import AdaptiveTutorWorkflow
 from agents.orchestrator import load_student_kb, SKB_FILE_PATH
 from agents.diagnosis_agent import DiagnosisAgent
 from agents.struggle_tracker import load_catalog
+from agents.pedagogy_controller import compact_pedagogy_history
 from agents.root_cause_agent import (
     DEFAULT_PRESET, METHOD_LABELS, METHODS, PARAM_LABELS, PARAMS, WEIGHT_PRESETS, SIGNS,
 )
@@ -199,18 +200,22 @@ with st.sidebar:
         pedagogy_history = kb.get("pedagogy_history", [])
         if pedagogy_history:
             with st.expander("Adaptive teaching history"):
-                for event in reversed(pedagogy_history[-8:]):
+                st.caption("Lesson = teaching block on a topic with one strategy; "
+                           "the score is from the first quiz after it.")
+                for event in reversed(compact_pedagogy_history(pedagogy_history)[-8:]):
                     topic = event.get("topic_id", "Unknown topic")
                     if event.get("event") == "lesson":
+                        turns = event.get("turns", 1)
                         outcome = event.get("assessment_accuracy")
-                        evidence = (
-                            f" | next quiz accuracy: {outcome:.0%}"
-                            if outcome is not None
-                            else " | awaiting assessment"
-                        )
+                        if "assessment_accuracy" not in event:
+                            evidence = " | not quizzed yet"
+                        elif outcome is None:
+                            evidence = " | quiz not topic-aligned"
+                        else:
+                            evidence = f" | next quiz accuracy: {outcome:.0%}"
                         st.markdown(
                             f"- **{event.get('strategy', 'unknown').replace('_', ' ').title()}** "
-                            f"on {topic}{evidence}"
+                            f"on {topic} · {turns} message{'s' if turns != 1 else ''}{evidence}"
                         )
                     elif event.get("event") == "assessment":
                         accuracy = event.get("accuracy")

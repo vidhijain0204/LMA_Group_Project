@@ -150,21 +150,47 @@ def choose_teaching_strategy(
     return "explicit_explanation", "Use a direct explanation while initial evidence is collected."
 
 
+def _same_lesson(previous: dict, event: dict) -> bool:
+    return (
+        previous.get("event") == "lesson" and event.get("event") == "lesson"
+        and previous.get("topic_id") == event.get("topic_id")
+        and previous.get("strategy") == event.get("strategy")
+        and "assessment_accuracy" not in previous
+    )
+
+
+def compact_pedagogy_history(history: List[dict]) -> List[dict]:
+    """Merge back-to-back lesson events with the same topic and strategy into one event
+    with a "turns" count (older KBs stored one lesson event per tutor message)."""
+    compacted: List[dict] = []
+    for event in history:
+        if compacted and _same_lesson(compacted[-1], event):
+            merged = {**compacted[-1], **event}
+            merged["created_at"] = compacted[-1].get("created_at", event.get("created_at"))
+            merged["last_at"] = event.get("last_at") or event.get("created_at")
+            merged["turns"] = compacted[-1].get("turns", 1) + event.get("turns", 1)
+            compacted[-1] = merged
+        else:
+            compacted.append(dict(event))
+    return compacted
+
+
 def record_lesson_strategy(
     student_kb: dict,
     topic_id: str,
     strategy: str,
     reason: str,
 ) -> dict:
+    """One lesson event per teaching block: further messages on the same topic with the same
+    strategy (and no quiz in between) only increase its "turns" count."""
     updated = deepcopy(student_kb)
-    history = updated.setdefault("pedagogy_history", [])
-    history.append({
-        "event": "lesson",
-        "topic_id": topic_id,
-        "strategy": strategy,
-        "reason": reason,
-        "created_at": datetime.now().isoformat(timespec="seconds"),
-    })
+    history = compact_pedagogy_history(updated.get("pedagogy_history", []))
+    now = datetime.now().isoformat(timespec="seconds")
+    event = {"event": "lesson", "topic_id": topic_id, "strategy": strategy, "reason": reason, "created_at": now}
+    if history and _same_lesson(history[-1], event):
+        history[-1].update(reason=reason, last_at=now, turns=history[-1].get("turns", 1) + 1)
+    else:
+        history.append({**event, "turns": 1})
     updated["pedagogy_history"] = history[-100:]
     updated["latest_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return updated
@@ -184,20 +210,17 @@ def record_assessment_outcome(
     RootCauseAgent selected for this quiz."""
     updated = deepcopy(student_kb)
     history = updated.setdefault("pedagogy_history", [])
-    matched_lesson = next(
-        (
-            event
-            for event in reversed(history)
-            if event.get("event") == "lesson"
-            and event.get("topic_id") == topic_id
-            and "assessment_accuracy" not in event
-        ),
-        None,
-    )
-    strategy = matched_lesson.get("strategy") if matched_lesson else None
-    if matched_lesson:
-        matched_lesson["assessment_accuracy"] = accuracy
-        matched_lesson["error_signals"] = list(dict.fromkeys(error_signals))
+    # Every lesson on this topic since the last quiz is evaluated by this quiz.
+    pending_lessons = [
+        event for event in history
+        if event.get("event") == "lesson"
+        and event.get("topic_id") == topic_id
+        and "assessment_accuracy" not in event
+    ]
+    strategy = pending_lessons[-1].get("strategy") if pending_lessons else None
+    for lesson in pending_lessons:
+        lesson["assessment_accuracy"] = accuracy
+        lesson["error_signals"] = list(dict.fromkeys(error_signals))
 
     assessment_event = {
         "event": "assessment",

@@ -271,3 +271,58 @@ def recent_learning_topics(
         if turn.get("topic_id") in valid
     ][-turns:]
     return list(dict.fromkeys(recent))
+
+
+# ------------------------------------------------------------------ topic of a tutor request
+# Concept, method and keyword names that point at a topic without naming it
+# ("difference between sort and count" -> lists). A word may belong to several topics
+# ("count", "slicing"); the conversation's current topic then breaks the tie.
+TOPIC_HINTS = {
+    "T01": "interpreter bytecode script shell pep indentation comment",
+    "T02": "int float str bool string_type type casting cast variable assign assignment none integer",
+    "T03": "print input format fstring f-string formatting",
+    "T04": "operator arithmetic modulo floor division comparison logical precedence exponent",
+    "T05": "condition conditional elif else nested ternary boolean",
+    "T06": "loop while range break continue iterate iteration enumerate nested_loop",
+    "T07": "string upper lower strip split replace find join startswith endswith concatenate "
+           "count index slice slicing character",
+    "T08": "list lists tuple tuples set sets append extend insert remove pop sort sorted count index "
+           "reverse clear copy alias aliasing union intersection slice slicing immutable mutable",
+    "T09": "dict dictionary dictionaries key keys value values items get update",
+    "T10": "function def return parameter argument args kwargs recursion recursive lambda scope",
+    "T11": "comprehension comprehensions",
+    "T12": "exception exceptions try except finally raise error traceback valueerror typeerror "
+           "zerodivisionerror",
+    "T13": "file files open read write close readline readlines csv path",
+}
+
+
+@lru_cache(maxsize=4)
+def _topic_evidence_words(topics_filepath: str = TOPICS_FILEPATH) -> Dict[str, set]:
+    """Per topic: words from its subtopic names that no other topic uses, plus TOPIC_HINTS."""
+    catalog = load_catalog(topics_filepath)
+    from_names = {
+        tid: set().union(tokenize(catalog["topic_names"][tid]),
+                         *(tokenize(catalog["subtopic_names"][sid]) for sid in sids))
+        for tid, sids in catalog["topic_subtopics"].items()
+    }
+    words = {}
+    for tid, tokens in from_names.items():
+        distinctive = {t for t in tokens if sum(t in other for other in from_names.values()) == 1}
+        words[tid] = distinctive | tokenize(TOPIC_HINTS.get(tid, "").replace("_", " "))
+    return words
+
+
+def topic_evidence(text: str, topics_filepath: str = TOPICS_FILEPATH) -> Dict[str, int]:
+    """How many words of the message point at each topic (topics with no evidence omitted)."""
+    tokens = tokenize(text)
+    scores = {tid: len(tokens & words) for tid, words in _topic_evidence_words(topics_filepath).items()}
+    return {tid: score for tid, score in scores.items() if score}
+
+
+def current_lesson_topic(student_kb: Optional[dict]) -> Optional[str]:
+    """Topic of the most recent tutor lesson, if the last thing the student did was learning."""
+    history = (student_kb or {}).get("pedagogy_history", [])
+    if history and history[-1].get("event") == "lesson":
+        return history[-1].get("topic_id")
+    return None

@@ -5,7 +5,10 @@ from typing import Any, List, Optional, Tuple, TypedDict
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langgraph.types import Command
 
-from agents.struggle_tracker import RECENT_TURNS_FOR_QUIZ, recent_learning_topics, topics_mentioned
+from agents.pedagogy_controller import resolve_topic_id
+from agents.struggle_tracker import (
+    RECENT_TURNS_FOR_QUIZ, current_lesson_topic, recent_learning_topics, topic_evidence, topics_mentioned,
+)
 
 
 
@@ -147,6 +150,37 @@ def detect_follow_up(state: dict, student_kb: Optional[dict]) -> Optional[dict]:
     return {"topic_id": lesson.get("topic_id"), "strategy": lesson.get("strategy"), "tutor_question": question[:300]}
 
 
+def choose_tutor_topic(
+    user_text: str, llm_topics, student_kb: Optional[dict], in_conversation: bool
+) -> Tuple[List[str], str]:
+    """Topic for a tutor request, and where it came from.
+
+    1. A topic the student names ("explain dictionaries").
+    2. Keyword evidence ("difference between sort and count" -> T08). When the conversation's
+       current topic is among the best matches, it is kept ("count" is both a string and a
+       list method; while learning lists it means the list method).
+    3. No evidence ("can you give another example?"): stay on the conversation's topic.
+    4. Otherwise the topic the LLM suggested.
+    """
+    previous = current_lesson_topic(student_kb) if in_conversation else None
+    named = topics_mentioned(user_text)
+    if named:
+        return named, f"topic named in the message: {', '.join(named)}"
+    evidence = topic_evidence(user_text)
+    if evidence:
+        best = max(evidence.values())
+        leaders = sorted(tid for tid, score in evidence.items() if score == best)
+        if previous in leaders:
+            return [previous], f"keywords point at {', '.join(leaders)}; kept the conversation's topic {previous}"
+        return [leaders[0]], f"keywords in the message point at {leaders[0]} ({evidence})"
+    if previous:
+        return [previous], f"no topic in the message; continuing the conversation's topic {previous}"
+    llm_topics = llm_topics if isinstance(llm_topics, list) else [llm_topics]
+    resolved = [resolve_topic_id(t) for t in llm_topics if t]
+    resolved = [t for t in resolved if re.fullmatch(r"T\d{2}", t)]
+    return (resolved or ["T01"]), "no topic in the message and no ongoing lesson; the LLM's topic"
+
+
 def parse_decision(raw_content: str) -> dict:
     """Extract the JSON routing decision from the LLM output (thinking and code fences removed)."""
     content = raw_content.replace("\xa0", " ")
@@ -254,12 +288,19 @@ def create_orchestrator_node(llm=None):
         instruction = decision.get("instruction", "Explain concept.")
         reasoning = decision.get("reasoning", "Direct routing.")
 
+        user_text = state.get("user_input") or next(
+            (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)), ""
+        )
         if next_agent == ASSESSMENT_NODE:
-            user_text = state.get("user_input") or next(
-                (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)), ""
-            )
             topic_focus, source = choose_quiz_topics(user_text, topic_focus, student_kb)
             reasoning = f"{reasoning} | Quiz topics: {source}"
+        else:
+            # The LLM's topic is only a last resort: a small model (or the parse-error fallback)
+            # often picks an unrelated topic for a follow-up question.
+            in_conversation = len(state.get("messages", [])) > 1
+            llm_topic = topic_focus
+            topic_focus, source = choose_tutor_topic(user_text, llm_topic, student_kb, in_conversation)
+            reasoning = f"{reasoning} | Topic: {source} (LLM suggested {llm_topic})"
 
         print(f"\n🧭 [ORCHESTRATOR] Routing to -> {next_agent} | Topic: {topic_focus} | Reason: {reasoning}")
         return Command(

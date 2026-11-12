@@ -13,7 +13,7 @@ from langgraph.errors import GraphInterrupt
 from langchain_core.messages import HumanMessage, AIMessage
 
 from agents.orchestrator import (
-    create_orchestrator_node, load_student_kb, SKB_FILE_PATH,
+    create_orchestrator_node, load_student_kb, read_skb_database, SKB_FILE_PATH,
     DIAGNOSIS_NODE, TUTOR_NODE, ASSESSMENT_NODE,
 )
 from agents.diagnosis_agent import DiagnosisAgent
@@ -483,18 +483,11 @@ class AdaptiveTutorWorkflow:
         import json
         import os
 
-        with open(self.db_filepath, "r", encoding="utf-8") as db_file:
-            database = json.load(db_file)
-        if isinstance(database, list):
-            database = [
-                record for record in database
-                if record.get("student_id") != student_kb.get("student_id")
-            ]
-            database.append(student_kb)
-        elif isinstance(database, dict):
-            database = student_kb
-        else:
-            raise ValueError(f"Unsupported SKB database format: {type(database).__name__}")
+        database = [
+            record for record in read_skb_database(self.db_filepath)
+            if record.get("student_id") != student_kb.get("student_id")
+        ]
+        database.append(student_kb)
 
         parent = os.path.dirname(self.db_filepath)
         if parent:

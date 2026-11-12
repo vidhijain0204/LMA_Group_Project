@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 import os
 import re
 from typing import Any, List, Optional, Tuple, TypedDict
@@ -51,18 +52,33 @@ class AgentState(TypedDict):
     tutor_question: str
 
 
-def load_student_kb(student_id: str, db_path: str = SKB_FILE_PATH) -> Optional[dict]:
+def read_skb_database(db_path: str = SKB_FILE_PATH) -> List[dict]:
+    """All student records, as a list. A missing, empty or whitespace-only file is an empty
+    database. An unreadable file is renamed to <name>.corrupt-<time> (so the next save does
+    not overwrite it silently) and treated as empty. A single-record dict is wrapped in a list."""
     if not os.path.exists(db_path):
-        return None
-    with open(db_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    if isinstance(data, list):
-        for record in data:
-            if record.get("student_id") == student_id:
-                return record
-    elif isinstance(data, dict) and data.get("student_id") == student_id:
-        return data
-    return None
+        return []
+    try:
+        with open(db_path, "r", encoding="utf-8") as f:
+            text = f.read()
+        if not text.strip():
+            return []
+        data = json.loads(text)
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        backup = f"{db_path}.corrupt-{datetime.now():%Y%m%d-%H%M%S}"
+        os.replace(db_path, backup)
+        print(f"[KB] {db_path} is not valid JSON ({error}); moved it to {backup} and started empty.")
+        return []
+    if isinstance(data, dict):
+        data = [data] if data.get("student_id") else []
+    if not isinstance(data, list):
+        print(f"[KB] Unsupported format in {db_path} ({type(data).__name__}); treating it as empty.")
+        return []
+    return [record for record in data if isinstance(record, dict)]
+
+
+def load_student_kb(student_id: str, db_path: str = SKB_FILE_PATH) -> Optional[dict]:
+    return next((r for r in read_skb_database(db_path) if r.get("student_id") == student_id), None)
 
 
 ORCHESTRATOR_SYSTEM_PROMPT = """You are the Master Orchestrator for an AI Python Tutoring System.

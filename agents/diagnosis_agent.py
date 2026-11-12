@@ -44,10 +44,8 @@ class DiagnosisAgent:
             return json.load(f)
 
     def _load_db(self) -> list:
-        if not os.path.exists(self.db_filepath) or os.path.getsize(self.db_filepath) == 0:
-            return []
-        with open(self.db_filepath, "r", encoding="utf-8") as f:
-            return json.load(f)
+        from agents.orchestrator import read_skb_database   # local import: avoids an import cycle
+        return read_skb_database(self.db_filepath)
 
     def student_exists(self, student_id: str) -> bool:
         return any(e.get("student_id") == student_id for e in self._load_db())

@@ -23,8 +23,21 @@ Hypothesis parameters:
     P(H)      = max(Score(H), 0) / sum of max(Score, 0) over the candidates
 
 The weights come from WEIGHT_PRESETS (or any custom dict), so different combinations - and
-leave-one-parameter-out ablations - can be evaluated against each other.
+leave-one-parameter-out ablations - can be evaluated against each other. Weights fitted on
+labelled students by scripts/fit_weights.py are added as the "learned" preset.
+
+History used for CE and RP: the recent quizzes plus the diagnosis test (its questions are tagged
+with subtopics), so these parameters are informative from the first quiz on.
+
+Misconceptions: when a quiz question tags its wrong options with the misconception they reveal
+("option_misconceptions": {"B": "sort_returns_none"}, see scripts/tag_mcq_misconceptions.py),
+the root cause also names the most frequent misconception among the student's wrong answers on
+that subtopic - what the student most likely believes.
 """
+
+import json
+import os
+from collections import Counter
 
 from typing import Any, Dict, List, Optional
 
@@ -57,6 +70,22 @@ WEIGHT_PRESETS: Dict[str, Dict[str, float]] = {
 }
 DEFAULT_PRESET = "balanced"
 
+# Weights fitted on labelled quizzes (scripts/fit_weights.py) become the "learned" preset.
+LEARNED_WEIGHTS_FILE = "data/evaluation/learned_weights.json"
+
+
+def _load_learned_weights(path: str = LEARNED_WEIGHTS_FILE) -> Optional[Dict[str, float]]:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            weights = json.load(f).get("weights", {})
+        return {key: float(weights[key]) for key in PARAMS} if all(k in weights for k in PARAMS) else None
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
+
+
+if os.path.exists(LEARNED_WEIGHTS_FILE) and _load_learned_weights():
+    WEIGHT_PRESETS["learned"] = _load_learned_weights()
+
 METHODS = ("no_kb", "kb_low_score", "hypothesis")
 METHOD_LABELS = {
     "no_kb": "Without KB (quiz errors only)",
@@ -68,7 +97,7 @@ DEFAULT_METHOD = "hypothesis"
 # How each parameter is described in the reason summary, when it supports the hypothesis.
 EVIDENCE_PHRASES = {
     "LS": "the student struggled with it while learning with the tutor",
-    "RP": "the same mistake appeared in recent quizzes",
+    "RP": "it was also answered wrongly in earlier quizzes or the diagnosis",
     "PW": "a prerequisite topic is weak",
     "PM": "prior mastery is low or fragile",
 }
@@ -131,16 +160,46 @@ class RootCauseAgent:
                 "is_correct": chosen is not None and chosen == question.get("correct_option"),
                 "subtopics": list(question.get("related_subtopics", [])),
                 "chosen_text": str(options.get(chosen, "")),
+                # The misconception this wrong option reveals, when the question bank tags it.
+                "misconception": (
+                    (question.get("option_misconceptions") or {}).get(chosen)
+                    if chosen is not None and chosen != question.get("correct_option") else None
+                ),
                 "explanation": str(question.get("explanations", "")),
             })
         return responses
 
     @staticmethod
     def _assessments(student_kb: Optional[dict]) -> List[dict]:
-        return [
-            event for event in (student_kb or {}).get("pedagogy_history", [])
-            if event.get("event") == "assessment"
-        ]
+        """Earlier quizzes, oldest first. The diagnosis test counts as the first one."""
+        kb = student_kb or {}
+        quizzes = [event for event in kb.get("pedagogy_history", []) if event.get("event") == "assessment"]
+        if kb.get("diagnosis_responses"):
+            quizzes.insert(0, {"event": "assessment", "topic_id": "diagnosis", "source": "diagnosis",
+                               "responses": kb["diagnosis_responses"]})
+        return quizzes
+
+    def misconception_of(self, subtopic_id: str, responses: List[dict]) -> Optional[dict]:
+        """Most frequent tagged misconception among the wrong answers on this subtopic."""
+        counts = Counter(
+            r["misconception"] for r in responses
+            if not r["is_correct"] and r.get("misconception") and subtopic_id in r["subtopics"]
+        )
+        if not counts:
+            return None
+        misconception_id, count = counts.most_common(1)[0]
+        return {
+            "id": misconception_id,
+            "description": self.catalog.get("misconceptions", {}).get(misconception_id, misconception_id),
+            "count": count,
+        }
+
+    def _with_misconception(self, root: Optional[dict], responses: List[dict]) -> Optional[dict]:
+        if root:
+            misconception = self.misconception_of(root["subtopic_id"], responses)
+            root["misconception"] = misconception
+            root["summary"] = format_root_cause(root)
+        return root
 
     @staticmethod
     def _subtopic_stats(responses: List[dict]) -> Dict[str, tuple]:
@@ -321,11 +380,12 @@ class RootCauseAgent:
         """Root cause with one method. `hypotheses` is filled only for the hypothesis method."""
         responses = self.grade(questions, answers or {})
         if method == "no_kb":
-            return {"method": method, "hypotheses": [], "root_cause": self.analyze_no_kb(responses),
-                    "responses": responses}
+            return {"method": method, "hypotheses": [], "responses": responses,
+                    "root_cause": self._with_misconception(self.analyze_no_kb(responses), responses)}
         if method == "kb_low_score":
-            return {"method": method, "hypotheses": [],
-                    "root_cause": self.analyze_kb_low_score(responses, student_kb), "responses": responses}
+            return {"method": method, "hypotheses": [], "responses": responses,
+                    "root_cause": self._with_misconception(
+                        self.analyze_kb_low_score(responses, student_kb), responses)}
 
         past = self._assessments(student_kb)
         weights = resolve_weights(weights, preset)
@@ -337,7 +397,8 @@ class RootCauseAgent:
             "preset": preset if not weights or weights == WEIGHT_PRESETS.get(preset) else "custom",
             "weights": weights,
             "hypotheses": hypotheses,
-            "root_cause": self.root_from_hypotheses(hypotheses, preset, weights),
+            "root_cause": self._with_misconception(
+                self.root_from_hypotheses(hypotheses, preset, weights), responses),
             "responses": responses,
         }
 
@@ -358,13 +419,18 @@ class RootCauseAgent:
         def pick(weights, preset):
             hyps = self.score_hypotheses(raw, weights)
             return {"weights": weights, "hypotheses": hyps,
-                    "root_cause": self.root_from_hypotheses(hyps, preset, weights)}
+                    "root_cause": self._with_misconception(
+                        self.root_from_hypotheses(hyps, preset, weights), responses)}
 
         base = resolve_weights(preset=base_preset)
         return {
+            # Raw parameters of the candidates: stored with the quiz so that weights can be
+            # refitted later (scripts/fit_weights.py) without recomputing them.
+            "candidates": [{"subtopic_id": h["subtopic_id"], "params": h["params"]} for h in raw],
             "methods": {
-                "no_kb": self.analyze_no_kb(responses),
-                "kb_low_score": self.analyze_kb_low_score(responses, student_kb),
+                "no_kb": self._with_misconception(self.analyze_no_kb(responses), responses),
+                "kb_low_score": self._with_misconception(
+                    self.analyze_kb_low_score(responses, student_kb), responses),
                 "hypothesis": pick(base, base_preset)["root_cause"],
             },
             "presets": {name: pick(w, name) for name, w in WEIGHT_PRESETS.items()},
@@ -389,7 +455,11 @@ def format_root_cause(root: Optional[dict]) -> str:
     if not root:
         return "No wrong answers, so no root cause."
     topic = f"{root['topic_id']} {root.get('topic_name') or ''}".strip()
-    return f"{topic} → {root['subtopic_id']} {root['name']} → {root['reason']}"
+    line = f"{topic} → {root['subtopic_id']} {root['name']} → {root['reason']}"
+    misconception = root.get("misconception")
+    if misconception:
+        line += f"; likely misconception: {misconception['description']}"
+    return line
 
 
 def format_hypotheses(result: dict) -> str:

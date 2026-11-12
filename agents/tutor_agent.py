@@ -86,7 +86,12 @@ Do NOT treat it as a new question and do not restart the explanation.
 1. Start your reply with exactly one of these on its own line: "✅ Correct", "🟡 Partly correct" or "❌ Not quite".
 2. Say specifically what was right and what was wrong or missing in their answer.
 3. Continue the same lesson with the same strategy: give the next step, clue or guiding question.
-If the message is clearly not an answer but a new question, skip the verdict line and answer it."""
+If the message is clearly not an answer but a new question, skip the verdict line and answer it.{judge_note}"""
+VERDICT_LINES = {"correct": "✅ Correct", "partial": "🟡 Partly correct", "incorrect": "❌ Not quite"}
+REMEDIATION_GUIDANCE = (
+    "This is a remediation lesson after a quiz: the student did not ask a question; the system "
+    "chose the subtopic their quiz errors point to. Follow the Orchestrator Instruction."
+)
 
 VERDICT_PATTERN = re.compile(
     r"^\W*(partly correct|partially correct|not quite|incorrect|not correct|correct)\b", re.IGNORECASE
@@ -150,6 +155,8 @@ def create_tutor_node(enable_kb_context: bool = True):
         instruction = state.get("orchestrator_instruction", "Explain the concept clearly.")
         follow_up = state.get("conversation_mode") == "follow_up"
         tutor_question = state.get("tutor_question", "")
+        analysis = state.get("turn_analysis") or {}
+        judged_verdict = analysis.get("verdict") if follow_up and analysis.get("source") == "llm" else None
 
         if enable_kb_context:
             mastery_tag, mastery_score, misconceptions = get_student_topic_context(student_kb, topic_focus)
@@ -199,8 +206,17 @@ def create_tutor_node(enable_kb_context: bool = True):
                     if root_cause else "None identified yet"
                 ),
                 conversation_guidance=(
-                    FOLLOW_UP_GUIDANCE.format(tutor_question=tutor_question or "(see previous message)")
-                    if follow_up else NEW_REQUEST_GUIDANCE
+                    FOLLOW_UP_GUIDANCE.format(
+                        tutor_question=tutor_question or "(see previous message)",
+                        judge_note=(
+                            f"\nAn automatic check rated this answer: start with \"{VERDICT_LINES[judged_verdict]}\" "
+                            "unless you are sure it is wrong."
+                            if judged_verdict else ""
+                        ),
+                    )
+                    if follow_up
+                    else REMEDIATION_GUIDANCE if state.get("conversation_mode") == "remediation"
+                    else NEW_REQUEST_GUIDANCE
                 ),
             )
         )
@@ -209,9 +225,12 @@ def create_tutor_node(enable_kb_context: bool = True):
         raw_content = response.content.strip()
         actual_content = clean_tutor_output(raw_content)
 
-        verdict = answer_verdict(actual_content) if follow_up else None
+        # Verdict: the turn judge's (JSON), else the tutor's first line ("✅ Correct", ...).
+        tutor_verdict = answer_verdict(actual_content) if follow_up else None
+        verdict = judged_verdict or tutor_verdict
         result = {
-            "conversation_mode": "follow_up" if follow_up else "new_request",
+            "conversation_mode": state.get("conversation_mode") or "new_request",
+            "verdict_source": "judge" if judged_verdict else "tutor_text" if tutor_verdict else None,
             "answer_verdict": verdict,
             "messages": [AIMessage(content=actual_content)],
             "last_active_agent": "tutor_agent",
@@ -233,12 +252,21 @@ def create_tutor_node(enable_kb_context: bool = True):
                 (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)),
                 "",
             )
-            updated_kb = record_learning_turn(
+            remediation = state.get("conversation_mode") == "remediation"
+            # A remediation lesson is started by a button, not by a student message: no turn.
+            updated_kb = student_kb if remediation else record_learning_turn(
                 student_kb, topic_id, student_text, previous_strategy,
                 reply_to_tutor=follow_up, answer_verdict=verdict, context_text=tutor_question,
+                flags=(
+                    {"confusion": analysis["confused"], "hint_request": analysis["asks_hint"]}
+                    if analysis.get("source") == "llm" else None
+                ),
+                signal_source=analysis.get("source", "rules"),
             )
+            forced = state.get("forced_route") or {}
             result["student_kb"] = record_lesson_strategy(
-                updated_kb, topic_id, pedagogy_strategy, strategy_reason
+                updated_kb, topic_id, pedagogy_strategy, strategy_reason,
+                remediation_for=forced.get("quiz_id") if remediation else None,
             )
         return result
 

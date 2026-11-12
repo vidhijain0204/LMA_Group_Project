@@ -10,7 +10,12 @@
     ],
     "correct option": "Guido van Rossum, 1991",
     "type": "single_choice",
-    "related topics": ["Introduction to Python"],
+    "related topics": [
+      "Introduction to Python"
+    ],
+    "related subtopics": [
+      "T01.1"
+    ],
     "explanation": "Python was conceived in the late 1980s by Guido van Rossum at CWI in the Netherlands and officially released in 1991."
   },
   {
@@ -24,7 +29,12 @@
     ],
     "correct option": "Python source code is compiled into bytecode (.pyc), which is then interpreted by the Python Virtual Machine (PVM).",
     "type": "single_choice",
-    "related topics": ["Introduction to Python"],
+    "related topics": [
+      "Introduction to Python"
+    ],
+    "related subtopics": [
+      "T01.1"
+    ],
     "explanation": "Standard CPython compiles `.py` files into intermediate bytecode instructions, which are then run by the Python Virtual Machine (PVM)."
   },
   {
@@ -38,7 +48,14 @@
     ],
     "correct option": "<class 'float'>",
     "type": "single_choice",
-    "related topics": ["Variables and Data Types", "Operators"],
+    "related topics": [
+      "Variables and Data Types",
+      "Operators"
+    ],
+    "related subtopics": [
+      "T02.2",
+      "T04.1"
+    ],
     "explanation": "The `/` operator performs true division in Python 3, returning a float (`1.5`) even when both operands are integers."
   },
   {
@@ -52,7 +69,14 @@
     ],
     "correct option": "x = (1, 2, 3)",
     "type": "single_choice",
-    "related topics": ["Variables and Data Types", "Lists, Tuples, and Sets"],
+    "related topics": [
+      "Variables and Data Types",
+      "Lists, Tuples, and Sets"
+    ],
+    "related subtopics": [
+      "T02.2",
+      "T08.3"
+    ],
     "explanation": "Tuples are immutable sequence types in Python; once initialized, their elements cannot be reassigned or altered."
   },
   {
@@ -66,7 +90,14 @@
     ],
     "correct option": "str",
     "type": "single_choice",
-    "related topics": ["Input and Output", "Variables and Data Types"],
+    "related topics": [
+      "Input and Output",
+      "Variables and Data Types"
+    ],
+    "related subtopics": [
+      "T03.3",
+      "T02.2"
+    ],
     "explanation": "`input()` reads a line from standard input and always returns it as a string (`str`), requiring explicit type-casting for numeric evaluation."
   },
   {
@@ -80,7 +111,13 @@
     ],
     "correct option": "Python-3!",
     "type": "single_choice",
-    "related topics": ["Input and Output", "Strings"],
+    "related topics": [
+      "Input and Output",
+      "Strings"
+    ],
+    "related subtopics": [
+      "T03.1"
+    ],
     "explanation": "The `sep` argument specifies the separator inserted between values ('-'), and `end` replaces the default newline suffix with '!'."
   },
   {
@@ -94,7 +131,14 @@
     ],
     "correct option": "512",
     "type": "single_choice",
-    "related topics": ["Operators", "Variables and Data Types"],
+    "related topics": [
+      "Operators",
+      "Variables and Data Types"
+    ],
+    "related subtopics": [
+      "T04.1",
+      "T04.5"
+    ],
     "explanation": "Exponentiation `**` possesses right-to-left associativity: `3 ** 2 = 9`, followed by `2 ** 9 = 512`."
   },
   {
@@ -108,7 +152,13 @@
     ],
     "correct option": "`==` checks for value equality; `is` checks for object identity (memory address).",
     "type": "single_choice",
-    "related topics": ["Operators", "Conditional Statements (if, elif, else)"],
+    "related topics": [
+      "Operators",
+      "Conditional Statements (if, elif, else)"
+    ],
+    "related subtopics": [
+      "T04.6"
+    ],
     "explanation": "`==` evaluates whether the values of two objects are equal, while `is` verifies whether both variables point to the exact same object in memory (`id(a) == id(b)`)."
   },
   {
@@ -122,7 +172,13 @@
     ],
     "correct option": "B",
     "type": "single_choice",
-    "related topics": ["Conditional Statements (if, elif, else)", "Operators"],
+    "related topics": [
+      "Conditional Statements (if, elif, else)",
+      "Operators"
+    ],
+    "related subtopics": [
+      "T05.3"
+    ],
     "explanation": "The conditions evaluate sequentially; `x > 15` is False, but `x == 10` is True, executing the corresponding block and exiting the conditional structure."
   },
   {
@@ -136,7 +192,13 @@
     ],
     "correct option": "'Pass'",
     "type": "single_choice",
-    "related topics": ["Conditional Statements (if, elif, else)", "Variables and Data Types"],
+    "related topics": [
+      "Conditional Statements (if, elif, else)",
+      "Variables and Data Types"
+    ],
+    "related subtopics": [
+      "T05.2"
+    ],
     "explanation": "This demonstrates Python's ternary conditional expression `[true_expr] if [condition] else [false_expr]`. Because `5 > 3` is True, `'Pass'` is assigned."
   },
   {
@@ -150,7 +212,13 @@
     ],
     "correct option": "[1, 3, 5, 7, 9]",
     "type": "single_choice",
-    "related topics": ["Loops (for, while)", "Lists, Tuples, and Sets"],
+    "related topics": [
+      "Loops (for, while)",
+      "Lists, Tuples, and Sets"
+    ],
+    "related subtopics": [
+      "T06.1"
+    ],
     "explanation": "`range(start, stop, step)` starts at 1, increments by 2, and stops before reaching 10, resulting in 1, 3, 5, 7, and 9."
   },
   {
@@ -164,7 +232,13 @@
     ],
     "correct option": "When the loop terminates naturally without hitting a `break`.",
     "type": "single_choice",
-    "related topics": ["Loops (for, while)", "Conditional Statements (if, elif, else)"],
+    "related topics": [
+      "Loops (for, while)",
+      "Conditional Statements (if, elif, else)"
+    ],
+    "related subtopics": [
+      "T06.4"
+    ],
     "explanation": "The `else` clause of a loop executes when the sequence is exhausted (or condition becomes false), but is skipped entirely if the loop is terminated via `break`."
   },
   {
@@ -178,7 +252,13 @@
     ],
     "correct option": "'olleh'",
     "type": "single_choice",
-    "related topics": ["Strings", "Operators"],
+    "related topics": [
+      "Strings",
+      "Operators"
+    ],
+    "related subtopics": [
+      "T07.2"
+    ],
     "explanation": "Extended slice syntax `[start:stop:step]` with a step of `-1` traverses the sequence backwards from end to start, reversing the string."
   },
   {
@@ -192,7 +272,13 @@
     ],
     "correct option": "'a-b-c'",
     "type": "single_choice",
-    "related topics": ["Strings", "Lists, Tuples, and Sets"],
+    "related topics": [
+      "Strings",
+      "Lists, Tuples, and Sets"
+    ],
+    "related subtopics": [
+      "T07.4"
+    ],
     "explanation": "`str.join(iterable)` concatenates elements of an iterable using the string instance (`'-'`) as the separator."
   },
   {
@@ -206,7 +292,14 @@
     ],
     "correct option": "3",
     "type": "single_choice",
-    "related topics": ["Lists, Tuples, and Sets", "Variables and Data Types"],
+    "related topics": [
+      "Lists, Tuples, and Sets",
+      "Variables and Data Types"
+    ],
+    "related subtopics": [
+      "T08.4",
+      "T08.5"
+    ],
     "explanation": "Sets in Python store unique elements and automatically discard duplicates upon construction, leaving `{1, 2, 3}`."
   },
   {
@@ -220,7 +313,13 @@
     ],
     "correct option": "a.extend(b)",
     "type": "single_choice",
-    "related topics": ["Lists, Tuples, and Sets", "Functions"],
+    "related topics": [
+      "Lists, Tuples, and Sets",
+      "Functions"
+    ],
+    "related subtopics": [
+      "T08.2"
+    ],
     "explanation": "`a.extend(iterable)` iterates through the supplied argument and appends each element individually to list `a`, mutating it in place."
   },
   {
@@ -234,7 +333,13 @@
     ],
     "correct option": "0",
     "type": "single_choice",
-    "related topics": ["Dictionaries", "Exception Handling"],
+    "related topics": [
+      "Dictionaries",
+      "Exception Handling"
+    ],
+    "related subtopics": [
+      "T09.3"
+    ],
     "explanation": "The `dict.get(key, default)` method retrieves the value if the key exists; otherwise, it returns the provided default value without raising a `KeyError`."
   },
   {
@@ -248,7 +353,14 @@
     ],
     "correct option": "d.items()",
     "type": "single_choice",
-    "related topics": ["Dictionaries", "Lists, Tuples, and Sets", "Loops (for, while)"],
+    "related topics": [
+      "Dictionaries",
+      "Lists, Tuples, and Sets",
+      "Loops (for, while)"
+    ],
+    "related subtopics": [
+      "T09.4"
+    ],
     "explanation": "`dict.items()` returns a dynamic `dict_items` view containing `(key, value)` 2-tuples."
   },
   {
@@ -262,7 +374,15 @@
     ],
     "correct option": "[1]\n[1, 2]",
     "type": "single_choice",
-    "related topics": ["Functions", "Lists, Tuples, and Sets", "Variables and Data Types"],
+    "related topics": [
+      "Functions",
+      "Lists, Tuples, and Sets",
+      "Variables and Data Types"
+    ],
+    "related subtopics": [
+      "T10.4",
+      "T08.6"
+    ],
     "explanation": "Default parameter values in Python are evaluated once when the function is defined, making mutable defaults (like lists) shared across subsequent invocations."
   },
   {
@@ -276,7 +396,14 @@
     ],
     "correct option": "Arbitrary positional arguments (tuple) and arbitrary keyword arguments (dict)",
     "type": "single_choice",
-    "related topics": ["Functions", "Dictionaries", "Lists, Tuples, and Sets"],
+    "related topics": [
+      "Functions",
+      "Dictionaries",
+      "Lists, Tuples, and Sets"
+    ],
+    "related subtopics": [
+      "T10.2"
+    ],
     "explanation": "`*args` packs excess positional arguments into a tuple, while `**kwargs` packs named keyword arguments into a dictionary."
   },
   {
@@ -290,7 +417,14 @@
     ],
     "correct option": "[0, 4, 16]",
     "type": "single_choice",
-    "related topics": ["List Comprehensions", "Loops (for, while)", "Operators"],
+    "related topics": [
+      "List Comprehensions",
+      "Loops (for, while)",
+      "Operators"
+    ],
+    "related subtopics": [
+      "T11.2"
+    ],
     "explanation": "The loop generates 0, 1, 2, 3, 4. The predicate filters to even values (0, 2, 4), and squares them: `0**2=0`, `2**2=4`, `4**2=16`."
   },
   {
@@ -304,7 +438,14 @@
     ],
     "correct option": "[item for row in matrix for item in row]",
     "type": "single_choice",
-    "related topics": ["List Comprehensions", "Lists, Tuples, and Sets", "Loops (for, while)"],
+    "related topics": [
+      "List Comprehensions",
+      "Lists, Tuples, and Sets",
+      "Loops (for, while)"
+    ],
+    "related subtopics": [
+      "T11.4"
+    ],
     "explanation": "Nested list comprehensions mirror the order of nested `for` loops: first `for row in matrix:` followed by `for item in row:`."
   },
   {
@@ -318,7 +459,13 @@
     ],
     "correct option": "else",
     "type": "single_choice",
-    "related topics": ["Exception Handling", "Conditional Statements (if, elif, else)"],
+    "related topics": [
+      "Exception Handling",
+      "Conditional Statements (if, elif, else)"
+    ],
+    "related subtopics": [
+      "T12.4"
+    ],
     "explanation": "In Python, the `else` block of a `try...except` statement runs only if the code in the `try` block completes successfully without raising any exceptions."
   },
   {
@@ -332,7 +479,13 @@
     ],
     "correct option": "finally",
     "type": "single_choice",
-    "related topics": ["Exception Handling", "File Handling"],
+    "related topics": [
+      "Exception Handling",
+      "File Handling"
+    ],
+    "related subtopics": [
+      "T12.4"
+    ],
     "explanation": "The `finally` block always executes prior to leaving the `try` structure, making it ideal for deterministic cleanup operations."
   },
   {
@@ -346,7 +499,13 @@
     ],
     "correct option": "It automatically handles closing the file even if exceptions occur inside the block.",
     "type": "single_choice",
-    "related topics": ["File Handling", "Exception Handling"],
+    "related topics": [
+      "File Handling",
+      "Exception Handling"
+    ],
+    "related subtopics": [
+      "T13.2"
+    ],
     "explanation": "The `with` statement leverages the Context Management protocol (`__enter__` and `__exit__`), ensuring that the file descriptor is closed properly upon block exit."
   },
   {
@@ -360,7 +519,14 @@
     ],
     "correct option": "Opens the file for writing, appending new data to the end without truncating it.",
     "type": "single_choice",
-    "related topics": ["File Handling", "Input and Output", "Strings"],
+    "related topics": [
+      "File Handling",
+      "Input and Output",
+      "Strings"
+    ],
+    "related subtopics": [
+      "T13.1"
+    ],
     "explanation": "Mode `'a'` designates append mode: the file stream position is placed at the end of the file, creating the file if it does not already exist."
   }
 ]

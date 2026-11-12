@@ -82,6 +82,7 @@ class DiagnosisAgent:
         topic_stats = {t["topic_id"]: [0, 0] for t in self.topics if "topic_id" in t}
         subtopic_stats = {}
         misconceptions = {}
+        responses = []
 
         for q in self.mcqs:
             problem_id = q.get("prob_id", q.get("problem_id"))
@@ -99,6 +100,12 @@ class DiagnosisAgent:
                 bucket[1] += 1
                 bucket[0] += int(is_correct)
 
+            responses.append({
+                "prob_id": problem_id,
+                "chosen": submitted_val,
+                "is_correct": bool(is_correct),
+                "subtopics": list(_field(q, "related_subtopics", "related subtopics", default=[])),
+            })
             for sub_id in _field(q, "related_subtopics", "related subtopics", default=[]):
                 sub_bucket = subtopic_stats.setdefault(sub_id, [0, 0])
                 sub_bucket[1] += 1
@@ -117,6 +124,7 @@ class DiagnosisAgent:
             topics=to_prob(topic_stats),
             skills=to_prob(subtopic_stats),  
             active_misconceptions=misconceptions,
+            diagnosis_responses=responses,
         )
         skb.update_categorization(threshold=self.threshold)
         self._save(skb)

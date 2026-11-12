@@ -180,6 +180,7 @@ def record_lesson_strategy(
     topic_id: str,
     strategy: str,
     reason: str,
+    remediation_for: Optional[str] = None,
 ) -> dict:
     """One lesson event per teaching block: further messages on the same topic with the same
     strategy (and no quiz in between) only increase its "turns" count."""
@@ -187,7 +188,9 @@ def record_lesson_strategy(
     history = compact_pedagogy_history(updated.get("pedagogy_history", []))
     now = datetime.now().isoformat(timespec="seconds")
     event = {"event": "lesson", "topic_id": topic_id, "strategy": strategy, "reason": reason, "created_at": now}
-    if history and _same_lesson(history[-1], event):
+    if remediation_for:
+        event["remediation_for"] = remediation_for      # a lesson started by the remediation button
+    if history and _same_lesson(history[-1], event) and not remediation_for:
         history[-1].update(reason=reason, last_at=now, turns=history[-1].get("turns", 1) + 1)
     else:
         history.append({**event, "turns": 1})
@@ -238,6 +241,7 @@ def record_assessment_outcome(
                 "correct": result.get("correct"),
                 "is_correct": bool(result.get("is_correct")),
                 "subtopics": list(result.get("subtopics", [])),
+                "misconception": result.get("misconception"),
             }
             for result in question_results
         ]
@@ -274,3 +278,30 @@ def record_assessment_outcome(
         ]
     updated["latest_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return updated
+
+
+# --------------------------------------------------------------- subtopic mastery
+# Each quiz answer moves the mastery of every subtopic the question tests towards 1 (correct)
+# or 0 (wrong): m <- m + RATE * (outcome - m). This is an exponential moving average, the
+# simplest form of knowledge tracing; it keeps mastery per subtopic instead of per topic, so the
+# root-cause agent (PM', lowest-mastery method) can tell the subtopics of one topic apart.
+SUBTOPIC_LEARNING_RATE = 0.3
+DEFAULT_SUBTOPIC_MASTERY = 0.5
+
+
+def update_subtopic_mastery(
+    student_kb: dict, responses: List[dict], rate: float = SUBTOPIC_LEARNING_RATE
+) -> Tuple[dict, Dict[str, Dict[str, float]]]:
+    """Returns the updated KB and {subtopic: {"before", "after"}} for the subtopics touched."""
+    updated = deepcopy(student_kb)
+    skills = updated.setdefault("skills", {})
+    topics = updated.get("topics", {})
+    changes: Dict[str, Dict[str, float]] = {}
+    for response in responses:
+        outcome = 1.0 if response.get("is_correct") else 0.0
+        for sid in response.get("subtopics", []):
+            start = skills.get(sid, topics.get(str(sid).split(".")[0], DEFAULT_SUBTOPIC_MASTERY))
+            changes.setdefault(sid, {"before": round(float(start), 2)})
+            skills[sid] = round(float(start) + rate * (outcome - float(start)), 3)
+            changes[sid]["after"] = round(skills[sid], 2)
+    return updated, changes

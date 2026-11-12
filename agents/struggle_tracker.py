@@ -76,8 +76,13 @@ def load_catalog(topics_filepath: str = TOPICS_FILEPATH) -> dict:
         topics = json.load(topic_file)
 
     subtopic_names, subtopic_topic, prerequisites, topic_subtopics, topic_names = {}, {}, {}, {}, {}
+    misconceptions, topic_misconceptions = {}, {}
     for topic in topics:
         topic_id = topic["topic_id"]
+        topic_misconceptions[topic_id] = []
+        for item in topic.get("common_misconceptions", []):
+            misconceptions[item["id"]] = item.get("description", item["id"])
+            topic_misconceptions[topic_id].append(item["id"])
         topic_names[topic_id] = topic.get("name", topic_id)
         prerequisites[topic_id] = list(topic.get("prerequisites", []))
         topic_subtopics[topic_id] = []
@@ -105,6 +110,8 @@ def load_catalog(topics_filepath: str = TOPICS_FILEPATH) -> dict:
         "topic_subtopics": topic_subtopics,
         "subtopic_keywords": {sid: tokenize(name) for sid, name in subtopic_names.items()},
         "distinctive_keywords": distinctive_keywords,
+        "misconceptions": misconceptions,
+        "topic_misconceptions": topic_misconceptions,
     }
 
 
@@ -135,6 +142,8 @@ def record_learning_turn(
     reply_to_tutor: bool = False,
     answer_verdict: Optional[str] = None,
     context_text: str = "",
+    flags: Optional[Dict[str, bool]] = None,
+    signal_source: str = "rules",
 ) -> dict:
     """Log one student message sent to the tutor, with its struggle flags.
 
@@ -144,17 +153,29 @@ def record_learning_turn(
     updated = deepcopy(student_kb)
     if not str(student_text or "").strip():
         return updated
-    flags = detect_struggle(student_text)
+    rule_flags = detect_struggle(student_text)
+    flags = flags or rule_flags
+    subtopic_ids = (
+        map_subtopics(student_text, topic_id, topics_filepath)
+        or map_subtopics(context_text, topic_id, topics_filepath)
+    )
+    subtopic_source = "keywords" if subtopic_ids else None
+    if not subtopic_ids:
+        # No keyword match: ask the semantic classifier (it abstains when unsure).
+        from agents.topic_classifier import classify_subtopic
+        predicted = classify_subtopic(f"{context_text} {student_text}".strip(), topic_id)
+        if predicted:
+            subtopic_ids, subtopic_source = [predicted], "classifier"
     turns = updated.setdefault("learning_conversations", [])
     turns.append({
         "topic_id": topic_id,
-        "subtopic_ids": (
-            map_subtopics(student_text, topic_id, topics_filepath)
-            or map_subtopics(context_text, topic_id, topics_filepath)
-        ),
+        "subtopic_ids": subtopic_ids,
+        "subtopic_source": subtopic_source,
         "text": str(student_text).strip()[:300],
-        "confusion": flags["confusion"],
-        "hint_request": flags["hint_request"],
+        "confusion": bool(flags.get("confusion")),
+        "hint_request": bool(flags.get("hint_request")),
+        "signal_source": signal_source,
+        "rule_flags": rule_flags,
         "after_strategy": previous_strategy,
         "reply_to_tutor": bool(reply_to_tutor),
         "answer_verdict": answer_verdict,
@@ -288,13 +309,20 @@ TOPIC_HINTS = {
            "count index slice slicing character",
     "T08": "list lists tuple tuples set sets append extend insert remove pop sort sorted count index "
            "reverse clear copy alias aliasing union intersection slice slicing immutable mutable",
-    "T09": "dict dictionary dictionaries key keys value values items get update",
+    "T09": "dict dictionary dictionaries key keys value values items get update keyerror",
     "T10": "function def return parameter argument args kwargs recursion recursive lambda scope",
     "T11": "comprehension comprehensions",
     "T12": "exception exceptions try except finally raise error traceback valueerror typeerror "
            "zerodivisionerror",
     "T13": "file files open read write close readline readlines csv path",
 }
+
+
+# Everyday words that are also Python terms ("I don't GET it", "keep my DATA", "what does this
+# VALUE mean"). They never count as topic evidence on their own; the topic classifier and the
+# conversation's topic decide instead.
+GENERIC_WORDS = {"get", "data", "program", "valu", "key", "item", "updat", "check", "work", "run",
+                 "mak", "new", "creat", "number", "word", "nam", "tim", "thing", "exampl", "cod", "keys"}
 
 
 @lru_cache(maxsize=4)
@@ -309,7 +337,7 @@ def _topic_evidence_words(topics_filepath: str = TOPICS_FILEPATH) -> Dict[str, s
     words = {}
     for tid, tokens in from_names.items():
         distinctive = {t for t in tokens if sum(t in other for other in from_names.values()) == 1}
-        words[tid] = distinctive | tokenize(TOPIC_HINTS.get(tid, "").replace("_", " "))
+        words[tid] = (distinctive | tokenize(TOPIC_HINTS.get(tid, "").replace("_", " "))) - GENERIC_WORDS
     return words
 
 

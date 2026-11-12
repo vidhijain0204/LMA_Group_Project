@@ -391,6 +391,39 @@ and inspect entries like:
 
 If you want to reset a student profile, remove the matching record from this file or create a new student ID.
 
+## Running the study and evaluating it
+
+**Before the study (once, on the GPU machine):**
+1. Tag the wrong options of the quiz bank with misconceptions:
+   `python scripts/tag_mcq_misconceptions.py --limit 10 --dry-run` (check), then
+   `python scripts/tag_mcq_misconceptions.py`. Review a sample in
+   `data/evaluation/mcq_misconception_review.csv` and fix wrong tags in `data/common/mcqs_list.json`.
+2. Download the topic-classifier model once: `TOPIC_EMBED_DOWNLOAD=1 python -c "from agents.topic_classifier import get_classifier; print(get_classifier().backend)"`
+   (prints `embedding`; without it the app uses the weaker TF-IDF backend).
+
+**Per student** (`streamlit run app.py`, Study mode on):
+1. Click **🆕 New anonymous student** (S101, S102, ...), the student accepts the consent screen.
+2. Diagnosis → learn with the tutor → "ready for assessment" → quiz.
+3. After the quiz: the student fills **🧾 why did you get these wrong?**, clicks **📘 Review**,
+   learns, then **🔁 Re-test** (this measures the learning gain).
+4. At the end: **📝 Session feedback** in the sidebar.
+5. For an A/B comparison of the root-cause methods, turn on *Assign method by student id* in
+   **🔎 Root-cause settings** before the student starts.
+
+Each app start backs up the KB, traces and evaluation files to `data/backups/`.
+
+**After the study:**
+- `python scripts/evaluate.py` → `data/evaluation/report/report.md` (+ CSVs): root-cause accuracy
+  per method/preset/ablation, agreement, misconception check, learning gain, judge vs rules,
+  latency, feedback.
+- Optional expert labels: `python scripts/evaluate.py --export-labeling`, fill
+  `data/evaluation/labeling_sheet.csv`, then `python scripts/evaluate.py --import-labels <file>`.
+- `python scripts/fit_weights.py --save` learns the weights (report its leave-one-student-out
+  accuracy) and adds them as the `learned` preset.
+
+Environment switches: `TUTOR_LLM_JUDGE=0` (rules instead of the LLM turn judge),
+`TOPIC_EMBED_MODEL=none` (TF-IDF topic classifier).
+
 ## Common issues and fixes
 
 ### Cannot connect to the local model

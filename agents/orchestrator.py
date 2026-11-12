@@ -7,6 +7,8 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langgraph.types import Command
 
 from agents.pedagogy_controller import resolve_topic_id
+from agents.topic_classifier import classify_topic
+from agents.turn_judge import analyze_turn
 from agents.struggle_tracker import (
     RECENT_TURNS_FOR_QUIZ, current_lesson_topic, recent_learning_topics, topic_evidence, topics_mentioned,
 )
@@ -43,6 +45,9 @@ def normalize_route(label) -> str:
 class AgentState(TypedDict):
     student_id: str
     messages: List[Any]
+    turn_analysis: Optional[dict]      # turn judge output for the current message
+    forced_route: Optional[dict]       # set by the app's remediation / re-test buttons
+    quiz_subtopics: List[str]          # re-test: the subtopics the quiz must cover
     student_kb: Optional[dict]
     topic_focus: List[str]
     last_active_agent: Optional[str]
@@ -166,6 +171,10 @@ def detect_follow_up(state: dict, student_kb: Optional[dict]) -> Optional[dict]:
     return {"topic_id": lesson.get("topic_id"), "strategy": lesson.get("strategy"), "tutor_question": question[:300]}
 
 
+# During a lesson, the classifier may move to another topic only with this vote share.
+SWITCH_SHARE = 0.7
+
+
 def choose_tutor_topic(
     user_text: str, llm_topics, student_kb: Optional[dict], in_conversation: bool
 ) -> Tuple[List[str], str]:
@@ -175,8 +184,11 @@ def choose_tutor_topic(
     2. Keyword evidence ("difference between sort and count" -> T08). When the conversation's
        current topic is among the best matches, it is kept ("count" is both a string and a
        list method; while learning lists it means the list method).
-    3. No evidence ("can you give another example?"): stay on the conversation's topic.
-    4. Otherwise the topic the LLM suggested.
+    3. No keywords: the semantic classifier (agents/topic_classifier.py), when it is confident.
+       During a lesson it only switches topic when it is very sure (vote share >= 0.7), so
+       "can you give another example?" stays on the conversation's topic.
+    4. No keywords and no confident classification: stay on the conversation's topic.
+    5. Otherwise the topic the LLM suggested.
     """
     previous = current_lesson_topic(student_kb) if in_conversation else None
     named = topics_mentioned(user_text)
@@ -188,7 +200,16 @@ def choose_tutor_topic(
         leaders = sorted(tid for tid, score in evidence.items() if score == best)
         if previous in leaders:
             return [previous], f"keywords point at {', '.join(leaders)}; kept the conversation's topic {previous}"
+        if len(leaders) > 1:            # a tie: let the classifier choose among the leaders
+            _, ranking = classify_topic(user_text)
+            ranked = [tid for tid, _ in ranking if tid in leaders]
+            if ranked:
+                return [ranked[0]], f"keywords tie between {', '.join(leaders)}; classifier prefers {ranked[0]}"
         return [leaders[0]], f"keywords in the message point at {leaders[0]} ({evidence})"
+    predicted, ranking = classify_topic(user_text)
+    share = ranking[0][1] if ranking else 0.0
+    if predicted and (not previous or (predicted != previous and share >= SWITCH_SHARE)):
+        return [predicted], f"no keywords; topic classifier is confident: {predicted} ({ranking})"
     if previous:
         return [previous], f"no topic in the message; continuing the conversation's topic {previous}"
     llm_topics = llm_topics if isinstance(llm_topics, list) else [llm_topics]
@@ -216,12 +237,56 @@ def parse_decision(raw_content: str) -> dict:
     return decision
 
 
-def create_orchestrator_node(llm=None):
-    """Create the orchestrator node. An LLM can be injected for testing; otherwise the local
-    LLM is loaded."""
+REMEDIATION_INSTRUCTION = (
+    "Remediation after a quiz. The student's quiz errors point to {subtopic} ({reason}).{misconception} "
+    "Re-teach exactly this subtopic: start from what the student most likely misunderstood, give a "
+    "short contrasting example (wrong idea vs correct behaviour), then ask one check question."
+)
+
+
+def forced_command(forced: dict, student_id: str, student_kb: dict) -> Command:
+    """Route chosen by an app button, without the LLM: remediation lesson or re-test quiz."""
+    topic_id = forced.get("topic_id") or "T01"
+    common = {
+        "student_id": student_id,
+        "student_kb": student_kb,
+        "topic_focus": [topic_id],
+        "tutor_question": "",
+        "turn_analysis": None,
+        "last_active_agent": "orchestrator",
+    }
+    if forced.get("kind") == "retest":
+        subtopics = forced.get("subtopics") or []
+        reasoning = f"Re-test button: quiz on {', '.join(subtopics)} after remediation (re-test of {forced.get('quiz_id')})."
+        print(f"\n🧭 [ORCHESTRATOR] {reasoning}")
+        return Command(goto=ASSESSMENT_NODE, update={
+            **common, "quiz_subtopics": subtopics, "conversation_mode": "retest",
+            "orchestrator_instruction": "Short re-test on the subtopics the student just reviewed.",
+            "orchestrator_reasoning": reasoning,
+        })
+    misconception = forced.get("misconception")
+    reasoning = f"Remediation button: re-teach {forced.get('subtopic_id')} (root cause of quiz {forced.get('quiz_id')})."
+    print(f"\n🧭 [ORCHESTRATOR] {reasoning}")
+    return Command(goto=TUTOR_NODE, update={
+        **common, "quiz_subtopics": [], "conversation_mode": "remediation",
+        "orchestrator_instruction": REMEDIATION_INSTRUCTION.format(
+            subtopic=f"{forced.get('subtopic_id')} {forced.get('subtopic_name', '')}".strip(),
+            reason=forced.get("reason", ""),
+            misconception=f" Likely misconception: {misconception}." if misconception else "",
+        ),
+        "orchestrator_reasoning": reasoning,
+    })
+
+
+def create_orchestrator_node(llm=None, judge_llm=None):
+    """Create the orchestrator node. LLMs can be injected for testing; otherwise the local
+    LLM is loaded (router profile for routing, judge profile for the turn judge)."""
     if llm is None:
         from agents.llm_factory import get_llm
         llm = get_llm("router", enable_thinking=True)
+    if judge_llm is None:
+        from agents.llm_factory import get_llm
+        judge_llm = get_llm("judge", enable_thinking=False)
 
     topics_summary = "Python Basics, Control Flow, Data Structures, Functions, OOP"
     if os.path.exists(TOPICS_FILE_PATH):
@@ -253,9 +318,23 @@ def create_orchestrator_node(llm=None):
                 },
             )
 
+        if state.get("forced_route"):
+            return forced_command(state["forced_route"], student_id, student_kb)
+
+        user_text = state.get("user_input") or next(
+            (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)), ""
+        )
+        # Turn judge: is this an answer to the tutor's question or a new question, the verdict,
+        # and struggle flags. The rules decide when there is no pending question and the message
+        # is a quiz request (no LLM call needed).
+        candidate = detect_follow_up(state, student_kb)
+        needs_judge = bool(candidate) or not QUIZ_REQUEST.search(user_text)
+        analysis = analyze_turn(judge_llm if needs_judge else None,
+                                candidate["tutor_question"] if candidate else "", user_text)
+
         # The student is answering the tutor's last question: continue that lesson directly,
-        # without asking the LLM (which would treat the answer as a brand-new request).
-        follow_up = detect_follow_up(state, student_kb)
+        # without asking the routing LLM (which would treat the answer as a brand-new request).
+        follow_up = candidate if candidate and analysis["kind"] == "answer" else None
         if follow_up:
             reasoning = (
                 f"Student is replying to the tutor's question on {follow_up['topic_id']} "
@@ -272,6 +351,8 @@ def create_orchestrator_node(llm=None):
                     "orchestrator_reasoning": reasoning,
                     "conversation_mode": FOLLOW_UP_MODE,
                     "tutor_question": follow_up["tutor_question"],
+                    "turn_analysis": analysis,
+                    "quiz_subtopics": [],
                     "last_active_agent": "orchestrator",
                 },
             )
@@ -304,9 +385,8 @@ def create_orchestrator_node(llm=None):
         instruction = decision.get("instruction", "Explain concept.")
         reasoning = decision.get("reasoning", "Direct routing.")
 
-        user_text = state.get("user_input") or next(
-            (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)), ""
-        )
+        if candidate and not follow_up:
+            reasoning = f"{reasoning} | Turn judge: a new question, not an answer to the tutor's question"
         if next_agent == ASSESSMENT_NODE:
             topic_focus, source = choose_quiz_topics(user_text, topic_focus, student_kb)
             reasoning = f"{reasoning} | Quiz topics: {source}"
@@ -329,6 +409,8 @@ def create_orchestrator_node(llm=None):
                 "orchestrator_reasoning": reasoning,
                 "conversation_mode": "new_request",
                 "tutor_question": "",
+                "turn_analysis": analysis,
+                "quiz_subtopics": [],
                 "last_active_agent": "orchestrator",
             },
         )

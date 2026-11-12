@@ -2,6 +2,7 @@ import json
 import operator
 import os
 import time
+import uuid
 from datetime import datetime
 from typing import TypedDict, Literal, Any, Annotated, Optional
 from agents.llm_factory import get_llm
@@ -25,7 +26,7 @@ from agents.root_cause_agent import (
     resolve_weights,
     summarize_comparison,
 )
-from agents.pedagogy_controller import record_assessment_outcome, resolve_topic_id
+from agents.pedagogy_controller import record_assessment_outcome, resolve_topic_id, update_subtopic_mastery
 from agents.struggle_tracker import recent_learning_topics
 from agents.chat_memory import history_messages, lesson_entry, quiz_entry, remember
 
@@ -48,8 +49,12 @@ class AgentState(TypedDict):
     topic_focus: list
     orchestrator_instruction: str
     orchestrator_reasoning: str
-    conversation_mode: str          # "new_request" or "follow_up" (answer to the tutor's question)
+    conversation_mode: str          # "new_request", "follow_up" (answer to the tutor's question),
+                                    # "remediation" or "retest" (app buttons after a quiz)
     tutor_question: str             # the question being answered, for a follow-up
+    turn_analysis: Optional[dict]   # turn judge: answer/new question, verdict, struggle flags
+    forced_route: Optional[dict]    # remediation / re-test chosen by an app button
+    quiz_subtopics: list            # re-test: the subtopics the quiz must cover
     # per-round data
     student_kb: Optional[dict]
     active_quiz_questions: list
@@ -134,6 +139,8 @@ class AdaptiveTutorWorkflow:
                 "topic_focus": update.get("topic_focus"),
                 "instruction": update.get("orchestrator_instruction"),
                 "reasoning": update.get("orchestrator_reasoning"),
+                "turn_judge": update.get("turn_analysis"),
+                "forced_route": state.get("forced_route"),
             },
             started,
         )
@@ -232,6 +239,7 @@ class AdaptiveTutorWorkflow:
              "answering_tutor_question": state.get("tutor_question") or None},
             {"response_preview": response_text[:600] + ("…" if len(response_text) > 600 else ""),
              "answer_verdict": result.get("answer_verdict"),
+             "verdict_source": result.get("verdict_source"),
              "learning_turn_logged": logged_turn},
             started,
         )
@@ -260,6 +268,9 @@ class AdaptiveTutorWorkflow:
                 "pedagogy_reason": result["pedagogy_reason"],
                 "conversation_mode": result.get("conversation_mode"),
                 "answer_verdict": result.get("answer_verdict"),
+                "verdict_source": result.get("verdict_source"),
+                "remediation_for": (state.get("forced_route") or {}).get("quiz_id")
+                if result.get("conversation_mode") == "remediation" else None,
             },
             "last_active_agent": "tutor_agent"
         }
@@ -353,6 +364,11 @@ class AdaptiveTutorWorkflow:
         )
 
         student_kb = state.get("student_kb")
+        quiz_id = f"{state.get('student_id')}-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:4]}"
+        forced = state.get("forced_route") or {}
+        retest_of = forced.get("quiz_id") if forced.get("kind") == "retest" else None
+        target_subtopics = state.get("quiz_subtopics") or []
+        retest_record = None
         # Root cause of the errors, using the configured method (no_kb / kb_low_score /
         # hypothesis). Runs before the outcome is recorded so "recent quizzes" means quizzes
         # before this one. compare() runs every method and weight set on the same quiz.
@@ -416,9 +432,22 @@ class AdaptiveTutorWorkflow:
                 )
                 event = student_kb["pedagogy_history"][-1]
                 event["quiz_topics"] = topic_ids
+                event["quiz_id"] = quiz_id
+                if retest_of:
+                    event["retest_of"] = retest_of
                 if is_root_topic:
-                    # Keep what every method/weight set picked, to evaluate them later.
+                    # Keep what every method/weight set picked, and the raw parameters of the
+                    # candidates, to evaluate methods and refit weights later.
                     event["root_cause_comparison"] = compact_comparison
+                    event["hypothesis_candidates"] = comparison.get("candidates", [])
+                    event["root_cause_settings"] = {"method": self.root_cause_method,
+                                                    "preset": self.root_cause_preset, "weights": weights}
+            # Subtopic mastery: every answer updates the subtopics its question tests.
+            student_kb, subtopic_changes = update_subtopic_mastery(student_kb, root_cause_result["responses"])
+            if retest_of:
+                retest_record = self._learning_gain(student_kb, retest_of, quiz_id, target_subtopics,
+                                                    root_cause_result["responses"])
+                student_kb.setdefault("retests", []).append(retest_record)
             student_kb = remember(student_kb, quiz_entry(
                 state.get("user_input"), topic_ids, f"{correct_count}/{total}",
                 format_root_cause(root_cause) if root_cause else "",
@@ -432,6 +461,8 @@ class AdaptiveTutorWorkflow:
                     t: {"before": mastery_before.get(t), "after": student_kb.get("topics", {}).get(t)}
                     for t in per_topic
                  },
+                 "subtopic_mastery": subtopic_changes,
+                 "learning_gain": retest_record,
                  "weaknesses": student_kb.get("weaknesses", [])},
             )
 
@@ -459,8 +490,51 @@ class AdaptiveTutorWorkflow:
                 "root_cause_method": self.root_cause_method,
                 "hypotheses": hypotheses,
                 "comparison": comparison,
+                "quiz_id": quiz_id,
+                "retest": retest_record,
+                # For the "why did you get this wrong?" form in the app.
+                "wrong_answers": [
+                    {"prob_id": r["prob_id"], "chosen": r["chosen"], "correct": r["correct"],
+                     "chosen_text": r["chosen_text"], "subtopics": r["subtopics"],
+                     "misconception": r.get("misconception"),
+                     "question": next((q.get("prob_body") for q in quiz_questions
+                                       if q.get("prob_id") == r["prob_id"]), "")}
+                    for r in root_cause_result["responses"] if not r["is_correct"]
+                ],
             },
             "last_active_agent": "assessment_agent"
+        }
+
+    @staticmethod
+    def _learning_gain(student_kb: dict, original_quiz_id: str, retest_quiz_id: str,
+                       subtopics: list, retest_responses: list) -> dict:
+        """Accuracy on the re-tested subtopics before (original quiz) and after (re-test)."""
+        def accuracy(responses):
+            relevant = [r for r in responses if set(r.get("subtopics", [])) & set(subtopics)]
+            return (round(sum(bool(r.get("is_correct")) for r in relevant) / len(relevant), 2)
+                    if relevant else None), len(relevant)
+
+        original = [e for e in student_kb.get("pedagogy_history", [])
+                    if e.get("event") == "assessment" and e.get("quiz_id") == original_quiz_id
+                    and not e.get("retest_of")]
+        before, n_before = accuracy([r for e in original for r in e.get("responses", [])])
+        after, n_after = accuracy(retest_responses)
+        root_event = next((e for e in original if e.get("root_cause")), {})
+        remediation_turns = sum(
+            e.get("turns", 1) for e in student_kb.get("pedagogy_history", [])
+            if e.get("event") == "lesson" and e.get("remediation_for") == original_quiz_id
+        )
+        return {
+            "quiz_id": original_quiz_id,
+            "retest_quiz_id": retest_quiz_id,
+            "subtopics": subtopics,
+            "root_cause_method": (root_event.get("root_cause_settings") or {}).get("method"),
+            "root_cause_preset": (root_event.get("root_cause_settings") or {}).get("preset"),
+            "accuracy_before": before, "questions_before": n_before,
+            "accuracy_after": after, "questions_after": n_after,
+            "gain": round(after - before, 2) if before is not None and after is not None else None,
+            "remediation_turns": remediation_turns,
+            "created_at": datetime.now().isoformat(timespec="seconds"),
         }
 
     def _save_trace(self, thread_id: str, trace: list, status: str) -> None:
@@ -518,7 +592,10 @@ class AdaptiveTutorWorkflow:
 
     # ------------------------------------------------------------- public API
     def start(self, student_id: str, user_input: str, student_answers: dict = None,
-              chat_history: list = None, thread_id: str = None) -> dict:
+              chat_history: list = None, thread_id: str = None, forced_route: dict = None) -> dict:
+        """Run one turn. `forced_route` skips the routing LLM (app buttons):
+        {"kind": "remediation", "quiz_id", "topic_id", "subtopic_id", "subtopic_name", "reason", "misconception"}
+        {"kind": "retest", "quiz_id", "topic_id", "subtopics": [...]}"""
         thread_id = thread_id or f"{student_id}-session"
         student_kb = load_student_kb(student_id, self.db_filepath)
         
@@ -552,6 +629,9 @@ class AdaptiveTutorWorkflow:
             "last_active_agent": None,
             "conversation_mode": "new_request",
             "tutor_question": "",
+            "turn_analysis": None,
+            "forced_route": forced_route,
+            "quiz_subtopics": [],
         }
         return self._invoke(initial_state, thread_id)
 

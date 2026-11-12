@@ -79,29 +79,77 @@ def split_quota(limit: int, parts: int) -> List[int]:
     return [limit // parts + (i < limit % parts) for i in range(parts)]
 
 
-def select_adaptive_mcqs(topic_focus, student_kb: Optional[dict], limit: int = 10) -> List[Dict[str, Any]]:
-    """Pick `limit` questions spread evenly over the topics in `topic_focus` (a topic or a list of
-    topics). Each topic's questions are matched to that topic's difficulty for this student."""
+# At least this many questions per focus subtopic, so one lucky guess or slip does not decide
+# the counter-evidence (CE) of a subtopic.
+QUESTIONS_PER_SUBTOPIC = 2
+RETEST_SIZE = 6
+
+
+def seen_question_ids(student_kb: Optional[dict]) -> set:
+    """Questions this student already answered in earlier quizzes."""
+    return {
+        response.get("prob_id")
+        for event in (student_kb or {}).get("pedagogy_history", [])
+        if event.get("event") == "assessment"
+        for response in event.get("responses", [])
+    }
+
+
+def subtopic_mastery(student_kb: Optional[dict], subtopic_id: str) -> float:
+    kb = student_kb or {}
+    return float(kb.get("skills", {}).get(subtopic_id, kb.get("topics", {}).get(subtopic_id.split(".")[0], 0.5)))
+
+
+def select_adaptive_mcqs(topic_focus, student_kb: Optional[dict], limit: int = 10,
+                         target_subtopics: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    """Pick `limit` questions.
+
+    - Each topic in `topic_focus` gets an equal share; inside a topic the share goes to its
+      weakest subtopics (lowest subtopic mastery), QUESTIONS_PER_SUBTOPIC questions each.
+    - `target_subtopics` (a re-test after remediation) puts all questions on those subtopics.
+    - Questions near the topic's target difficulty are preferred, and questions the student has
+      not answered before are preferred over repeats.
+    """
     all_mcqs = load_all_mcqs()
     focus = topic_focus if isinstance(topic_focus, list) else [topic_focus]
     topic_ids = list(dict.fromkeys(get_topic_id_from_name(t) for t in focus if t)) or ["T01"]
+    seen = seen_question_ids(student_kb)
 
     selected, used = [], set()
 
     def take(pool, count, target_diff):
         pool = [q for q in pool if q["prob_id"] not in used]
-        pool.sort(key=lambda q: abs(float(q.get("difficulty", 0.5)) - target_diff))
-        candidates = pool[:count * 2]
-        random.shuffle(candidates)
-        for q in candidates[:count]:
+        random.shuffle(pool)       # random order among equally good questions
+        pool.sort(key=lambda q: (q["prob_id"] in seen, round(abs(float(q.get("difficulty", 0.5)) - target_diff), 1)))
+        for q in pool[:count]:
             selected.append(q)
             used.add(q["prob_id"])
 
-    for topic_id, quota in zip(topic_ids, split_quota(limit, len(topic_ids))):
-        take([q for q in all_mcqs if _covers_topic(q, topic_id)], quota,
-             determine_target_difficulty(student_kb, topic_id))
+    def with_subtopic(sid):
+        return [q for q in all_mcqs if sid in q.get("related_subtopics", [])]
 
-    # A topic with too few questions: fill from the other chosen topics, then from the whole bank.
+    plan = []      # (subtopic, number of questions, target difficulty)
+    if target_subtopics:
+        for sid, quota in zip(target_subtopics, split_quota(limit, len(target_subtopics))):
+            plan.append((sid, quota, determine_target_difficulty(student_kb, sid.split(".")[0])))
+    else:
+        for topic_id, quota in zip(topic_ids, split_quota(limit, len(topic_ids))):
+            difficulty = determine_target_difficulty(student_kb, topic_id)
+            subtopics = sorted(
+                {sid for q in all_mcqs for sid in q.get("related_subtopics", []) if sid.startswith(f"{topic_id}.")},
+                key=lambda sid: (subtopic_mastery(student_kb, sid), random.random()),
+            )
+            subtopics = [sid for sid in subtopics if len(with_subtopic(sid)) >= QUESTIONS_PER_SUBTOPIC]
+            count = max(1, min(len(subtopics), quota // QUESTIONS_PER_SUBTOPIC))
+            if not subtopics:
+                take([q for q in all_mcqs if _covers_topic(q, topic_id)], quota, difficulty)
+                continue
+            for sid, share in zip(subtopics[:count], split_quota(quota, count)):
+                plan.append((sid, share, difficulty))
+    for sid, quota, difficulty in plan:
+        take(with_subtopic(sid), quota, difficulty)
+
+    # Too few questions: fill from the chosen topics, then from the whole bank.
     if len(selected) < limit:
         take([q for q in all_mcqs if any(_covers_topic(q, t) for t in topic_ids)], limit - len(selected), 0.5)
     if len(selected) < limit:
@@ -173,7 +221,11 @@ def create_assessment_node():
         else:
             diff_label = "Intermediate / Medium"
 
-        quiz_questions = select_adaptive_mcqs(topic_ids, student_kb, limit=10)
+        target_subtopics = state.get("quiz_subtopics") or None
+        quiz_questions = select_adaptive_mcqs(
+            topic_ids, student_kb, limit=RETEST_SIZE if target_subtopics else 10,
+            target_subtopics=target_subtopics,
+        )
 
         sys_msg = SystemMessage(
             content=ASSESSMENT_SYSTEM_PROMPT.format(

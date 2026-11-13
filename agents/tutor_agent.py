@@ -3,6 +3,7 @@ import re
 from typing import List, Optional, Tuple
 from langchain_core.messages import SystemMessage, AIMessage
 
+from agents.course_retriever import CourseRetriever
 from agents.llm_factory import get_llm
 
 
@@ -48,6 +49,10 @@ Your goal is to explain concepts clearly, provide clean code examples, and guide
 - Active Misconceptions to Address: {misconceptions}
 - Orchestrator Instruction: {orchestrator_instruction}
 
+### Retrieved Course Material (RAG):
+{retrieved_context}
+Use this material as the source of truth when it is relevant. Do not claim that unsupported details came from the course material. If no material was retrieved, answer from your general knowledge and say that no matching course source was found.
+
 ### STRICT PEDAGOGICAL RULES BASED ON SCORE:
 - If Score < 0.4 (WEAKNESS/NEW): Do NOT give standard explanations. Use a simple, real-world physical analogy first, break down the syntax piece-by-piece, and use a very basic code example. Proactively warn against any listed misconceptions.
 - If Score ≥ 0.8 (STRENGTH): SKIP all basic definitions. Immediately present an advanced edge case, a common bug/pitfall, or an optimization challenge.
@@ -89,14 +94,48 @@ def clean_tutor_output(raw_text: str) -> str:
     return "\n".join(filtered_lines).strip()
 
 
-def create_tutor_node(enable_kb_context: bool = True):
+def create_tutor_node(
+    enable_kb_context: bool = True,
+    retriever: Optional[CourseRetriever] = None,
+):
     llm = get_llm("tutor", enable_thinking=False)
+    course_retriever = (
+        retriever if retriever is not None else CourseRetriever()
+    )
 
     def tutor_node(state: dict) -> dict:
         student_id = state.get("student_id", "Unknown")
         student_kb = state.get("student_kb") if enable_kb_context else None
         topic_focus = state.get("topic_focus", ["Python Basics"])
         instruction = state.get("orchestrator_instruction", "Explain the concept clearly.")
+
+        question = next(
+            (
+                message.content
+                for message in reversed(state.get("messages", []))
+                if getattr(message, "type", None) == "human"
+                and isinstance(message.content, str)
+            ),
+            "",
+        )
+        retrieval_query = " ".join(
+            part for part in [question, *topic_focus] if part
+        )
+        retrieved_chunks = course_retriever.search(
+            retrieval_query,
+            limit=4,
+            method="bm25",
+        )
+        retrieved_context = (
+            course_retriever.format_context(retrieved_chunks)
+            if retrieved_chunks
+            else "No matching course material was retrieved."
+        )
+        chunk_ids = [chunk["chunk_id"] for chunk in retrieved_chunks]
+        print(
+            f"[RAG] Retrieved {len(retrieved_chunks)} course chunks"
+            + (f": {', '.join(chunk_ids)}" if chunk_ids else " (no matches)")
+        )
 
         if enable_kb_context:
             mastery_tag, mastery_score, misconceptions = get_student_topic_context(student_kb, topic_focus)
@@ -114,12 +153,24 @@ def create_tutor_node(enable_kb_context: bool = True):
                 mastery_score=mastery_score,
                 misconceptions=", ".join(misconceptions) if misconceptions else "None recorded",
                 orchestrator_instruction=instruction,
+                retrieved_context=retrieved_context,
             )
         )
 
         response = llm.invoke([sys_msg] + state["messages"])
         raw_content = response.content.strip()
         actual_content = clean_tutor_output(raw_content)
+        if retrieved_chunks:
+            citations = []
+            for chunk in retrieved_chunks:
+                source = chunk["source"]
+                citation = source["title"]
+                if source["section"]:
+                    citation += f" — {source['section']}"
+                if source["url"]:
+                    citation = f"[{citation}]({source['url']})"
+                citations.append(f"{citation} [{chunk['chunk_id']}]")
+            actual_content += "\n\nCourse sources: " + "; ".join(citations)
 
         return {
             "messages": [AIMessage(content=actual_content)],

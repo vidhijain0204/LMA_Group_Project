@@ -100,21 +100,30 @@ separate local server; the application sends requests to `http://127.0.0.1:8080/
 It does not load the model into the application process. The client uses separate
 generation profiles for routing, tutoring, judging, and quiz introductions.
 
-Install the backend packages:
+The app connects to the server through LangChain's OpenAI-compatible client. Both
+packages are included in `requirements.txt`.
 
 ```bash
-python -m pip install mlx-lm langchain-openai
+python -m pip install -r requirements.txt
 ```
 
-In another terminal, start the model server:
+If the model weights are missing from the cache, download them once while online:
 
 ```bash
-mlx_lm.server --model "Qwen/Qwen3-4B-MLX-4bit" --host 127.0.0.1
+hf download Qwen/Qwen3-4B-MLX-4bit
 ```
 
-Then launch the app as described below. Note that the current `requirements.txt` still
-lists the previous Transformers/Hugging Face dependencies and does not yet include
-`mlx-lm` or `langchain-openai`; install the backend packages explicitly as above.
+Then start the server in a separate terminal, using the same model name as the app.
+Offline mode prevents an unexpected network download:
+
+```bash
+export TUTOR_MODEL_NAME="Qwen/Qwen3-4B-MLX-4bit"
+HF_HUB_OFFLINE=1 mlx_lm.server --model "$TUTOR_MODEL_NAME" --host 127.0.0.1 --port 8080
+```
+
+Set `TUTOR_MODEL_NAME` to a different local model directory in both terminals to use
+another model. The app endpoint can be changed with `TUTOR_LLM_BASE_URL` (default
+`http://127.0.0.1:8080/v1`).
 
 
 # AI Python Tutoring System
@@ -186,17 +195,16 @@ The system is built around a LangGraph workflow:
 
 ## Requirements
 
-This project recommends Python 3.11 or 3.12 (see `requirements.txt`) and requires a
-running local MLX-LM server for `Qwen/Qwen3-4B-MLX-4bit`. MLX-LM is intended for
-supported Apple Silicon systems.
+This project requires Python 3.11 or 3.12 and a running local MLX-LM server for
+`Qwen/Qwen3-4B-MLX-4bit`. MLX-LM is intended for supported Apple Silicon systems.
 
-The current dependency manifest has not yet been migrated from the Transformers
-backend. In addition to the repository dependencies, install the MLX model server and
-OpenAI-compatible LangChain client:
+Create the environment and install all dependencies from the repository root:
 
 ```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python -m pip install mlx-lm langchain-openai
 ```
 
 See [Local MLX LLM Backend](#local-mlx-llm-backend) above for how to start the
@@ -208,22 +216,34 @@ From the project root:
 
 ```bash
 cd /path/to/LMA_Group_Project
-python3 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install --upgrade pip
-python3 -m pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
 
 ## How to run the app
 
-### 1) Launch the student web app
+### 1) Start the local model server
+
+In a terminal with the project environment active, run:
+
+```bash
+HF_HUB_OFFLINE=1 mlx_lm.server --model "Qwen/Qwen3-4B-MLX-4bit" --host 127.0.0.1 --port 8080
+```
+
+Keep this terminal open. The app connects to this local server; it does not load the
+model into the Streamlit process.
+
+### 2) Launch the student web app
 
 This is the main usage path for the tutoring system.
 
 ```bash
 cd /path/to/LMA_Group_Project
-python3 -m streamlit run app.py
+source .venv/bin/activate
+python -m streamlit run app.py
 ```
 
 Then open the local URL shown by Streamlit, usually:
@@ -430,18 +450,13 @@ Environment switches: `TUTOR_LLM_JUDGE=0` (rules instead of the LLM turn judge),
 
 Start the MLX-LM server in a separate terminal using the command in
 [Local MLX LLM Backend](#local-mlx-llm-backend). The client expects it at
-`http://127.0.0.1:8080/v1`; model-backed requests fail while that server is stopped or
-unavailable.
+`http://127.0.0.1:8080/v1`. If it cannot start offline, download the model using the
+`hf download` command above, then restart the server.
 
-### `python` command not found
+### `python3.11` command not found
 
-Use:
-
-```bash
-python3
-```
-
-instead of `python` if your system only exposes the Python 3 binary.
+Install Python 3.11 or 3.12 for macOS and recreate the virtual environment with that
+interpreter. The system Python on this computer is too old for the MLX backend.
 
 ### Streamlit does not open
 
@@ -495,7 +510,8 @@ This directory contains a full educational AI tutoring system with:
 The primary entry point for users is:
 
 ```bash
-python3 -m streamlit run app.py
+source .venv/bin/activate
+python -m streamlit run app.py
 ```
 
 If you want to customize the system, start by editing the files in the `agents/` folder and the JSON datasets in `data/`.

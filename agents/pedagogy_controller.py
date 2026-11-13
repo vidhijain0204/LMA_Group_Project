@@ -1,9 +1,30 @@
+"""Pedagogy controller: chooses how the tutor teaches and keeps the student's scores up to date.
+
+Where it fits in the flow:
+- tutor_agent.py calls `choose_teaching_strategy()` before each reply and
+  `record_lesson_strategy()` after it, so every lesson is logged in the student's SKB
+  (data/skb_database.json) under "pedagogy_history".
+- workflow.py calls `record_assessment_outcome()` and `update_subtopic_mastery()` after a quiz
+  has been graded (error_analysis_agent.py) and explained (root_cause_agent.py).
+- tutor_agent.py also reads `recent_error_context()` and `latest_root_cause()` to tell the LLM
+  which errors keep coming back and what the root cause of the last quiz was.
+
+Main contents:
+- STRATEGY_INSTRUCTIONS: the six teaching strategies and the text sent to the LLM for each one.
+- choose_teaching_strategy(): keep the current strategy, or switch it when quizzes show it is
+  not working (accuracy below 60% on 2 quizzes, or the same errors repeating).
+- record_assessment_outcome(): store a quiz result and update the topic mastery score.
+- update_subtopic_mastery(): per-subtopic mastery, updated after every quiz answer.
+- resolve_topic_id(), compact_pedagogy_history(): small helpers used by other modules too.
+"""
+
 from collections import Counter
 from copy import deepcopy
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 
+# Teaching strategies the tutor can use. The text is added to the tutor's system prompt.
 STRATEGY_INSTRUCTIONS = {
     "hints": (
         "Give one targeted hint and a guiding question. Do not reveal the full solution "
@@ -31,13 +52,19 @@ STRATEGY_INSTRUCTIONS = {
     ),
 }
 
+# Order in which strategies are tried when the current one fails (wraps around at the end).
 STRATEGY_CYCLE = tuple(STRATEGY_INSTRUCTIONS)
+# Switch strategy only if the average accuracy of the last 2 quizzes taught with it is below 60%.
 MIN_STRATEGY_ASSESSMENTS = 2
 LOW_ACCURACY_THRESHOLD = 0.6
 
 
 def resolve_topic_id(topic_focus: str) -> str:
-    """Resolve a topic name or ID using the local topic catalog when available."""
+    """Turn a topic name or id (e.g. "Loops" or "T06") into its topic id using topics.json.
+
+    Tries an exact id/name match first, then a partial match. Returns "unknown" for empty input
+    and the input unchanged if nothing matches or the file is missing.
+    """
     query = str(topic_focus or "").strip()
     if not query:
         return "unknown"
@@ -67,6 +94,7 @@ def resolve_topic_id(topic_focus: str) -> str:
 
 
 def _signals_recur(assessments: List[dict]) -> bool:
+    """True if any error signal appears in at least 2 of the last 3 quizzes."""
     recent = assessments[-3:]
     counts = Counter(
         signal_id
@@ -77,6 +105,8 @@ def _signals_recur(assessments: List[dict]) -> bool:
 
 
 def recent_error_context(student_kb: Optional[dict], topic_id: str) -> List[str]:
+    """Return descriptions of the error signals seen in at least 2 of the last 3 quizzes on
+    this topic, most frequent first. The tutor puts them in its prompt."""
     assessments = [
         event
         for event in (student_kb or {}).get("pedagogy_history", [])
@@ -96,7 +126,8 @@ def recent_error_context(student_kb: Optional[dict], topic_id: str) -> List[str]
 
 
 def latest_root_cause(student_kb: Optional[dict], topic_id: str) -> Optional[dict]:
-    """The most recent root cause found for a quiz on this topic (or located in this topic)."""
+    """Return the most recent root cause found for a quiz on this topic, or one located in
+    this topic. None if there is none."""
     for entry in reversed((student_kb or {}).get("root_cause_history", [])):
         if topic_id in (entry.get("quiz_topic_id"), entry.get("topic_id")):
             return entry
@@ -108,7 +139,18 @@ def choose_teaching_strategy(
     topic_id: str,
     mastery_score: float,
 ) -> Tuple[str, str]:
-    """Select a strategy, changing it only after repeated assessment evidence."""
+    """Pick the teaching strategy for the next tutor reply on a topic.
+
+    Rules, checked in order:
+    1. The same error signals keep coming back -> "contrastive_feedback" (if not already used).
+    2. A strategy is already in use -> keep it, unless its last 2 quizzes averaged below 60%,
+       then move to the next strategy in STRATEGY_CYCLE.
+    3. No lesson yet -> choose from the mastery score (low: step_scaffolding,
+       high: self_explanation, otherwise explicit_explanation).
+
+    Returns:
+        (strategy name, short reason shown in the UI and saved in the SKB)
+    """
     history = (student_kb or {}).get("pedagogy_history", [])
     topic_history = [event for event in history if event.get("topic_id") == topic_id]
     lessons = [event for event in topic_history if event.get("event") == "lesson"]
@@ -151,6 +193,8 @@ def choose_teaching_strategy(
 
 
 def _same_lesson(previous: dict, event: dict) -> bool:
+    """True if `event` continues the `previous` lesson: same topic and strategy, and no quiz
+    has graded the previous lesson yet."""
     return (
         previous.get("event") == "lesson" and event.get("event") == "lesson"
         and previous.get("topic_id") == event.get("topic_id")
@@ -182,8 +226,12 @@ def record_lesson_strategy(
     reason: str,
     remediation_for: Optional[str] = None,
 ) -> dict:
-    """One lesson event per teaching block: further messages on the same topic with the same
-    strategy (and no quiz in between) only increase its "turns" count."""
+    """Log a tutor lesson in the SKB's "pedagogy_history" and return the updated copy.
+
+    One lesson event per teaching block: further messages on the same topic with the same
+    strategy (and no quiz in between) only increase its "turns" count. `remediation_for` is the
+    quiz id when the lesson was started by the remediation button; it always starts a new event.
+    """
     updated = deepcopy(student_kb)
     history = compact_pedagogy_history(updated.get("pedagogy_history", []))
     now = datetime.now().isoformat(timespec="seconds")
@@ -194,7 +242,7 @@ def record_lesson_strategy(
         history[-1].update(reason=reason, last_at=now, turns=history[-1].get("turns", 1) + 1)
     else:
         history.append({**event, "turns": 1})
-    updated["pedagogy_history"] = history[-100:]
+    updated["pedagogy_history"] = history[-100:]   # keep only the newest 100 events
     updated["latest_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return updated
 
@@ -208,9 +256,25 @@ def record_assessment_outcome(
     question_results: Optional[List[dict]] = None,
     root_cause: Optional[dict] = None,
 ) -> dict:
-    """Record a quiz outcome. `question_results` keeps the option chosen for every question
-    (needed for counter-evidence and repeat checks later); `root_cause` is the hypothesis the
-    RootCauseAgent selected for this quiz."""
+    """Save a graded quiz in the SKB and update the student's topic scores. Called by workflow.py.
+
+    What it does:
+    - marks every lesson on this topic since the last quiz with this quiz's accuracy
+      (this is how a strategy is judged later in choose_teaching_strategy),
+    - appends an "assessment" event (with per-question answers and the root cause),
+    - counts each error signal in "learning_signals",
+    - updates the topic mastery: new = 0.8 * old + 0.2 * accuracy (first quiz: just accuracy),
+      and rebuilds strengths (>= 0.7) and weaknesses (< 0.7).
+
+    Args:
+        accuracy: share of correct answers (0..1), or None if it could not be computed.
+        error_signals / error_descriptions: error ids from the error analysis and their text.
+        question_results: the option chosen for every question (needed for counter-evidence
+            and repeat checks later).
+        root_cause: the hypothesis root_cause_agent.py selected for this quiz.
+    Returns:
+        The updated copy of the SKB.
+    """
     updated = deepcopy(student_kb)
     history = updated.setdefault("pedagogy_history", [])
     # Every lesson on this topic since the last quiz is evaluated by this quiz.
@@ -292,7 +356,11 @@ DEFAULT_SUBTOPIC_MASTERY = 0.5
 def update_subtopic_mastery(
     student_kb: dict, responses: List[dict], rate: float = SUBTOPIC_LEARNING_RATE
 ) -> Tuple[dict, Dict[str, Dict[str, float]]]:
-    """Returns the updated KB and {subtopic: {"before", "after"}} for the subtopics touched."""
+    """Update the mastery of every subtopic tested in a quiz (stored under "skills" in the SKB).
+
+    A subtopic with no mastery yet starts from its topic's score, or 0.5.
+    Returns the updated SKB copy and {subtopic: {"before", "after"}} for the subtopics touched.
+    """
     updated = deepcopy(student_kb)
     skills = updated.setdefault("skills", {})
     topics = updated.get("topics", {})

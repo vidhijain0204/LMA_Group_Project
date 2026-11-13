@@ -1,3 +1,23 @@
+"""The orchestrator: decides which agent handles each new student message.
+
+Where it fits: agents/workflow.py builds the LangGraph graph and calls the node made by
+`create_orchestrator_node()` first for every message. The node returns a LangGraph `Command`
+that jumps to one of three graph nodes (diagnosis, tutor_agent or assessment_agent) and fills
+the shared state (topic, instruction for the agent, reasoning for the logs, ...).
+
+How a message is routed (in order):
+    1. New student (no record in the SKB, data/skb_database.json) -> diagnosis test.
+    2. A button in the app forced a route (remediation lesson or re-test) -> forced_command().
+    3. The student is answering the tutor's last question (detect_follow_up() + the turn
+       judge in turn_judge.py agree) -> tutor, same lesson, without asking the routing LLM.
+    4. Otherwise the router LLM picks the agent (JSON answer, see ORCHESTRATOR_SYSTEM_PROMPT).
+       The topic is then chosen by rules (choose_quiz_topics / choose_tutor_topic), because a
+       small LLM often picks the wrong topic; the LLM's topic is only a last resort.
+
+It also contains the helpers that read the SKB file (read_skb_database, load_student_kb),
+which app.py, workflow.py and some scripts import from here.
+"""
+
 import json
 from datetime import datetime
 import os
@@ -43,24 +63,29 @@ def normalize_route(label) -> str:
 
 
 class AgentState(TypedDict):
+    """The graph state fields the orchestrator reads and writes (one value per message)."""
     student_id: str
     messages: List[Any]
     turn_analysis: Optional[dict]      # turn judge output for the current message
     forced_route: Optional[dict]       # set by the app's remediation / re-test buttons
     quiz_subtopics: List[str]          # re-test: the subtopics the quiz must cover
-    student_kb: Optional[dict]
-    topic_focus: List[str]
+    student_kb: Optional[dict]         # the student's SKB record (None = new student)
+    topic_focus: List[str]             # topic ids the next agent should work on
     last_active_agent: Optional[str]
-    orchestrator_instruction: str
-    orchestrator_reasoning: str
-    conversation_mode: str
-    tutor_question: str
+    orchestrator_instruction: str      # short directive for the next agent
+    orchestrator_reasoning: str        # why this route was chosen (for logs / UI)
+    conversation_mode: str             # "new_request", "follow_up", "remediation" or "retest"
+    tutor_question: str                # the tutor question being answered (follow-ups only)
 
 
 def read_skb_database(db_path: str = SKB_FILE_PATH) -> List[dict]:
-    """All student records, as a list. A missing, empty or whitespace-only file is an empty
-    database. An unreadable file is renamed to <name>.corrupt-<time> (so the next save does
-    not overwrite it silently) and treated as empty. A single-record dict is wrapped in a list."""
+    """Read every student record from the SKB file and return them as a list of dicts.
+
+    - A missing, empty or whitespace-only file counts as an empty database.
+    - A file that is not valid JSON is renamed to <name>.corrupt-<time> (so the next save does
+      not silently overwrite it) and treated as empty.
+    - A single record saved as a dict is wrapped in a list; non-dict entries are dropped.
+    """
     if not os.path.exists(db_path):
         return []
     try:
@@ -83,9 +108,11 @@ def read_skb_database(db_path: str = SKB_FILE_PATH) -> List[dict]:
 
 
 def load_student_kb(student_id: str, db_path: str = SKB_FILE_PATH) -> Optional[dict]:
+    """Return the SKB record of one student, or None if the student is not in the file."""
     return next((r for r in read_skb_database(db_path) if r.get("student_id") == student_id), None)
 
 
+# System prompt for the router LLM. {topics_summary} is filled with the topic catalog.
 ORCHESTRATOR_SYSTEM_PROMPT = """You are the Master Orchestrator for an AI Python Tutoring System.
 Your job is to analyze the student's message, student knowledge base, and route to the correct agent.
 
@@ -110,11 +137,12 @@ Respond in strict JSON format with keys:
 
 
 def choose_quiz_topics(user_text: str, llm_topics, student_kb: Optional[dict]) -> Tuple[List[str], str]:
-    """Topics for a quiz request, and where they came from.
+    """Choose the topics for a quiz request. Returns (topic ids, explanation of the choice).
 
     1. Topics the student names in the message ("quiz on lists and loops").
-    2. Otherwise ("ready for assessment"), the topics of the last 3 tutor conversations.
-    3. Otherwise, whatever topic the LLM suggested.
+    2. Otherwise ("ready for assessment"), the topics of the last RECENT_TURNS_FOR_QUIZ
+       tutor conversations.
+    3. Otherwise, whatever topic the LLM suggested (or "T01" if it gave none).
     """
     named = topics_mentioned(user_text)
     if named:
@@ -129,6 +157,7 @@ def choose_quiz_topics(user_text: str, llm_topics, student_kb: Optional[dict]) -
     return [str(t) for t in llm_topics if t] or ["T01"], "no topic named and no learning history, so the LLM's topic"
 
 
+# Words that mean the student wants to be tested (used to skip the follow-up logic).
 QUIZ_REQUEST = re.compile(r"\b(quiz|test me|assess\w*|exam|ready for)\b", re.IGNORECASE)
 FOLLOW_UP_MODE = "follow_up"
 FOLLOW_UP_INSTRUCTION = (
@@ -138,19 +167,21 @@ FOLLOW_UP_INSTRUCTION = (
 
 
 def detect_follow_up(state: dict, student_kb: Optional[dict]) -> Optional[dict]:
-    """Is the new message the student's reply to a question the tutor just asked?
+    """Check whether the new message may be the student's reply to the tutor's last question.
 
-    True when all of these hold:
+    It counts as a candidate follow-up when all of these hold:
     - the last thing that happened for this student was a tutor lesson (not a quiz),
     - the previous chat message is from the tutor and ends with a question,
     - the new message does not request a quiz and does not name a different topic.
     Returns the lesson to continue ({"topic_id", "strategy", "tutor_question"}) or None.
+    The turn judge then decides if the message really is an answer.
     """
     messages = state.get("messages", [])
     if len(messages) < 2 or not isinstance(messages[-2], AIMessage):
         return None
     tutor_message = str(messages[-2].content)
-    # The tutor must END with a question (headings like "What is a list?" don't count).
+    # The tutor must END with a question: look for "?" only in the last 3 non-heading lines
+    # (headings like "## What is a list?" don't count).
     closing_lines = [
         line for line in tutor_message.splitlines()
         if line.strip() and not line.lstrip().startswith("#")
@@ -178,7 +209,10 @@ SWITCH_SHARE = 0.7
 def choose_tutor_topic(
     user_text: str, llm_topics, student_kb: Optional[dict], in_conversation: bool
 ) -> Tuple[List[str], str]:
-    """Topic for a tutor request, and where it came from.
+    """Choose the topic for a tutor request. Returns ([topic id], explanation of the choice).
+
+    `in_conversation` is True when there is earlier chat history; only then is the current
+    lesson topic (from the SKB) used as "the conversation's topic". Rules, in order:
 
     1. A topic the student names ("explain dictionaries").
     2. Keyword evidence ("difference between sort and count" -> T08). When the conversation's
@@ -188,7 +222,7 @@ def choose_tutor_topic(
        During a lesson it only switches topic when it is very sure (vote share >= 0.7), so
        "can you give another example?" stays on the conversation's topic.
     4. No keywords and no confident classification: stay on the conversation's topic.
-    5. Otherwise the topic the LLM suggested.
+    5. Otherwise the topic the LLM suggested (only valid ids like "T05"; "T01" if none).
     """
     previous = current_lesson_topic(student_kb) if in_conversation else None
     named = topics_mentioned(user_text)
@@ -197,6 +231,7 @@ def choose_tutor_topic(
     evidence = topic_evidence(user_text)
     if evidence:
         best = max(evidence.values())
+        # All topics with the highest keyword score.
         leaders = sorted(tid for tid, score in evidence.items() if score == best)
         if previous in leaders:
             return [previous], f"keywords point at {', '.join(leaders)}; kept the conversation's topic {previous}"
@@ -208,6 +243,8 @@ def choose_tutor_topic(
         return [leaders[0]], f"keywords in the message point at {leaders[0]} ({evidence})"
     predicted, ranking = classify_topic(user_text)
     share = ranking[0][1] if ranking else 0.0
+    # Outside a lesson any confident prediction is used; during a lesson only a different
+    # topic with a high vote share may replace the current one.
     if predicted and (not previous or (predicted != previous and share >= SWITCH_SHARE)):
         return [predicted], f"no keywords; topic classifier is confident: {predicted} ({ranking})"
     if previous:
@@ -219,8 +256,13 @@ def choose_tutor_topic(
 
 
 def parse_decision(raw_content: str) -> dict:
-    """Extract the JSON routing decision from the LLM output (thinking and code fences removed)."""
-    content = raw_content.replace("\xa0", " ")
+    """Pull the JSON routing decision out of the router LLM's raw text.
+
+    Removes <think> reasoning and ``` code fences, then parses the text between the first "{"
+    and the last "}". Raises ValueError if there is no JSON object or a required key
+    (next_agent, topic_focus, instruction, reasoning) is missing.
+    """
+    content = raw_content.replace("\xa0", " ")    # non-breaking spaces break json.loads
     content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
     if "<think>" in content:                      # thinking cut off before it closed
         content = content.split("<think>")[0].strip()
@@ -237,6 +279,7 @@ def parse_decision(raw_content: str) -> dict:
     return decision
 
 
+# Tutor instruction for a remediation lesson; filled with the root cause found after a quiz.
 REMEDIATION_INSTRUCTION = (
     "Remediation after a quiz. The student's quiz errors point to {subtopic} ({reason}).{misconception} "
     "Re-teach exactly this subtopic: start from what the student most likely misunderstood, give a "
@@ -245,7 +288,12 @@ REMEDIATION_INSTRUCTION = (
 
 
 def forced_command(forced: dict, student_id: str, student_kb: dict) -> Command:
-    """Route chosen by an app button, without the LLM: remediation lesson or re-test quiz."""
+    """Build the route for an app button, without calling the LLM.
+
+    `forced` comes from state["forced_route"]. kind "retest" -> a short quiz on the given
+    subtopics (assessment node); anything else -> a remediation lesson that re-teaches the
+    root-cause subtopic (tutor node), mentioning the likely misconception when known.
+    """
     topic_id = forced.get("topic_id") or "T01"
     common = {
         "student_id": student_id,
@@ -279,8 +327,13 @@ def forced_command(forced: dict, student_id: str, student_kb: dict) -> Command:
 
 
 def create_orchestrator_node(llm=None, judge_llm=None):
-    """Create the orchestrator node. LLMs can be injected for testing; otherwise the local
-    LLM is loaded (router profile for routing, judge profile for the turn judge)."""
+    """Build the orchestrator node function that workflow.py adds to the graph.
+
+    LLMs can be passed in for testing; otherwise the local LLM is loaded with the "router"
+    profile (thinking on) for routing and the "judge" profile for the turn judge. The topic
+    list for the prompt is read once from TOPICS_FILE_PATH (a short fixed list if that fails).
+    Returns `orchestrator_node(state) -> Command`.
+    """
     if llm is None:
         from agents.llm_factory import get_llm
         llm = get_llm("router", enable_thinking=True)
@@ -297,6 +350,7 @@ def create_orchestrator_node(llm=None, judge_llm=None):
             pass
 
     def orchestrator_node(state: AgentState) -> Command:
+        """Route one student message (see the module docstring for the order of the rules)."""
         student_id = state.get("student_id", "S001")
         # workflow.start() has already looked the student up (None = not in the database);
         # read the file only if the caller did not provide the record.
@@ -325,8 +379,8 @@ def create_orchestrator_node(llm=None, judge_llm=None):
             (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)), ""
         )
         # Turn judge: is this an answer to the tutor's question or a new question, the verdict,
-        # and struggle flags. The rules decide when there is no pending question and the message
-        # is a quiz request (no LLM call needed).
+        # and struggle flags. The judge LLM is skipped (rules only) when there is no pending
+        # tutor question and the message is a quiz request.
         candidate = detect_follow_up(state, student_kb)
         needs_judge = bool(candidate) or not QUIZ_REQUEST.search(user_text)
         analysis = analyze_turn(judge_llm if needs_judge else None,
@@ -365,6 +419,7 @@ def create_orchestrator_node(llm=None, judge_llm=None):
             decision = parse_decision(raw_content)
             print("✅ Orchestrator Decision:", decision)
         except Exception as parse_err:
+            # Fall back to the tutor; the topic is fixed below by choose_tutor_topic().
             print(f"⚠️ [ORCHESTRATOR PARSE ERROR]: {parse_err} | Raw: {raw_content}")
             decision = {
                 "next_agent": "tutor_agent",

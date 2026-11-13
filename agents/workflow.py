@@ -1,3 +1,35 @@
+"""The LangGraph workflow that connects all the agents of the tutoring system.
+
+Where it fits:
+    app.py (the Streamlit UI) creates one AdaptiveTutorWorkflow and calls
+    start() for every student message and resume() when the student submits a
+    diagnostic test or a quiz. This file builds the graph and runs it.
+
+The graph:
+    orchestrator --> diagnosis        --> END   (new students: placement test)
+                 --> tutor_agent      --> END   (explanations / follow-up answers)
+                 --> assessment_agent --> END   (adaptive quiz)
+    The orchestrator (agents/orchestrator.py) picks the next node by returning
+    Command(goto=...). Diagnosis and assessment pause the graph with interrupt()
+    to wait for the student's answers; app.py shows a form and calls resume().
+
+After a quiz, assessment_quiz_node does the whole "close the loop" step:
+    1. grade the answers,
+    2. ErrorAnalysisAgent finds error signals per quiz topic,
+    3. RootCauseAgent finds the subtopic/misconception behind the errors with
+       the method chosen in the sidebar (no_kb, kb_low_score or hypothesis), and
+       also runs every method/weight set for comparison,
+    4. pedagogy_controller updates topic and subtopic mastery in the student's
+       knowledge base (the "SKB", data/skb_database.json),
+    5. for a re-test, the learning gain (accuracy before vs after) is stored.
+
+Every step is also recorded in a "trace" (agent, input, output, time). The
+trace is returned to the UI and appended to data/traces/<thread_id>.jsonl,
+one JSON line per start()/resume() call.
+
+Main contents: AgentState (the shared graph state) and AdaptiveTutorWorkflow
+(the nodes, the graph, and the public start/resume/clear_chat_memory API).
+"""
 import json
 import operator
 import os
@@ -30,20 +62,23 @@ from agents.pedagogy_controller import record_assessment_outcome, resolve_topic_
 from agents.struggle_tracker import recent_learning_topics
 from agents.chat_memory import history_messages, lesson_entry, quiz_entry, remember
 
-# --- Configuration & File Path Constants ---
 # Every start()/resume() call appends its agent trace here (one JSON line per call, one file
-# per thread), so a study session can be reviewed after the browser is closed.
+# per thread), so a session can be reviewed after the browser is closed.
+# scripts/evaluate.py also reads these files.
 TRACE_DIR = "data/traces"
-MAX_ITERATIONS = 3
-QUIZ_SIZE = 10
 
 
 class AgentState(TypedDict):
+    """The shared state passed between graph nodes during one turn.
+
+    Each node reads what it needs and returns a dict with the keys it changes.
+    round_log uses operator.add, so new entries are appended instead of replacing the list.
+    """
     # inputs
     student_id: str
     user_input: str
-    chat_history: list
-    messages: list                  
+    chat_history: list              # role/content dicts given by the caller (may be empty)
+    messages: list                  # LangChain messages: earlier exchanges + the new message
     student_answers: dict
     # routing / metadata from orchestrator
     topic_focus: list
@@ -56,24 +91,33 @@ class AgentState(TypedDict):
     forced_route: Optional[dict]    # remediation / re-test chosen by an app button
     quiz_subtopics: list            # re-test: the subtopics the quiz must cover
     # per-round data
-    student_kb: Optional[dict]
+    student_kb: Optional[dict]      # the student's SKB record (None for a new student)
     active_quiz_questions: list
     graded_details: list
     wrong_problems: list
     score_history: list
     # outputs
     round_log: Annotated[list, operator.add]
-    response_output: Any
+    response_output: Any            # the dict returned to app.py (reply text, quiz score, ...)
     last_active_agent: Optional[str]
 
 
 class AdaptiveTutorWorkflow:
+    """Builds the agent graph and runs one student turn at a time.
+
+    It holds one instance of each agent, an in-memory checkpointer (needed to
+    pause at interrupt() and resume later) and the compiled LangGraph app.
+    """
     # Root-cause configuration; app.py sets these from the sidebar before each run.
     root_cause_method = DEFAULT_METHOD
     root_cause_preset = DEFAULT_PRESET
     root_cause_weights = None            # custom weights; None = use the preset
 
     def __init__(self, db_filepath: str = SKB_FILE_PATH):
+        """Create all agents and compile the graph.
+
+        Args: db_filepath - path of the SKB JSON file (all students' knowledge bases).
+        """
         self.db_filepath = db_filepath
         self.diagnosis_agent = DiagnosisAgent(db_filepath=db_filepath)
 
@@ -86,12 +130,16 @@ class AdaptiveTutorWorkflow:
         # Steps executed during the current start()/resume() call, returned to the UI.
         self._trace = []
 
+        # Saves graph state per thread_id in memory, so a paused quiz can be resumed.
         self.checkpointer = MemorySaver()
         self.app = self._build_graph()
 
     # ------------------------------------------------------------------ trace
     def _log(self, agent: str, title: str, inputs: dict, outputs: dict, started: float = None) -> None:
-        """Record one agent step (who ran, with which input, and what it produced)."""
+        """Record one agent step (who ran, with which input, and what it produced).
+
+        `started` is a time.perf_counter() value; if given, the step's duration is stored too.
+        """
         if not hasattr(self, "_trace"):
             self._trace = []
         self._trace.append({
@@ -104,6 +152,7 @@ class AdaptiveTutorWorkflow:
 
     @staticmethod
     def _kb_summary(student_kb: Optional[dict]) -> dict:
+        """Short summary of a student's KB for the trace (topic scores, weaknesses, counts)."""
         if not student_kb:
             return {"registered": False}
         return {
@@ -119,6 +168,7 @@ class AdaptiveTutorWorkflow:
     # The orchestrator routes by returning Command(goto=<node name>). The annotation lists the
     # possible targets so LangGraph knows the graph's edges (e.g. when drawing it).
     def orchestrator_node(self, state: AgentState) -> Command[Literal["diagnosis", "tutor_agent", "assessment_agent"]]:
+        """Entry node: ask the orchestrator where to send this message, and log its decision."""
         print("\n🔵 [Orchestrator] Analyzing student status and intent...")
         started = time.perf_counter()
         command = self.orchestrator_node_fn(state)
@@ -127,6 +177,7 @@ class AdaptiveTutorWorkflow:
             "Orchestrator", f"Routed to {command.goto}",
             {
                 "user_message": state.get("user_input"),
+                # Earlier messages only ([:-1] drops the new one), shortened to 120 characters.
                 "chat_history": [
                     f"{'student' if isinstance(m, HumanMessage) else 'tutor'}: {str(m.content)[:120]}"
                     for m in state.get("messages", [])[:-1]
@@ -147,8 +198,14 @@ class AdaptiveTutorWorkflow:
         return command
 
     def diagnosis_node(self, state: AgentState) -> dict:
+        """Run the placement test for a new student and create their knowledge base.
+
+        The node pauses at interrupt() so app.py can show the questions. When the
+        student submits, resume() runs the node again and interrupt() returns the answers.
+        """
         print("\n🟢 [Diagnosis] Administering diagnostic assessment test...")
         questions = self.diagnosis_agent.get_questions()
+        # interrupt() raises GraphInterrupt the first time (to pause); we log the pause and re-raise.
         try:
             answers = interrupt({
                 "type": "diagnosis",
@@ -189,6 +246,13 @@ class AdaptiveTutorWorkflow:
         }
 
     def tutor_node(self, state: AgentState) -> dict:
+        """Run the tutor agent, log the chosen teaching strategy, and save the exchange.
+
+        The tutor node (agents/tutor_agent.py) picks the strategy via the pedagogy
+        controller and writes the answer. Here we compare the strategy with the last
+        lesson on the same topic (for logging), add the exchange to chat memory, and
+        save the updated KB.
+        """
         print(f"\n🟡 [Tutor] Handling explanation request for topic: {state.get('topic_focus')}")
         started = time.perf_counter()
         result = self.tutor_node_fn(state)
@@ -198,6 +262,7 @@ class AdaptiveTutorWorkflow:
         if not isinstance(topic_focus, list):
             topic_focus = [str(topic_focus)]
         topic_id = resolve_topic_id(topic_focus[0] if topic_focus else "unknown")
+        # Strategy of the most recent lesson on this topic (from the KB before this turn), or None.
         previous_strategy = next(
             (
                 event.get("strategy")
@@ -228,6 +293,7 @@ class AdaptiveTutorWorkflow:
             {"strategy": strategy, "changed": previous_strategy not in (None, strategy),
              "reason": result["pedagogy_reason"]},
         )
+        # The tutor turn just logged by the struggle tracker (None if nothing was logged).
         logged_turn = ((student_kb or {}).get("learning_conversations") or [None])[-1]
         self._log(
             "Tutor Agent",
@@ -276,11 +342,20 @@ class AdaptiveTutorWorkflow:
         }
 
     def assessment_quiz_node(self, state: AgentState) -> dict:
+        """Give an adaptive quiz, then grade it and analyse the errors.
+
+        Steps: select questions -> pause for answers (interrupt) -> grade ->
+        error analysis per topic -> root-cause analysis -> update topic and
+        subtopic mastery in the KB -> learning gain if this is a re-test ->
+        save the KB. Returns the score, root cause, hypotheses and method
+        comparison for the UI.
+        """
         print(f"\n🟣 [Assessment] Generating adaptive quiz for topic: {state.get('topic_focus')}")
         started = time.perf_counter()
         result = self.assessment_node_fn(state)
         intro_text = result["messages"][-1].content
         quiz_questions = result["active_quiz_questions"]
+        # A question's id may be under "prob_id" or "problem_id", so both are checked below.
         # On resume LangGraph re-runs this node from the top; only log the selection the first time.
         if not getattr(self, "_resuming", False):
             self._log(
@@ -318,12 +393,10 @@ class AdaptiveTutorWorkflow:
             correct_val = q.get("correct_option")
             student_val = answers.get(pid)
             is_correct = (student_val == correct_val)
-            
             if is_correct:
                 correct_count += 1
             else:
                 wrong_problems.append(q)
-                
             graded_details.append({"prob_id": pid, "is_correct": is_correct})
 
         total = len(quiz_questions)
@@ -364,6 +437,7 @@ class AdaptiveTutorWorkflow:
         )
 
         student_kb = state.get("student_kb")
+        # Unique quiz id: "<student>-<date-time>-<4 random hex chars>".
         quiz_id = f"{state.get('student_id')}-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:4]}"
         forced = state.get("forced_route") or {}
         retest_of = forced.get("quiz_id") if forced.get("kind") == "retest" else None
@@ -508,8 +582,15 @@ class AdaptiveTutorWorkflow:
     @staticmethod
     def _learning_gain(student_kb: dict, original_quiz_id: str, retest_quiz_id: str,
                        subtopics: list, retest_responses: list) -> dict:
-        """Accuracy on the re-tested subtopics before (original quiz) and after (re-test)."""
+        """Measure what the review changed: accuracy on the re-tested subtopics before and after.
+
+        "Before" comes from the original quiz's responses stored in the KB, "after"
+        from the re-test. gain = after - before. Also counts the remediation lesson
+        turns given for the original quiz.
+        Returns the record that is appended to student_kb["retests"].
+        """
         def accuracy(responses):
+            """(accuracy, number of questions) over responses that test one of `subtopics`."""
             relevant = [r for r in responses if set(r.get("subtopics", [])) & set(subtopics)]
             return (round(sum(bool(r.get("is_correct")) for r in relevant) / len(relevant), 2)
                     if relevant else None), len(relevant)
@@ -538,10 +619,12 @@ class AdaptiveTutorWorkflow:
         }
 
     def _save_trace(self, thread_id: str, trace: list, status: str) -> None:
+        """Append one call's trace as a JSON line to TRACE_DIR/<thread_id>.jsonl."""
         if not trace or not TRACE_DIR:
             return
         try:
             os.makedirs(TRACE_DIR, exist_ok=True)
+            # Replace characters that are not safe in a file name.
             safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in thread_id)
             with open(os.path.join(TRACE_DIR, f"{safe_name}.jsonl"), "a", encoding="utf-8") as trace_file:
                 trace_file.write(json.dumps({
@@ -554,6 +637,7 @@ class AdaptiveTutorWorkflow:
             print(f"[Trace] Could not save trace: {error}")
 
     def _save_student_kb(self, student_kb: dict) -> None:
+        """Replace this student's record in the SKB file and write the file back."""
         import json
         import os
 
@@ -566,6 +650,7 @@ class AdaptiveTutorWorkflow:
         parent = os.path.dirname(self.db_filepath)
         if parent:
             os.makedirs(parent, exist_ok=True)
+        # Write to a temporary file first, then swap it in, so a crash cannot leave a half-written file.
         temporary_path = self.db_filepath + ".tmp"
         with open(temporary_path, "w", encoding="utf-8") as db_file:
             json.dump(database, db_file, indent=2)
@@ -573,7 +658,8 @@ class AdaptiveTutorWorkflow:
 
     # ------------------------------------------------------------------ graph
     def _build_graph(self):
-        g = StateGraph(AgentState)
+        """Create the graph: orchestrator -> one of diagnosis / tutor / assessment -> END."""
+        g =StateGraph(AgentState)
         g.add_node("orchestrator", self.orchestrator_node)
         g.add_node(DIAGNOSIS_NODE, self.diagnosis_node)
         g.add_node(TUTOR_NODE, self.tutor_node)
@@ -593,12 +679,21 @@ class AdaptiveTutorWorkflow:
     # ------------------------------------------------------------- public API
     def start(self, student_id: str, user_input: str, student_answers: dict = None,
               chat_history: list = None, thread_id: str = None, forced_route: dict = None) -> dict:
-        """Run one turn. `forced_route` skips the routing LLM (app buttons):
-        {"kind": "remediation", "quiz_id", "topic_id", "subtopic_id", "subtopic_name", "reason", "misconception"}
-        {"kind": "retest", "quiz_id", "topic_id", "subtopics": [...]}"""
+        """Run one turn for a new student message (called by app.py).
+
+        Args:
+            student_id: e.g. "S001"; their KB is loaded from the SKB file.
+            user_input: the student's message.
+            chat_history: optional role/content dicts; if None, the KB's chat memory is used.
+            thread_id: checkpointer thread (default "<student_id>-session").
+            forced_route: set by the app's buttons after a quiz to skip the routing LLM:
+                {"kind": "remediation", "quiz_id", "topic_id", "subtopic_id", "subtopic_name", "reason", "misconception"}
+                {"kind": "retest", "quiz_id", "topic_id", "subtopics": [...]}
+        Returns: the result dict from _invoke() (a reply, or a paused diagnosis/quiz).
+        """
         thread_id = thread_id or f"{student_id}-session"
         student_kb = load_student_kb(student_id, self.db_filepath)
-        
+
         # Earlier messages: by default the student's chat memory from the KB (latest 3
         # exchanges, summarised). An explicit chat_history (role/content dicts) overrides it.
         if chat_history is None:
@@ -643,11 +738,19 @@ class AdaptiveTutorWorkflow:
             self._save_student_kb(student_kb)
 
     def resume(self, thread_id: str, answers: dict) -> dict:
+        """Continue a paused diagnosis or quiz with the student's answers ({question_id: answer})."""
         return self._invoke(Command(resume=answers), thread_id)
 
     def _invoke(self, payload, thread_id: str) -> dict:
+        """Run the graph and turn its result into the dict app.py expects.
+
+        payload is either the initial state (start) or Command(resume=...) (resume).
+        Returns {"status": "waiting_for_interrupt", "payload": ...} if the graph paused,
+        otherwise the node's response_output plus round_log; both include the trace.
+        """
         config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 50}
         self._trace = []
+        # Tells assessment_quiz_node not to log the question selection a second time on resume.
         self._resuming = isinstance(payload, Command)
         result = self.app.invoke(payload, config)
         trace, self._trace = self._trace, []

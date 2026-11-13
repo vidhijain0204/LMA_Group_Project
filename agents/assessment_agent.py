@@ -1,3 +1,20 @@
+"""Assessment agent: the LangGraph node that builds a personalized multiple-choice quiz.
+
+Where it fits in the flow:
+- orchestrator.py routes a message here when the student asks for a quiz (or a re-test after a
+  remediation lesson); workflow.py registers `create_assessment_node()` as "assessment_agent".
+- The node picks questions from the MCQ bank with `select_adaptive_mcqs()` and asks the LLM only
+  for a short introduction. The questions themselves are shown by the quiz form in app.py.
+- After the student submits, workflow.py grades the answers and passes them on to
+  error_analysis_agent.py and root_cause_agent.py (not this file).
+
+How questions are chosen (select_adaptive_mcqs):
+- each focus topic gets an equal share; inside a topic the weakest subtopics (lowest mastery
+  in the SKB) get the questions, 2 per subtopic,
+- a re-test puts all questions on the given subtopics,
+- questions close to the target difficulty and not seen before are preferred.
+"""
+
 import json
 import os
 import random
@@ -15,6 +32,7 @@ TOPICS_FILEPATH = "data/common/topics.json"
 
 
 def load_all_mcqs() -> List[Dict[str, Any]]:
+    """Load the whole MCQ bank (an empty list if the file is missing). Also used by workflow.py."""
     if not os.path.exists(MCQS_FILEPATH):
         return []
     with open(MCQS_FILEPATH, "r", encoding="utf-8") as f:
@@ -47,14 +65,17 @@ def get_topic_id_from_name(topic_query: str) -> str:
 
 
 def determine_target_difficulty(student_kb: Optional[dict], topic_focus: str) -> float:
+    """Pick the question difficulty (0..1) to aim for on a topic, from the student's score:
+    0.9 for strong topics (score >= 0.8), 0.2 for weak ones (< 0.4), else 0.5.
+    A student with no scores yet gets 0.3 (fairly easy)."""
     if not student_kb or not student_kb.get("topics"):
-        return 0.3  
+        return 0.3
 
     scores = student_kb.get("topics", {})
     strengths = set(student_kb.get("strengths", []))
     weaknesses = set(student_kb.get("weaknesses", []))
 
-    score = 0.5
+    score = 0.5   # default when the topic has no score yet
     for tid, s in scores.items():
         if tid.lower() in topic_focus.lower() or topic_focus.lower() in tid.lower():
             score = float(s)
@@ -69,24 +90,25 @@ def determine_target_difficulty(student_kb: Optional[dict], topic_focus: str) ->
 
 
 def _covers_topic(question: dict, topic_id: str) -> bool:
+    """True if the question is tagged with the topic or with one of its subtopics."""
     return topic_id in question.get("related_topics", []) or any(
         str(sub).startswith(f"{topic_id}.") for sub in question.get("related_subtopics", [])
     )
 
 
 def split_quota(limit: int, parts: int) -> List[int]:
-    """10 questions over 3 topics -> [4, 3, 3]."""
+    """Split `limit` questions as evenly as possible into `parts`: 10 over 3 -> [4, 3, 3]."""
     return [limit // parts + (i < limit % parts) for i in range(parts)]
 
 
 # At least this many questions per focus subtopic, so one lucky guess or slip does not decide
 # the counter-evidence (CE) of a subtopic.
 QUESTIONS_PER_SUBTOPIC = 2
-RETEST_SIZE = 6
+RETEST_SIZE = 6   # number of questions in a re-test after remediation (a normal quiz has 10)
 
 
 def seen_question_ids(student_kb: Optional[dict]) -> set:
-    """Questions this student already answered in earlier quizzes."""
+    """Return the ids of the questions this student already answered in earlier quizzes."""
     return {
         response.get("prob_id")
         for event in (student_kb or {}).get("pedagogy_history", [])
@@ -96,19 +118,22 @@ def seen_question_ids(student_kb: Optional[dict]) -> set:
 
 
 def subtopic_mastery(student_kb: Optional[dict], subtopic_id: str) -> float:
+    """The student's mastery of a subtopic; falls back to the topic score, then to 0.5."""
     kb = student_kb or {}
     return float(kb.get("skills", {}).get(subtopic_id, kb.get("topics", {}).get(subtopic_id.split(".")[0], 0.5)))
 
 
 def select_adaptive_mcqs(topic_focus, student_kb: Optional[dict], limit: int = 10,
                          target_subtopics: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-    """Pick `limit` questions.
+    """Pick `limit` questions from the MCQ bank for this student.
 
     - Each topic in `topic_focus` gets an equal share; inside a topic the share goes to its
       weakest subtopics (lowest subtopic mastery), QUESTIONS_PER_SUBTOPIC questions each.
     - `target_subtopics` (a re-test after remediation) puts all questions on those subtopics.
     - Questions near the topic's target difficulty are preferred, and questions the student has
       not answered before are preferred over repeats.
+    - If there are still too few questions, the rest is filled from the chosen topics and then
+      from the whole bank.
     """
     all_mcqs = load_all_mcqs()
     focus = topic_focus if isinstance(topic_focus, list) else [topic_focus]
@@ -118,14 +143,18 @@ def select_adaptive_mcqs(topic_focus, student_kb: Optional[dict], limit: int = 1
     selected, used = [], set()
 
     def take(pool, count, target_diff):
+        """Add the `count` best unused questions from `pool` to the quiz."""
         pool = [q for q in pool if q["prob_id"] not in used]
         random.shuffle(pool)       # random order among equally good questions
+        # Unseen questions first, then closest to the target difficulty (rounded to 0.1 so
+        # that near-equal questions stay in random order).
         pool.sort(key=lambda q: (q["prob_id"] in seen, round(abs(float(q.get("difficulty", 0.5)) - target_diff), 1)))
         for q in pool[:count]:
             selected.append(q)
             used.add(q["prob_id"])
 
     def with_subtopic(sid):
+        """All bank questions tagged with subtopic `sid`."""
         return [q for q in all_mcqs if sid in q.get("related_subtopics", [])]
 
     plan = []      # (subtopic, number of questions, target difficulty)
@@ -135,13 +164,15 @@ def select_adaptive_mcqs(topic_focus, student_kb: Optional[dict], limit: int = 1
     else:
         for topic_id, quota in zip(topic_ids, split_quota(limit, len(topic_ids))):
             difficulty = determine_target_difficulty(student_kb, topic_id)
+            # The topic's subtopics, weakest first (ties in random order), keeping only those
+            # with enough questions in the bank.
             subtopics = sorted(
                 {sid for q in all_mcqs for sid in q.get("related_subtopics", []) if sid.startswith(f"{topic_id}.")},
                 key=lambda sid: (subtopic_mastery(student_kb, sid), random.random()),
             )
             subtopics = [sid for sid in subtopics if len(with_subtopic(sid)) >= QUESTIONS_PER_SUBTOPIC]
-            count = max(1, min(len(subtopics), quota // QUESTIONS_PER_SUBTOPIC))
-            if not subtopics:
+            count = max(1, min(len(subtopics), quota // QUESTIONS_PER_SUBTOPIC))   # subtopics to cover
+            if not subtopics:   # no tagged subtopics: take any questions on the topic
                 take([q for q in all_mcqs if _covers_topic(q, topic_id)], quota, difficulty)
                 continue
             for sid, share in zip(subtopics[:count], split_quota(quota, count)):
@@ -158,7 +189,7 @@ def select_adaptive_mcqs(topic_focus, student_kb: Optional[dict], limit: int = 1
 
 
 def clean_llm_output(raw_text: str) -> str:
-    """Return only the model's answer.
+    """Return only the model's answer from the raw LLM output.
 
     langchain-huggingface ignores the pipeline_kwargs set in llm_factory.py, so the pipeline returns
     the full text: the whole chat prompt (<|im_start|>system ... ) followed by the answer, which may
@@ -187,6 +218,7 @@ def keep_introduction_only(text: str) -> str:
     return "\n".join(kept).strip()
 
 
+# System prompt for the quiz introduction. The LLM writes only the intro, never the questions.
 ASSESSMENT_SYSTEM_PROMPT = """You are an expert AI Assessment Coach.
 The student is taking a personalized quiz on: {topic_focus}.\n(If several topics are listed, the quiz mixes questions from all of them.)
 Student Mastery Score: {mastery_score} (Target Test Difficulty: {difficulty_label}).
@@ -199,9 +231,15 @@ the questions are shown to the student separately.
 
 
 def create_assessment_node():
+    """Build the assessment node function for the LangGraph workflow."""
     llm = get_llm("quiz", enable_thinking=False)
 
     def assessment_node(state: dict) -> dict:
+        """Select the quiz questions and write a short introduction.
+
+        Returns the state updates: the intro message and "active_quiz_questions", which app.py
+        shows as the quiz form. `state["quiz_subtopics"]` set means a re-test on those subtopics.
+        """
         student_id = state.get("student_id", "Unknown")
         student_kb = state.get("student_kb")
         topic_focus_list = state.get("topic_focus") or ["Python Basics"]
@@ -212,6 +250,8 @@ def create_assessment_node():
         scores = student_kb.get("topics", {}) if student_kb else {}
         topic_ids = list(dict.fromkeys(get_topic_id_from_name(t) for t in topic_focus_list))
         topic_focus = ", ".join(topic_ids)
+        # Average mastery over the quiz topics (0.5 for an unscored topic); only used for the
+        # difficulty label in the intro prompt.
         score = round(sum(float(scores.get(t, 0.5)) for t in topic_ids) / len(topic_ids), 2)
 
         if score >= 0.8:
@@ -238,7 +278,7 @@ def create_assessment_node():
 
         response = llm.invoke([sys_msg] + state["messages"])
         intro_text = keep_introduction_only(clean_llm_output(response.content))
-        if not intro_text:
+        if not intro_text:   # fallback if the model wrote nothing usable
             intro_text = (f"Here is a quiz tailored to your current level on {topic_focus}. "
                           "Take your time and good luck!")
 

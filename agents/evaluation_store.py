@@ -1,38 +1,38 @@
-"""Study data collected in the app, kept apart from the knowledge base.
+"""Saves the students' answers to the "why did you get these wrong?" form (the evaluation labels).
 
-    data/evaluation/labels.jsonl     the student's own reason for each wrong quiz answer, and the
-                                     subtopic they think caused most mistakes (ground truth for
-                                     the root-cause evaluation; expert labels can be added with
-                                     scripts/evaluate.py --import-labels)
-    data/evaluation/feedback.jsonl   end-of-session ratings and comments
-    data/evaluation/consent.jsonl    one line per student id that agreed to take part
-    data/backups/<time>/             copies of the KB, traces and evaluation files
+Where it fits: after a quiz, app.py shows an optional form where the student says why they got
+each question wrong and which subtopic caused most of their mistakes. app.py saves the answers
+with append("labels", ...). scripts/eval_data.py reads them back as the ground truth ("true
+root cause") for scripts/evaluate.py and scripts/fit_weights.py.
 
-One JSON object per line, appended, so a crash never corrupts earlier records.
+The labels are kept apart from the knowledge base, in data/evaluation/labels.jsonl:
+one JSON object per line, only ever appended, so a crash never corrupts earlier records.
+Expert labels imported with scripts/evaluate.py --import-labels go to a separate file in the
+same folder (read() also accepts a file path).
+
+Main contents: append(), read(), labelled_quiz_ids() and next_anonymous_id().
 """
 
 import json
 import os
 import re
-import shutil
 from datetime import datetime
 from typing import Iterable, List, Optional
 
 EVALUATION_DIR = "data/evaluation"
-BACKUP_DIR = "data/backups"
-KEEP_BACKUPS = 30
+# Short name -> file name inside EVALUATION_DIR.
 FILES = {
     "labels": "labels.jsonl",
-    "feedback": "feedback.jsonl",
-    "consent": "consent.jsonl",
 }
 
 
 def path_of(kind: str) -> str:
+    """Full path of a stored file, e.g. path_of("labels") -> data/evaluation/labels.jsonl."""
     return os.path.join(EVALUATION_DIR, FILES[kind])
 
 
 def append(kind: str, record: dict) -> dict:
+    """Add one record (with a "created_at" time stamp) as a new line. Returns the saved record."""
     os.makedirs(EVALUATION_DIR, exist_ok=True)
     record = {"created_at": datetime.now().isoformat(timespec="seconds"), **record}
     with open(path_of(kind), "a", encoding="utf-8") as f:
@@ -41,6 +41,10 @@ def append(kind: str, record: dict) -> dict:
 
 
 def read(kind_or_path: str) -> List[dict]:
+    """All records of a file, given its short name ("labels") or a path to any .jsonl file.
+
+    A missing file gives an empty list; lines that are not valid JSON are skipped.
+    """
     path = path_of(kind_or_path) if kind_or_path in FILES else kind_or_path
     if not os.path.exists(path):
         return []
@@ -55,36 +59,19 @@ def read(kind_or_path: str) -> List[dict]:
     return records
 
 
-def has_consent(student_id: str) -> bool:
-    return any(r.get("student_id") == student_id and r.get("consent") for r in read("consent"))
-
-
 def labelled_quiz_ids(student_id: Optional[str] = None) -> set:
+    """Ids of the quizzes that already have a label (for one student, or for everyone).
+
+    app.py uses this so the form is not shown again for a quiz that was already answered.
+    """
     return {r.get("quiz_id") for r in read("labels") if not student_id or r.get("student_id") == student_id}
 
 
 def next_anonymous_id(existing_ids: Iterable[str]) -> str:
-    """S101, S102, ... : the next number above every id in the KB and the consent file."""
-    ids = set(existing_ids) | {r.get("student_id", "") for r in read("consent")}
+    """Next anonymous student id: S101, S102, ... (one above every existing id, at least S101).
+
+    Used by the "New anonymous student" button in app.py.
+    """
+    ids = set(existing_ids)
     numbers = [int(m.group(1)) for i in ids if (m := re.fullmatch(r"S(\d+)", str(i)))]
     return f"S{max(numbers + [100]) + 1:03d}"
-
-
-def backup_data(sources: Iterable[str] = ("data/skb_database.json", "data/traces", EVALUATION_DIR),
-                reason: str = "manual") -> Optional[str]:
-    """Copy the study data to data/backups/<time>-<reason>/; keeps the newest KEEP_BACKUPS."""
-    existing = [s for s in sources if os.path.exists(s)]
-    if not existing:
-        return None
-    target = os.path.join(BACKUP_DIR, f"{datetime.now():%Y%m%d-%H%M%S}-{reason}")
-    os.makedirs(target, exist_ok=True)
-    for source in existing:
-        destination = os.path.join(target, os.path.basename(source.rstrip("/")))
-        if os.path.isdir(source):
-            shutil.copytree(source, destination, dirs_exist_ok=True)
-        else:
-            shutil.copy2(source, destination)
-    backups = sorted(d for d in os.listdir(BACKUP_DIR) if os.path.isdir(os.path.join(BACKUP_DIR, d)))
-    for old in backups[:-KEEP_BACKUPS]:
-        shutil.rmtree(os.path.join(BACKUP_DIR, old), ignore_errors=True)
-    return target

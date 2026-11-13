@@ -1,5 +1,10 @@
 """Turn judge: one short LLM call that classifies a student message before it is routed.
 
+Where it fits: orchestrator.py calls analyze_turn() for each new message. Its result decides
+whether the message continues the current lesson (an answer to the tutor's question) or is
+routed as a new request, and its flags are logged with the turn by the tutor.
+
+The judge returns:
     kind       "answer"        the message answers the question the tutor just asked
                "new_question"  the student asks something new instead of answering
                "other"         thanks, greetings, quiz requests, ...
@@ -12,6 +17,9 @@ be parsed, rule-based values are used instead (source "rules"). The rule values 
 next to the judge's ("rule_flags") so the two can be compared during evaluation.
 
 Set TUTOR_LLM_JUDGE=0 to use only the rules (no extra LLM call per message).
+
+Main contents: the judge prompt, rule_analysis() (fallback), parse_judgement() (reads the LLM
+reply) and analyze_turn() (the entry point).
 """
 
 import json
@@ -46,6 +54,7 @@ JUDGE_USER_TEMPLATE = """Tutor's last question to the student: {question}
 
 Student's message: {message}"""
 
+# Rule helpers: a message that starts like a question, and a request for a quiz.
 QUESTION_START = re.compile(
     r"^\s*(what|why|how|when|where|which|who|can|could|should|is|are|does|do|explain|tell me|difference)\b",
     re.IGNORECASE,
@@ -54,11 +63,15 @@ QUIZ_REQUEST = re.compile(r"\b(quiz|test me|assess\w*|exam|ready for)\b", re.IGN
 
 
 def judge_enabled() -> bool:
+    """False when TUTOR_LLM_JUDGE=0 (rules only)."""
     return os.environ.get("TUTOR_LLM_JUDGE", "1") != "0"
 
 
 def rule_analysis(question: str, message: str) -> dict:
-    """Rule-based fallback (also stored for comparison)."""
+    """Rule-based version of the judgement, used when the LLM judge fails or is turned off.
+
+    It never gives a verdict. It is also stored next to the LLM result for comparison.
+    """
     flags = detect_struggle(message)
     text = str(message or "").strip()
     if QUIZ_REQUEST.search(text):
@@ -73,6 +86,11 @@ def rule_analysis(question: str, message: str) -> dict:
 
 
 def parse_judgement(raw: str) -> Optional[dict]:
+    """Read the judge's JSON reply into a clean dict, or None if it is unusable.
+
+    Removes <think> blocks, takes the outermost {...}, checks that kind is valid, keeps the
+    verdict only for answers, and accepts "true"/"false" strings for the two flags.
+    """
     content = re.sub(r"<think>.*?</think>", "", str(raw or ""), flags=re.DOTALL)
     start, end = content.find("{"), content.rfind("}")
     if start == -1 or end == -1:
@@ -97,7 +115,15 @@ def parse_judgement(raw: str) -> Optional[dict]:
 
 
 def analyze_turn(llm, question: str, message: str) -> dict:
-    """Judge's analysis of the message, falling back to the rules."""
+    """Classify one student message: the LLM judge's result, or the rules if that fails.
+
+    Args:
+        llm: the judge model, or None to use the rules only.
+        question: the tutor's pending question ("" if there is none).
+        message: the student's message.
+    Returns: {"kind", "verdict", "confused", "asks_hint", "source", "rule_flags"}, plus
+    "judge_error" when the LLM call failed.
+    """
     rules = rule_analysis(question, message)
     result = None
     error = None
@@ -113,6 +139,7 @@ def analyze_turn(llm, question: str, message: str) -> dict:
                 error = "unparseable judge output"
         except Exception as exc:              # the judge must never break the tutor
             error = f"{type(exc).__name__}: {exc}"
+    # Without a pending question the message cannot be an answer.
     if result is not None and not question and result["kind"] == "answer":
         result["kind"] = "new_question"
     analysis = dict(result or rules)

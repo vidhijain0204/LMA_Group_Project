@@ -136,7 +136,8 @@ The project is designed to:
 - `data/` — JSON course data, question banks, and student knowledge base.
 - `models/` — model/schema definitions for the student knowledge base.
 - `requirements.txt` — Python dependencies.
-- `mid_report.pdf` and `part1_flow.jpeg` — project report and architecture diagram.
+- `scripts/` — offline tools: misconception tagging, weight fitting and the evaluation report.
+- `docs/` — `mid_report.pdf` (project report) and `part1_flow.jpeg` (architecture diagram).
 
 ## High-level architecture
 
@@ -149,39 +150,50 @@ The system is built around a LangGraph workflow:
 2. The `DiagnosisAgent` asks a diagnostic set of MCQs and stores a student knowledge base.
 3. The `TutorAgent` uses the student's mastery profile and topic focus to explain concepts adaptively.
 4. The `AssessmentAgent` selects a quiz tailored to the student's current performance.
-5. The `CourseRetriever` indexes course corpus chunks and retrieves relevant educational material by topic and difficulty.
+5. After each quiz, the `ErrorAnalysisAgent` grades it and the `RootCauseAgent` finds the subtopic
+   (and, when tagged, the misconception) that most likely caused the wrong answers.
 
 ## Project structure
 
 ```text
 .
 ├── agents/
-│   ├── assessment_agent.py      # Adaptive quiz generation and grading
-│   ├── course_retriever.py      # TF-IDF matching over course chunks
-│   ├── diagnosis_agent.py       # Diagnostic onboarding and SKB creation
-│   ├── error_analysis_agent.py  # Quiz outcome and recurring error analysis
-│   ├── llm_factory.py           # Local LLM initialization for Qwen model
-│   ├── orchestrator.py          # Routes requests to the right agent
-│   ├── pedagogy_controller.py   # Rule-based strategy selection and SKB history
-│   ├── tutor_agent.py           # Personalized tutor behavior
-│   ├── workflow.py              # LangGraph workflow and state machine
-│   └── __init__.py              # package marker (if present)
+│   ├── assessment_agent.py      # Picks adaptive quiz questions
+│   ├── chat_memory.py           # Short summaries of the last 3 exchanges
+│   ├── course_retriever.py      # TF-IDF search over course text (not connected yet)
+│   ├── diagnosis_agent.py       # Diagnostic onboarding test and SKB creation
+│   ├── error_analysis_agent.py  # Grades a quiz and lists error signals per topic
+│   ├── evaluation_store.py      # Saves the students' "why was this wrong?" answers
+│   ├── llm_factory.py           # Loads the local Qwen model
+│   ├── orchestrator.py          # Routes each message to the right agent
+│   ├── pedagogy_controller.py   # Teaching strategy choice and mastery updates
+│   ├── root_cause_agent.py      # Finds the root cause of quiz errors (3 methods)
+│   ├── struggle_tracker.py      # Logs learning turns and computes Learning Struggle
+│   ├── topic_classifier.py      # Detects the topic of a student message
+│   ├── turn_judge.py            # Classifies a message (answer / new question, confusion)
+│   ├── tutor_agent.py           # Writes the lesson with the chosen strategy
+│   └── workflow.py              # LangGraph graph that connects all agents
 ├── data/
 │   ├── common/
-│   │   ├── corpus.jsonl         # Course material chunks
-│   │   ├── mcqs_list.json      # Quiz bank
-│   │   └── topics.json          # Topic catalog and misconceptions
+│   │   ├── corpus.jsonl         # Course material chunks (topic_classifier, course_retriever)
+│   │   ├── mcqs_list.json       # Quiz bank
+│   │   └── topics.json          # Topics, subtopics, prerequisites, misconceptions
 │   ├── diagnosis/
 │   │   └── static_diagnosis_mcq_list.json
 │   └── skb_database.json        # Student knowledge base records
 ├── models/
-│   └── skb_schema.py            # Pydantic schema for student KB
+│   └── skb_schema.py            # Pydantic schema for a student record
+├── scripts/
+│   ├── tag_mcq_misconceptions.py  # Tags wrong quiz options with misconceptions (run once)
+│   ├── fit_weights.py             # Learns the 5 hypothesis weights from labelled quizzes
+│   ├── evaluate.py                # Builds the evaluation report
+│   └── eval_data.py               # Shared data loader for the two scripts above
+├── docs/
+│   ├── mid_report.pdf           # Project report
+│   └── part1_flow.jpeg          # Architecture diagram
 ├── app.py                       # Streamlit tutor UI
-├── requirements.txt             # Python deps
-├── mid_report.pdf               # Project report PDF
-├── part1_flow.jpeg              # Architecture diagram
-├── .gitignore
-└── README.md                   # This file
+├── requirements.txt
+└── README.md
 ```
 
 ## Requirements
@@ -332,18 +344,6 @@ recurring signal across multiple quizzes prioritizes contrastive feedback. This 
 assessment outcomes rather than asking students to rate the tutor; a new profile starts
 with a mastery-based strategy until enough evidence is available.
 
-### `agents/course_retriever.py`
-
-This is a local retrieval layer over `data/common/corpus.jsonl`.
-
-It uses TF-IDF to:
-- find relevant course chunks,
-- rank by lexical similarity,
-- factor in difficulty alignment with a student's mastery,
-- return source attribution and citations.
-
-This is useful when you want to retrieve relevant course material for a question or lesson.
-
 ### `models/skb_schema.py`
 
 Defines the student knowledge base schema using Pydantic.
@@ -401,25 +401,23 @@ If you want to reset a student profile, remove the matching record from this fil
 2. Download the topic-classifier model once: `TOPIC_EMBED_DOWNLOAD=1 python -c "from agents.topic_classifier import get_classifier; print(get_classifier().backend)"`
    (prints `embedding`; without it the app uses the weaker TF-IDF backend).
 
-**Per student** (`streamlit run app.py`, Study mode on):
-1. Click **🆕 New anonymous student** (S101, S102, ...), the student accepts the consent screen.
+**Per student** (`streamlit run app.py`):
+1. Click **🆕 New anonymous student** (S101, S102, ...).
 2. Diagnosis → learn with the tutor → "ready for assessment" → quiz.
 3. After the quiz: the student fills **🧾 why did you get these wrong?**, clicks **📘 Review**,
    learns, then **🔁 Re-test** (this measures the learning gain).
-4. At the end: **📝 Session feedback** in the sidebar.
-5. For an A/B comparison of the root-cause methods, turn on *Assign method by student id* in
+4. For an A/B comparison of the root-cause methods, turn on *Assign method by student id* in
    **🔎 Root-cause settings** before the student starts.
-
-Each app start backs up the KB, traces and evaluation files to `data/backups/`.
 
 **After the study:**
 - `python scripts/evaluate.py` → `data/evaluation/report/report.md` (+ CSVs): root-cause accuracy
-  per method/preset/ablation, agreement, misconception check, learning gain, judge vs rules,
-  latency, feedback.
+  per method/weight set/ablation, agreement, misconception check, learning gain, judge vs rules,
+  latency.
 - Optional expert labels: `python scripts/evaluate.py --export-labeling`, fill
   `data/evaluation/labeling_sheet.csv`, then `python scripts/evaluate.py --import-labels <file>`.
 - `python scripts/fit_weights.py --save` learns the weights (report its leave-one-student-out
-  accuracy) and adds them as the `learned` preset.
+  accuracy). The app's **Custom weights** sliders then start from these values; with custom
+  weights off, all five parameters get the same weight (plain average).
 
 Environment switches: `TUTOR_LLM_JUDGE=0` (rules instead of the LLM turn judge),
 `TOPIC_EMBED_MODEL=none` (TF-IDF topic classifier).

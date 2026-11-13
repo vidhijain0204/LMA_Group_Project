@@ -1,3 +1,23 @@
+"""Tutor agent: the LangGraph node that teaches the student with the local Qwen LLM.
+
+Where it fits in the flow:
+- orchestrator.py routes a message here when the student wants to learn or is answering the
+  tutor's last question; workflow.py registers `create_tutor_node()` as the "tutor_agent" node.
+- Before replying it asks pedagogy_controller.py for the teaching strategy, the recurring quiz
+  errors and the latest root cause, and puts them in the system prompt.
+- After replying it logs the student's message with struggle_tracker.record_learning_turn()
+  (used later for the LS score) and the lesson with pedagogy_controller.record_lesson_strategy().
+
+Three conversation modes change the prompt:
+- new_request: a normal new question.
+- follow_up:   the student is answering the tutor's question; the reply starts with a verdict
+               line (correct / partly correct / not quite) and keeps the same strategy.
+- remediation: a lesson started by the remediation button after a quiz.
+
+Main contents: get_student_topic_context(), the prompt templates, answer_verdict(),
+clean_tutor_output() and create_tutor_node().
+"""
+
 import json
 import re
 from typing import List, Optional, Tuple
@@ -16,6 +36,13 @@ from agents.struggle_tracker import record_learning_turn
 
 
 def get_student_topic_context(student_kb: Optional[dict], topic_focus: List[str]) -> Tuple[str, float, list]:
+    """Look up how well the student knows the focus topic, for the tutor prompt.
+
+    Returns (tag, score, misconceptions): tag is "STRENGTH", "WEAKNESS" or "DEVELOPING" for the
+    first focus topic found in the student's scores ("DEVELOPING", 0.5 if none is found, and
+    "UNTESTED / NEW", 0.0 if the student has no scores yet); misconceptions are the ids of the
+    student's active misconceptions.
+    """
     if not student_kb or not student_kb.get("topics"):
         return "UNTESTED / NEW", 0.0, []
 
@@ -35,6 +62,7 @@ def get_student_topic_context(student_kb: Optional[dict], topic_focus: List[str]
         t_query_lower = t_query.lower()
         target_tid = name_to_id.get(t_query_lower, resolve_topic_id(t_query))
 
+        # Match by exact id, or loosely when one string contains the other.
         for tid, score in scores.items():
             if (
                 tid.lower() == target_tid.lower()
@@ -51,6 +79,7 @@ def get_student_topic_context(student_kb: Optional[dict], topic_focus: List[str]
     return "DEVELOPING", 0.5, misconceptions
 
 
+# System prompt for the tutor LLM. The {placeholders} are filled in tutor_node().
 TUTOR_SYSTEM_PROMPT = """You are an expert, encouraging AI Python Programming Tutor.
 Your goal is to explain concepts clearly, provide clean code examples, and guide the student step-by-step using your pretrained knowledge.
 
@@ -77,6 +106,7 @@ Maintain an encouraging, supportive teaching tone. Do not repeat or echo system 
 """
 
 
+# Text for the "Conversation Mode" part of the prompt, one per mode.
 NEW_REQUEST_GUIDANCE = (
     "The latest message is a new request. Earlier messages are included only as context."
 )
@@ -93,15 +123,18 @@ REMEDIATION_GUIDANCE = (
     "chose the subtopic their quiz errors point to. Follow the Orchestrator Instruction."
 )
 
+# Reads the verdict from the first line of a follow-up reply. "partly correct" is listed before
+# "correct" so the longer phrase wins.
 VERDICT_PATTERN = re.compile(
     r"^\W*(partly correct|partially correct|not quite|incorrect|not correct|correct)\b", re.IGNORECASE
 )
 
 
 def answer_verdict(response_text: str) -> Optional[str]:
-    """"correct" / "partial" / "incorrect" from the first line of a follow-up reply, else None."""
+    """Read the tutor's verdict from the first non-empty line of a follow-up reply.
+    Returns "correct", "partial" or "incorrect", or None if the line has no verdict."""
     first_line = next((line for line in str(response_text or "").splitlines() if line.strip()), "")
-    match = VERDICT_PATTERN.match(first_line.replace("*", ""))
+    match = VERDICT_PATTERN.match(first_line.replace("*", ""))   # ignore markdown bold
     if not match:
         return None
     word = match.group(1).lower()
@@ -111,6 +144,8 @@ def answer_verdict(response_text: str) -> Optional[str]:
 
 
 def clean_tutor_output(raw_text: str) -> str:
+    """Strip everything from the raw LLM output except the tutor's answer: the echoed prompt,
+    <think> blocks, chat markers and any copied system-prompt lines. Also used by workflow.py."""
     if not raw_text:
         return ""
 
@@ -120,13 +155,15 @@ def clean_tutor_output(raw_text: str) -> str:
     if "<|im_start|>assistant" in raw_text:
         raw_text = raw_text.rsplit("<|im_start|>assistant", 1)[1]
 
+    # Remove the model's thinking; a lone "</think>" means the opening tag was cut off.
     cleaned = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL)
     if "</think>" in cleaned:
         cleaned = cleaned.split("</think>")[-1]
-        
+
     cleaned = re.sub(r"<\|im_start\|>.*?\n", "", cleaned)
     cleaned = cleaned.replace("<|im_end|>", "").replace("<|im_start|>", "")
-    
+
+    # Drop lines where the model repeats parts of the system prompt.
     lines = cleaned.split("\n")
     filtered_lines = []
     for line in lines:
@@ -144,9 +181,22 @@ def clean_tutor_output(raw_text: str) -> str:
 
 
 def create_tutor_node(enable_kb_context: bool = True):
+    """Build the tutor node function for the LangGraph workflow.
+
+    Args:
+        enable_kb_context: if False, the tutor ignores the student's SKB (no personalization,
+            nothing is logged). workflow.py always passes True.
+    Returns:
+        tutor_node(state) -> dict of state updates.
+    """
     llm = get_llm("tutor", enable_thinking=False)
 
     def tutor_node(state: dict) -> dict:
+        """Answer the student's latest message and log the turn and lesson in the SKB.
+
+        Returns the state updates: the tutor message, the strategy used and why, the answer
+        verdict (for follow-ups) and, when the SKB is enabled, the updated "student_kb".
+        """
         student_id = state.get("student_id", "Unknown")
         student_kb = state.get("student_kb") if enable_kb_context else None
         topic_focus = state.get("topic_focus", ["Python Basics"])
@@ -156,6 +206,7 @@ def create_tutor_node(enable_kb_context: bool = True):
         follow_up = state.get("conversation_mode") == "follow_up"
         tutor_question = state.get("tutor_question", "")
         analysis = state.get("turn_analysis") or {}
+        # Trust the turn judge's verdict only when it came from the LLM (not the rule fallback).
         judged_verdict = analysis.get("verdict") if follow_up and analysis.get("source") == "llm" else None
 
         if enable_kb_context:
@@ -180,6 +231,7 @@ def create_tutor_node(enable_kb_context: bool = True):
             learning_signals = recent_error_context(student_kb, topic_id)
             root_cause = latest_root_cause(student_kb, topic_id)
         else:
+            # No personalization: fixed, neutral values.
             student_id = "ANONYMOUS_STUDENT"
             mastery_tag = "UNKNOWN (KB Disabled)"
             mastery_score = 0.0
@@ -263,7 +315,7 @@ def create_tutor_node(enable_kb_context: bool = True):
                 ),
                 signal_source=analysis.get("source", "rules"),
             )
-            forced = state.get("forced_route") or {}
+            forced = state.get("forced_route") or {}   # holds the quiz id for a remediation lesson
             result["student_kb"] = record_lesson_strategy(
                 updated_kb, topic_id, pedagogy_strategy, strategy_reason,
                 remediation_for=forced.get("quiz_id") if remediation else None,

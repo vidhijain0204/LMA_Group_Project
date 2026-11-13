@@ -1,4 +1,17 @@
-"""Load the study data for scripts/evaluate.py and scripts/fit_weights.py."""
+"""Shared data loader for scripts/evaluate.py and scripts/fit_weights.py.
+
+Why it exists: both scripts need the same data, so the loading code lives here once.
+It is not run on its own; the two scripts import it.
+
+It reads:
+    - the students' records from data/skb_database.json (the SKB),
+    - every quiz in them, with the root cause each method picked,
+    - the labels: the students' answers to the "why did you get these wrong?" form
+      (saved by agents/evaluation_store.py) and any imported expert labels.
+The labels are the ground truth (the "true" root-cause subtopic) the methods are compared with.
+
+Importing this module also adds the project root to sys.path, so the scripts can import agents.*.
+"""
 
 import json
 import os
@@ -15,11 +28,17 @@ EXPERT_LABELS = os.path.join(evaluation_store.EVALUATION_DIR, "expert_labels.jso
 
 
 def students(db_path: str = SKB_FILE_PATH) -> List[dict]:
+    """All student records from the SKB database."""
     return read_skb_database(db_path)
 
 
 def quizzes(records: List[dict]) -> List[dict]:
-    """One entry per quiz (its per-topic assessment events merged), oldest first."""
+    """One entry per quiz, oldest first.
+
+    A quiz on several topics is stored as one assessment event per topic; these are merged by
+    quiz_id. Each entry has the responses, topics and, if one was found, the root cause, the
+    method comparison, the hypothesis candidates and the settings used.
+    """
     by_id: Dict[str, dict] = {}
     for kb in records:
         for event in kb.get("pedagogy_history", []):
@@ -53,4 +72,5 @@ def labels() -> Dict[str, dict]:
 
 
 def true_subtopic(label: Optional[dict]) -> Optional[str]:
+    """The true root-cause subtopic of a label, or None (no label, or the student was not sure)."""
     return (label or {}).get("true_subtopic") or None

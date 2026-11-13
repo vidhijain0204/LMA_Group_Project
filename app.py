@@ -1,6 +1,29 @@
-# =====================================================================
-# STREAMLIT MULTI-AGENT TUTORING SYSTEM (`app.py`)
-# =====================================================================
+"""Streamlit user interface of the AI Python tutoring system.
+
+Run with:  streamlit run app.py
+
+Where it fits:
+    This is the only file the student sees. It sends every chat message to
+    AdaptiveTutorWorkflow.start() (agents/workflow.py), which routes it through the
+    orchestrator to the diagnosis, tutor or assessment agent. When the workflow pauses
+    for a diagnostic test or a quiz, this file shows the questions as a form and
+    passes the answers back with workflow.resume().
+
+What the page contains:
+    - Sidebar: choose/switch student (anonymous ids like S101), root-cause settings
+      (method, A/B condition by student id, custom weights for the hypothesis score
+      Score(H) built from LS/CE/RP/PW/PM), and a view of the student's stored
+      knowledge base (SKB, data/skb_database.json): strengths, weaknesses, teaching
+      history, root causes, topic scores.
+    - Main area: the chat, the diagnosis/quiz forms, the quiz result with its root
+      cause, buttons to review the root cause or re-test it, a form where the student
+      labels why they got each question wrong (saved through agents/evaluation_store.py
+      as ground truth for evaluation), and an "Agent flow" panel showing each agent's
+      input and output.
+
+Note: Streamlit re-runs this whole script after every click, so anything that must
+survive between runs is kept in st.session_state.
+"""
 import streamlit as st
 import json
 from pathlib import Path
@@ -16,23 +39,19 @@ from agents.root_cause_agent import (
 from agents import evaluation_store
 from agents.orchestrator import read_skb_database
 
-# =====================================================================
-# PAGE CONFIGURATION
-# =====================================================================
+# ---------------------------------------------------------------- page setup
 st.set_page_config(
     page_title="AI Python Tutoring System",
     page_icon="🎓",
     layout="wide",
 )
 
-# Initialize workflow and diagnosis agent.
 # Streamlit re-runs this whole script on every click, so the workflow is created once and cached:
 # a new workflow would have an empty checkpointer and could not resume a paused diagnosis or quiz.
 @st.cache_resource
 def get_workflow() -> AdaptiveTutorWorkflow:
-    # Once per app start: back up the study data, and build the topic classifier now so the
-    # first student message is not slowed down by it.
-    evaluation_store.backup_data(reason="app-start")
+    """Create the workflow once per server process (cached by Streamlit)."""
+    # Build the topic classifier now so the first student message is not slowed down by it.
     from agents.topic_classifier import get_classifier
     get_classifier()
     return AdaptiveTutorWorkflow(db_filepath=SKB_FILE_PATH)
@@ -41,9 +60,9 @@ def get_workflow() -> AdaptiveTutorWorkflow:
 workflow = get_workflow()
 diag_agent = DiagnosisAgent(db_filepath=SKB_FILE_PATH)
 
-# =====================================================================
-# SESSION STATE INITIALIZATION
-# =====================================================================
+# ---------------------------------------------------------------- session state
+# Default values on the first run. waiting_for_interrupt holds the paused diagnosis/quiz
+# payload (questions to show), or None when the chat is free.
 if "student_id" not in st.session_state:
     st.session_state.student_id = "S001"
 if "thread_id" not in st.session_state:
@@ -55,23 +74,20 @@ if "waiting_for_interrupt" not in st.session_state:
 # Agent steps of a start() call that paused for a diagnosis/quiz; shown with the final answer.
 if "pending_trace" not in st.session_state:
     st.session_state.pending_trace = []
-# Study mode: consent screen, "why was this wrong?" form and feedback form.
-if "study_mode" not in st.session_state:
-    st.session_state.study_mode = True
 
+# Id -> readable name lookups from the topic catalog.
 TOPIC_NAMES = load_catalog()["topic_names"]
 SUBTOPIC_NAMES = load_catalog()["subtopic_names"]
 MISCONCEPTIONS = load_catalog()["misconceptions"]
 
 
 def topic_label(topic_ids) -> str:
+    """Turn one topic id or a list of ids into "T1 Name, T2 Name" text."""
     topic_ids = topic_ids if isinstance(topic_ids, list) else [topic_ids]
     return ", ".join(f"{t} {TOPIC_NAMES.get(t, '')}".strip() for t in topic_ids)
 
 
-# =====================================================================
-# AGENT FLOW & ROOT CAUSE RENDERING
-# =====================================================================
+# ---------------------------------------------------------------- display helpers
 AGENT_ICONS = {
     "Orchestrator": "🧭",
     "Diagnosis Agent": "🩺",
@@ -88,6 +104,7 @@ def render_trace(trace: list) -> None:
     if not trace:
         return
     total_ms = sum(step.get("duration_ms") or 0 for step in trace)
+    # Order of agents that ran, with repeated consecutive steps of the same agent merged.
     path = []
     for step in trace:
         if not path or path[-1] != step["agent"]:
@@ -109,7 +126,10 @@ def render_trace(trace: list) -> None:
 
 
 def render_root_cause_details(details: dict) -> None:
-    """Hypothesis parameters and what each method / weight set picked, for evaluation."""
+    """Show the hypothesis table and what each method / weight set picked, for evaluation.
+
+    details holds "root_cause", "hypotheses" and "comparison" from the quiz result.
+    """
     if not details:
         return
     with st.expander("📐 Root-cause evidence & method comparison"):
@@ -131,8 +151,9 @@ def render_root_cause_details(details: dict) -> None:
         comparison = details.get("comparison")
         if comparison:
             primary = (details.get("root_cause") or {}).get("subtopic_id")
+            # One row per method / preset / ablation; votes counts how many picked each subtopic.
             rows, votes = [], {}
-            for group, label in (("methods", "Method"), ("presets", "Weight preset"), ("ablations", "Ablation")):
+            for group, label in (("methods", "Method"), ("presets", "Weights"), ("ablations", "Ablation")):
                 for name, entry in comparison[group].items():
                     root = entry if group == "methods" else entry.get("root_cause")
                     topic = f"{root['topic_id']} {root.get('topic_name') or ''}".strip() if root else "—"
@@ -174,6 +195,11 @@ def handle_result(result: dict) -> None:
 
 
 def run_turn(display_text: str, user_input: str, forced_route: dict = None) -> None:
+    """Send one message to the workflow and redraw the page.
+
+    display_text is what the chat shows; user_input is what the agents receive.
+    forced_route is set by the review / re-test buttons to skip the orchestrator's choice.
+    """
     st.session_state.messages.append({"role": "user", "content": display_text})
     with st.spinner("Processing request..."):
         # Earlier messages come from the student's chat memory in the KB
@@ -188,6 +214,12 @@ def run_turn(display_text: str, user_input: str, forced_route: dict = None) -> N
 
 
 def quiz_result_message(res: dict) -> dict:
+    """Build the chat message for a graded quiz.
+
+    The text has the score, accuracy per topic, the learning gain for a re-test, and
+    the root cause. The extra keys let render_message() show the evidence table,
+    the review/re-test buttons and the agent trace.
+    """
     score_msg = (
         f"📊 **Quiz Completed!** Score: {res.get('quiz_score')} "
         f"(Accuracy: {res.get('accuracy', 0.0):.0%})"
@@ -238,7 +270,11 @@ def quiz_result_message(res: dict) -> dict:
 
 
 def render_label_form(quiz: dict) -> None:
-    """The student's own reason for each wrong answer: ground truth for the evaluation."""
+    """Ask the student why they got each question wrong, and save it as an evaluation label.
+
+    These answers are the "ground truth" used to check how well the root-cause methods work.
+    The form is shown only once per quiz.
+    """
     quiz_id = quiz.get("quiz_id")
     if quiz_id in evaluation_store.labelled_quiz_ids(st.session_state.student_id):
         st.caption("🧾 Thanks — your answers about this quiz were saved.")
@@ -248,6 +284,7 @@ def render_label_form(quiz: dict) -> None:
             per_question, subtopic_choices = [], {}
             for i, wrong in enumerate(quiz["wrong_answers"], 1):
                 st.markdown(f"**{i}. {wrong.get('question', '')}**  \nYou chose _{wrong.get('chosen_text') or wrong.get('chosen')}_")
+                # Radio label -> (reason kind, subtopic id or misconception id).
                 options = {f"I did not understand: {sid} {SUBTOPIC_NAMES.get(sid, '')}": ("subtopic", sid)
                            for sid in wrong["subtopics"]}
                 for sid in wrong["subtopics"]:
@@ -278,7 +315,7 @@ def render_quiz_actions(quiz: dict) -> None:
     root = quiz.get("root_cause")
     if not root:
         return
-    if st.session_state.study_mode and quiz.get("wrong_answers"):
+    if quiz.get("wrong_answers"):
         render_label_form(quiz)
     sid, name = root["subtopic_id"], root["name"]
     left, right = st.columns(2)
@@ -296,6 +333,7 @@ def render_quiz_actions(quiz: dict) -> None:
 
 
 def render_message(message: dict, is_latest_quiz: bool = False) -> None:
+    """Draw one chat message with its extras (root-cause details, quiz buttons, trace)."""
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         render_root_cause_details(message.get("root_cause_details"))
@@ -303,15 +341,14 @@ def render_message(message: dict, is_latest_quiz: bool = False) -> None:
             render_quiz_actions(message["quiz"])
         render_trace(message.get("trace"))
 
-# =====================================================================
-# SIDEBAR: STUDENT PROFILE & CONTROLS
-# =====================================================================
+# ---------------------------------------------------------------- sidebar
 with st.sidebar:
     st.header("🎓 Student Portal")
-    
+
     input_id = st.text_input("Enter Student ID:", value=st.session_state.student_id)
-    
+
     def switch_student(student_id: str) -> None:
+        """Start a fresh chat session for another student id."""
         st.session_state.student_id = student_id
         st.session_state.thread_id = f"{student_id}-session"
         st.session_state.messages = []
@@ -324,10 +361,6 @@ with st.sidebar:
     if st.button("🆕 New anonymous student", help="Next free id (S101, S102, ...). Never use real names."):
         switch_student(evaluation_store.next_anonymous_id(
             r.get("student_id", "") for r in read_skb_database(SKB_FILE_PATH)))
-    st.session_state.study_mode = st.toggle(
-        "Study mode", value=st.session_state.study_mode,
-        help="Consent screen, 'why was this wrong?' form after quizzes and the feedback form.",
-    )
 
     st.divider()
 
@@ -347,11 +380,12 @@ with st.sidebar:
                 "Method", METHODS, index=METHODS.index("hypothesis"),
                 format_func=lambda m: METHOD_LABELS[m],
             )
-        preset_names = list(WEIGHT_PRESETS)
-        preset = st.selectbox("Weight preset", preset_names, index=preset_names.index(DEFAULT_PRESET))
+        # Off: every parameter has the same weight (plain average). On: sliders, starting from
+        # the weights learned by scripts/fit_weights.py if they exist, else from equal weights.
         custom = st.toggle("Custom weights", value=False)
-        weights = dict(WEIGHT_PRESETS[preset])
+        weights = dict(WEIGHT_PRESETS[DEFAULT_PRESET])
         if custom:
+            weights = dict(WEIGHT_PRESETS.get("learned", weights))
             for key in PARAMS:
                 weights[key] = st.slider(
                     f"{'−' if SIGNS[key] < 0 else '+'} {PARAM_LABELS[key]} ({key})",
@@ -363,7 +397,7 @@ with st.sidebar:
             ).lstrip("+ ")
         )
         workflow.root_cause_method = method
-        workflow.root_cause_preset = preset
+        workflow.root_cause_preset = DEFAULT_PRESET
         workflow.root_cause_weights = weights if custom else None
 
     st.divider()
@@ -433,23 +467,6 @@ with st.sidebar:
                 st.session_state.pending_trace = result.get("trace", [])
                 st.rerun()
 
-    if st.session_state.study_mode and kb:
-        with st.expander("📝 Session feedback"):
-            with st.form("feedback_form", clear_on_submit=True):
-                ratings = {
-                    "explanations_clear": st.slider("The explanations were clear", 1, 5, 3),
-                    "felt_personalised": st.slider("The tutor adapted to me", 1, 5, 3),
-                    "quiz_relevant": st.slider("The quizzes matched what I learned", 1, 5, 3),
-                    "root_cause_correct": st.slider("The 'reason for my errors' was right", 1, 5, 3),
-                    "would_use_again": st.slider("I would use this tutor again", 1, 5, 3),
-                }
-                comment = st.text_area("Anything else? (no personal details please)")
-                if st.form_submit_button("Send feedback"):
-                    evaluation_store.append("feedback", {
-                        "student_id": st.session_state.student_id, "ratings": ratings, "comment": comment.strip(),
-                    })
-                    st.success("Thank you!")
-
     st.divider()
     if st.button("Reset Chat / Session"):
         workflow.clear_chat_memory(st.session_state.student_id)
@@ -458,40 +475,25 @@ with st.sidebar:
         st.session_state.pending_trace = []
         st.rerun()
 
-# =====================================================================
-# MAIN CHAT & INTERRUPT INTERFACE
-# =====================================================================
+# ---------------------------------------------------------------- main chat area
 st.title("🤖 AI Python Tutoring Assistant")
 st.markdown(f"Chatting as **{st.session_state.student_id}**. Ask questions, request explanations, or ask for a quiz!")
-
-if st.session_state.study_mode and not evaluation_store.has_consent(st.session_state.student_id):
-    st.info(
-        "**Before you start.** This tutor is part of a university study on AI tutoring. We store "
-        "your messages, quiz answers and the tutor's analysis under the anonymous id "
-        f"**{st.session_state.student_id}** only — please do not type your name or other personal "
-        "details. You can stop at any time."
-    )
-    agreed = st.checkbox("I agree to take part and for my anonymous data to be used in the study.")
-    if st.button("Start", disabled=not agreed):
-        evaluation_store.append("consent", {"student_id": st.session_state.student_id, "consent": True})
-        st.rerun()
-    st.stop()
 
 # Display chat history (the buttons and form after a quiz only on the latest quiz result)
 latest_quiz = max((i for i, m in enumerate(st.session_state.messages) if m.get("quiz")), default=None)
 for index, message in enumerate(st.session_state.messages):
     render_message(message, is_latest_quiz=index == latest_quiz)
 
-# Check if graph is interrupted (e.g. waiting for diagnosis test or quiz answers)
+# If the workflow is paused, show the diagnosis or quiz form instead of the chat input.
 interrupt_payload = st.session_state.waiting_for_interrupt
 
 if interrupt_payload:
     int_type = interrupt_payload.get("type")
-    
+
     if int_type == "diagnosis":
         st.warning("📝 **Diagnostic Assessment Required** (New Student Onboarding)")
         questions = interrupt_payload.get("questions", [])
-        
+
         with st.form("interrupt_diagnosis_form"):
             submitted_answers = {}
             for idx, q in enumerate(questions, 1):
@@ -522,7 +524,7 @@ if interrupt_payload:
     elif int_type == "quiz":
         st.warning(f"🎯 **Adaptive Quiz Challenge** — Topics: {topic_label(interrupt_payload.get('topic_focus') or [])}")
         st.markdown(interrupt_payload.get("intro_text", ""))
-        
+
         questions = interrupt_payload.get("questions", [])
         with st.form("interrupt_quiz_form"):
             quiz_answers = {}
@@ -532,7 +534,7 @@ if interrupt_payload:
                 # options is a dict like {"A": "...", "B": "..."}
                 option_labels = list(options.keys())
                 option_texts = [f"{k}: {v}" for k, v in options.items()]
-                
+
                 choice_text = st.radio(
                     f"Select answer for Q{idx}:",
                     options=option_texts,
@@ -553,6 +555,6 @@ if interrupt_payload:
                     st.rerun()
 
 else:
-    # Standard Chat Input
+    # Normal chat: send the typed message to the workflow.
     if user_prompt := st.chat_input("Ask your tutor a question or request a quiz..."):
         run_turn(user_prompt, user_prompt)

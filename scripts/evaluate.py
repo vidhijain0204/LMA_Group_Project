@@ -1,4 +1,9 @@
-"""Evaluation report for the study.
+"""Build the results report: how well the system works on the data collected in the app.
+
+Why it exists: it turns what the app saved (the students' SKB records, the labels from the
+"why did you get these wrong?" form and the per-request traces) into tables for the project
+report. Run it whenever you want up-to-date numbers, e.g. after collecting a batch of quizzes.
+It only reads data; it does not need the LLM.
 
     python scripts/evaluate.py                       # report -> data/evaluation/report/
     python scripts/evaluate.py --export-labeling     # CSV for teammates to label quizzes by hand
@@ -6,14 +11,17 @@
 
 Sections of the report (data/evaluation/report/report.md, plus one CSV per table):
   1. Data collected
-  2. Root-cause accuracy per method, weight preset and ablation, against the true subtopic
+  2. Root-cause accuracy per method, weight set and ablation, against the true subtopic
      (expert label if there is one, else the student's own answer in the app)
   3. Agreement between methods (no labels needed)
   4. Misconception check: did students confirm the misconception the system named?
   5. Learning gain after remediation (re-test before/after), per root-cause method
   6. Turn judge (LLM) vs rules on the struggle flags
   7. Response time per agent, from the traces
-  8. Student feedback
+
+Optional hand-labelling: --export-labeling writes a CSV of the quizzes without the methods'
+picks (so the labeller is not biased); fill in true_subtopic / true_misconception and read it
+back with --import-labels. These expert labels then replace the student's own label.
 """
 
 import argparse
@@ -24,6 +32,7 @@ import statistics
 from collections import Counter, defaultdict
 from itertools import combinations
 
+# eval_data must be imported first: it adds the project root to sys.path for the agents imports.
 from eval_data import EXPERT_LABELS, labels, quizzes, students, true_subtopic
 from agents import evaluation_store
 from agents.struggle_tracker import load_catalog
@@ -34,23 +43,30 @@ LABELING_CSV = os.path.join(evaluation_store.EVALUATION_DIR, "labeling_sheet.csv
 
 
 def pct(value):
+    """Format a fraction as a percentage ("-" for None)."""
     return "-" if value is None else f"{value:.0%}"
 
 
 def mean(values):
+    """Average that ignores None values; None if nothing is left."""
     values = [v for v in values if v is not None]
     return statistics.mean(values) if values else None
 
 
 class Report:
+    """Collects the report as Markdown lines and writes one CSV per table."""
+
     def __init__(self):
+        """Start an empty report and make sure the report folder exists."""
         self.lines = ["# Evaluation report", ""]
         os.makedirs(REPORT_DIR, exist_ok=True)
 
     def section(self, title, note=""):
+        """Add a section heading, with an optional explanation below it."""
         self.lines += ["", f"## {title}", ""] + ([note, ""] if note else [])
 
     def table(self, name, rows):
+        """Add rows (a list of dicts with the same keys) as a Markdown table and save <name>.csv."""
         if not rows:
             self.lines.append("_No data yet._")
             return
@@ -65,9 +81,11 @@ class Report:
             writer.writerows(rows)
 
     def text(self, line):
+        """Add one line of free text."""
         self.lines.append(line)
 
     def save(self):
+        """Write report.md and print the report."""
         path = os.path.join(REPORT_DIR, "report.md")
         with open(path, "w", encoding="utf-8") as f:
             f.write("\n".join(self.lines) + "\n")
@@ -76,7 +94,10 @@ class Report:
 
 
 def picks(quiz):
-    """{"Method: no_kb": sid, "Preset: balanced": sid, "Ablation: ...": sid} for one quiz."""
+    """The subtopic each method, weight preset and ablation picked for one quiz.
+
+    Returns e.g. {"Method: no_kb": "T06.3", "Preset: equal": "T06.3", "Ablation: ...": ...}.
+    """
     comparison = quiz.get("comparison") or {}
     result = {}
     for group, label in (("methods", "Method"), ("presets", "Preset"), ("ablations", "Ablation")):
@@ -86,6 +107,11 @@ def picks(quiz):
 
 
 def root_cause_accuracy(report, all_quizzes, label_by_quiz):
+    """Section 2: how often each method picks the true subtopic (and its topic) on labelled quizzes.
+
+    Also shows how often the truth is among the hypothesis candidates, and how much accuracy
+    changes when one evidence parameter is removed (ablations).
+    """
     labelled = [q for q in all_quizzes if q.get("comparison") and true_subtopic(label_by_quiz.get(q["quiz_id"]))]
     report.section("2. Root-cause accuracy", (
         f"{len(labelled)} labelled quizzes. Top-1 = the pick is the true subtopic; same topic = the pick "
@@ -115,6 +141,7 @@ def root_cause_accuracy(report, all_quizzes, label_by_quiz):
 
 
 def agreement(report, all_quizzes):
+    """Section 3: how often two methods pick the same subtopic, and how often an ablation changes the pick."""
     analysed = [q for q in all_quizzes if q.get("comparison")]
     report.section("3. Agreement between methods", f"{len(analysed)} quizzes with a root cause; no labels needed.")
     names = sorted({n for q in analysed for n in picks(q) if not n.startswith("Ablation")})
@@ -135,6 +162,8 @@ def agreement(report, all_quizzes):
 
 
 def misconception_check(report, all_quizzes, label_by_quiz):
+    """Section 4: for wrong options tagged with a misconception, did the student pick that same
+    misconception as their reason in the form? Also counts the reasons students gave."""
     report.section("4. Misconception check", (
         "For wrong answers whose option is tagged with a misconception: how often the student, in the "
         "'why was this wrong?' form, chose that misconception as their reason."))
@@ -153,6 +182,7 @@ def misconception_check(report, all_quizzes, label_by_quiz):
 
 
 def learning_gain(report, records):
+    """Section 5: accuracy before and after the review lesson (from the re-tests), per root-cause method."""
     retests = [dict(r, student_id=kb.get("student_id")) for kb in records for r in kb.get("retests", [])]
     report.section("5. Learning gain after remediation", (
         "Accuracy on the root-cause subtopic in the original quiz (before) and in the re-test after the "
@@ -172,6 +202,7 @@ def learning_gain(report, records):
 
 
 def judge_vs_rules(report, records):
+    """Section 6: how often the LLM turn judge and the rules agree on the confusion and hint flags."""
     turns = [t for kb in records for t in kb.get("learning_conversations", []) if t.get("rule_flags")]
     llm_turns = [t for t in turns if t.get("signal_source") == "llm"]
     report.section("6. Turn judge vs rules", (
@@ -190,6 +221,7 @@ def judge_vs_rules(report, records):
 
 
 def latency(report):
+    """Section 7: response time per agent and per whole request, from the trace files."""
     report.section("7. Response time per agent", "From data/traces (one line per request).")
     per_agent, per_request = defaultdict(list), []
     if os.path.isdir(TRACE_DIR):
@@ -204,6 +236,7 @@ def latency(report):
                     per_request.append(total)
 
     def row(name, values):
+        """One table row: number of calls, mean, median and 90th percentile in seconds."""
         values = sorted(values)
         return {"Agent": name, "Calls": len(values), "Mean (s)": f"{statistics.mean(values) / 1000:.1f}",
                 "Median (s)": f"{statistics.median(values) / 1000:.1f}",
@@ -215,18 +248,8 @@ def latency(report):
     report.table("latency", rows)
 
 
-def feedback(report):
-    records = evaluation_store.read("feedback")
-    report.section("8. Student feedback", f"{len(records)} responses, ratings 1 (disagree) to 5 (agree).")
-    keys = sorted({k for r in records for k in r.get("ratings", {})})
-    report.table("feedback", [{"Statement": k, "Mean": f"{mean(r['ratings'].get(k) for r in records):.2f}",
-                               "Responses": sum(k in r.get("ratings", {}) for r in records)} for k in keys])
-    comments = [r.get("comment") for r in records if r.get("comment")]
-    if comments:
-        report.text("\nComments:\n" + "\n".join(f"- {c}" for c in comments))
-
-
 def export_labeling(all_quizzes):
+    """Write the hand-labelling CSV: one row per quiz with a root cause, with its candidates and wrong answers."""
     names = load_catalog()["subtopic_names"]
     rows = []
     for quiz in all_quizzes:
@@ -250,6 +273,7 @@ def export_labeling(all_quizzes):
 
 
 def import_labels(path):
+    """Read a filled labelling CSV and save each row that has a label as an expert label."""
     count = 0
     with open(path, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
@@ -260,6 +284,7 @@ def import_labels(path):
 
 
 def _append_expert(row):
+    """Append one expert label to EXPERT_LABELS (one JSON object per line)."""
     os.makedirs(os.path.dirname(EXPERT_LABELS), exist_ok=True)
     with open(EXPERT_LABELS, "a", encoding="utf-8") as f:
         f.write(json.dumps({
@@ -271,6 +296,7 @@ def _append_expert(row):
 
 
 def main():
+    """Parse the options, then export or import labels, or build the full report."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--export-labeling", action="store_true")
     parser.add_argument("--import-labels", metavar="CSV")
@@ -295,7 +321,6 @@ def main():
         "Labelled quizzes": sum(q["quiz_id"] in label_by_quiz for q in all_quizzes),
         "Re-tests": sum(len(kb.get("retests", [])) for kb in records),
         "Student turns": turns,
-        "Consents": len(evaluation_store.read("consent")),
     }])
     root_cause_accuracy(report, all_quizzes, label_by_quiz)
     agreement(report, all_quizzes)
@@ -303,7 +328,6 @@ def main():
     learning_gain(report, records)
     judge_vs_rules(report, records)
     latency(report)
-    feedback(report)
     report.save()
 
 

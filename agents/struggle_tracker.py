@@ -1,11 +1,20 @@
-"""Track how much a student struggled while learning a topic with the tutor.
+"""Struggle tracker: records how much a student struggled while learning with the tutor.
 
-Every student message sent to the tutor is logged in the knowledge base as a "learning turn",
-tagged with the topic, the subtopics it mentions and two struggle flags (confusion, hint request).
-`learning_struggle()` later turns those turns into the LS (Learning Struggle) parameter used by
-the root-cause agent:
+Where it fits in the flow:
+- tutor_agent.py calls `record_learning_turn()` after every tutor reply, so each student message
+  is saved in the student's SKB (data/skb_database.json) under "learning_conversations".
+- root_cause_agent.py calls `learning_struggle()` after a quiz to get the LS (Learning Struggle)
+  evidence for each candidate subtopic.
+- orchestrator.py uses the topic helpers at the bottom (`topics_mentioned`, `topic_evidence`,
+  `recent_learning_topics`, `current_lesson_topic`) to decide which topic a message or quiz is about.
+- `load_catalog()` reads data/common/topics.json and is shared by several other modules.
 
-    LS(H) = average(CF, RA, TR, HR, WS, SW)          each scaled to 0..1
+Each logged "learning turn" stores the topic, the subtopics the message mentions and two
+struggle flags: confusion ("I don't get it") and hint request ("just tell me the answer").
+
+The LS score for one subtopic is the plain average of six parts, each between 0 and 1:
+
+    LS = average(CF, RA, TR, HR, WS, SW)
 
     CF  Confusion phrases     share of turns that say "I don't get it", "still not working", ...
     RA  Re-asking             the student asked about this subtopic 2+ times
@@ -16,8 +25,9 @@ the root-cause agent:
                                  student was still confused or asked for the answer
     SW  Strategy switches     the pedagogy controller had to change strategy on the topic
 
-The detection is rule-based (regular expressions and keyword overlap) so it is fast,
-deterministic and testable without the LLM.
+The detection here is rule-based (regular expressions and keyword overlap), so it is fast,
+gives the same result every time and can be tested without the LLM. When the LLM turn judge
+(turn_judge.py) is available, its flags can be passed in instead of the rule flags.
 """
 
 import json
@@ -28,8 +38,9 @@ from functools import lru_cache
 from typing import Dict, List, Optional
 
 TOPICS_FILEPATH = "data/common/topics.json"
-MAX_LOGGED_TURNS = 200
+MAX_LOGGED_TURNS = 200   # only the newest 200 turns are kept, so the SKB does not grow forever
 
+# Phrases that show the student is confused or stuck (sets the "confusion" flag).
 CONFUSION_PATTERN = re.compile(
     r"\b(confus\w*|don'?t (get|understand)|do not (get|understand)|didn'?t (get|understand)|"
     r"not sure|i'?m lost|stuck|makes? no sense|doesn'?t make sense|can'?t understand|"
@@ -38,12 +49,14 @@ CONFUSION_PATTERN = re.compile(
     r"(empty|error|wrong|fail|crash|not|none|erased|missing))\b",
     re.IGNORECASE,
 )
+# Phrases that ask for a hint or for the answer itself (sets the "hint_request" flag).
 HINT_PATTERN = re.compile(
     r"\b(hint|just (tell|give|show) me|(tell|give|show) me the (answer|solution|code)|"
     r"what'?s the answer|what is the answer|solve it for me|do it for me)\b",
     re.IGNORECASE,
 )
 
+# Words too common to tell topics or subtopics apart; ignored when matching keywords.
 STOPWORDS = {
     "and", "the", "for", "with", "how", "what", "are", "vs", "its", "into", "from", "that",
     "this", "their", "basic", "using", "use", "common", "python",
@@ -54,7 +67,8 @@ SELF_EXPLANATION_STRATEGIES = {"self_explanation", "hints"}
 
 
 def stem(word: str) -> str:
-    """A tiny stemmer so that "files"/"file", "modes"/"mode" and "closing"/"close" match."""
+    """Cut common endings off a word so that "files"/"file", "modes"/"mode" and
+    "closing"/"close" become the same word. Very simple on purpose (no NLP library)."""
     for suffix in ("ing", "ed", "s"):
         if len(word) > 4 and word.endswith(suffix):
             word = word[: -len(suffix)]
@@ -65,13 +79,20 @@ def stem(word: str) -> str:
 
 
 def tokenize(text: str) -> set:
+    """Turn text into a set of stemmed lowercase words (3+ letters, stopwords removed),
+    used for keyword matching against subtopic and topic names."""
     words = re.findall(r"[a-z_]+", str(text or "").lower())
     return {stem(word) for word in words if len(word) >= 3 and word not in STOPWORDS}
 
 
 @lru_cache(maxsize=4)
 def load_catalog(topics_filepath: str = TOPICS_FILEPATH) -> dict:
-    """Subtopic names, the topic of every subtopic, topic prerequisites and per-topic keywords."""
+    """Read topics.json once and build lookup tables used across the project.
+
+    Returns a dict with: subtopic and topic names, the topic of every subtopic, topic
+    prerequisites, the subtopics of each topic, keywords per subtopic, misconception
+    descriptions and the misconceptions of each topic. Cached, so the file is read only once.
+    """
     with open(topics_filepath, "r", encoding="utf-8") as topic_file:
         topics = json.load(topic_file)
 
@@ -92,7 +113,8 @@ def load_catalog(topics_filepath: str = TOPICS_FILEPATH) -> dict:
             topic_subtopics[topic_id].append(subtopic["id"])
 
     # Keywords that tell the subtopics of one topic apart: drop words shared by most of them
-    # (e.g. "file" in every File Handling subtopic).
+    # (e.g. "file" in every File Handling subtopic). A word is kept only if at most
+    # max(1, (n - 1) // 2) of the topic's n subtopic names contain it.
     distinctive_keywords = {}
     for topic_id, subtopic_ids in topic_subtopics.items():
         token_sets = {sid: tokenize(subtopic_names[sid]) for sid in subtopic_ids}
@@ -116,6 +138,7 @@ def load_catalog(topics_filepath: str = TOPICS_FILEPATH) -> dict:
 
 
 def detect_struggle(text: str) -> Dict[str, bool]:
+    """Rule-based struggle flags for one message: {"confusion": bool, "hint_request": bool}."""
     return {
         "confusion": bool(CONFUSION_PATTERN.search(text or "")),
         "hint_request": bool(HINT_PATTERN.search(text or "")),
@@ -123,7 +146,7 @@ def detect_struggle(text: str) -> Dict[str, bool]:
 
 
 def map_subtopics(text: str, topic_id: str, topics_filepath: str = TOPICS_FILEPATH) -> List[str]:
-    """Subtopics of `topic_id` whose distinctive keywords appear in the message.
+    """Return the subtopics of `topic_id` whose distinctive keywords appear in the message.
     An empty list means the message is about the topic in general."""
     catalog = load_catalog(topics_filepath)
     tokens = tokenize(text)
@@ -145,15 +168,27 @@ def record_learning_turn(
     flags: Optional[Dict[str, bool]] = None,
     signal_source: str = "rules",
 ) -> dict:
-    """Log one student message sent to the tutor, with its struggle flags.
+    """Save one student message sent to the tutor as a "learning turn" in the SKB.
 
-    For a reply to the tutor's question, `answer_verdict` is the tutor's judgement of the answer
-    ("correct" / "partial" / "incorrect") and `context_text` is the question that was answered;
-    it is used to find the subtopic when the answer itself names none ("it prints 5")."""
+    Called by tutor_agent.py after every tutor reply. The subtopic is found from the message's
+    keywords, then from `context_text`, and finally from the semantic topic classifier.
+
+    Args:
+        student_kb: the student's SKB record (not modified; a copy is returned).
+        previous_strategy: the teaching strategy the student was responding to (used for WS).
+        reply_to_tutor / answer_verdict: whether the message answers the tutor's question, and
+            the judgement of that answer ("correct" / "partial" / "incorrect").
+        context_text: the tutor question being answered; helps find the subtopic when the
+            answer itself names none ("it prints 5").
+        flags: struggle flags from the LLM turn judge; if None, the rule-based flags are used.
+        signal_source: where the flags came from ("rules" or "llm").
+    Returns:
+        A new SKB dict with the turn appended (unchanged if the message is empty).
+    """
     updated = deepcopy(student_kb)
     if not str(student_text or "").strip():
         return updated
-    rule_flags = detect_struggle(student_text)
+    rule_flags = detect_struggle(student_text)   # always stored, even when the LLM flags are used
     flags = flags or rule_flags
     subtopic_ids = (
         map_subtopics(student_text, topic_id, topics_filepath)
@@ -186,6 +221,7 @@ def record_learning_turn(
 
 
 def strategy_switches(student_kb: Optional[dict], topic_id: str) -> int:
+    """Count how many times the teaching strategy changed between consecutive lessons on a topic."""
     strategies = [
         event.get("strategy")
         for event in (student_kb or {}).get("pedagogy_history", [])
@@ -199,7 +235,15 @@ def learning_struggle(
     subtopic_id: str,
     topics_filepath: str = TOPICS_FILEPATH,
 ) -> dict:
-    """Compute the LS parameter and its six components for one subtopic."""
+    """Compute the LS (Learning Struggle) score and its six parts for one subtopic.
+
+    Called by root_cause_agent.py. Uses the turns on the subtopic's topic that either name
+    this subtopic or name no subtopic at all (general questions about the topic).
+
+    Returns:
+        {"LS": 0..1, "components": {CF, RA, TR, HR, WS, SW}, "turns": number of turns used,
+         "examples": up to 2 recent messages that showed confusion or asked for a hint}
+    """
     catalog = load_catalog(topics_filepath)
     topic_id = catalog["subtopic_topic"].get(subtopic_id, subtopic_id.split(".")[0])
     turns = [
@@ -215,6 +259,8 @@ def learning_struggle(
     ]
 
     count = len(turns)
+    # RA: 0 for one explicit mention, 1.0 from three. TR: 0 up to 2 turns, 1.0 from 6 turns.
+    # SW: 1.0 from two strategy switches. CF, HR and WS are simple shares of turns.
     components = {
         "CF": sum(turn.get("confusion", False) for turn in turns) / count if count else 0.0,
         "RA": min(1.0, max(0, len(explicit_turns) - 1) / 2),
@@ -241,7 +287,8 @@ def learning_struggle(
 
 
 # ------------------------------------------------------------------ quiz topic selection
-RECENT_TURNS_FOR_QUIZ = 3
+# The helpers below are used by orchestrator.py to decide which topic(s) a quiz should cover.
+RECENT_TURNS_FOR_QUIZ = 3   # "quiz me" with no topic named -> topics of the last 3 tutor turns
 
 
 # How students name each topic. Plain "if" and "set" are left out on purpose: they are ordinary
@@ -261,15 +308,17 @@ TOPIC_ALIASES = {
     "T12": r"exceptions?|try[- /]except|error handling",
     "T13": r"files?|file handling",
 }
+# Whole-word, case-insensitive regex for each topic's aliases.
 _TOPIC_PATTERNS = {tid: re.compile(rf"\b(?:{alias})\b", re.IGNORECASE) for tid, alias in TOPIC_ALIASES.items()}
 
 
 def topics_mentioned(text: str, topics_filepath: str = TOPICS_FILEPATH) -> List[str]:
-    """Topic ids the message names explicitly, in the order they appear:
-    "quiz on lists and loops" -> [T08, T06]; "ready for assessment" -> []."""
+    """Return the topic ids the message names explicitly, in the order they appear.
+    Both ids ("T08") and names/aliases ("lists") count.
+    Example: "quiz on lists and loops" -> [T08, T06]; "ready for assessment" -> []."""
     text = str(text or "")
     valid = load_catalog(topics_filepath)["topic_names"]
-    positions = {}
+    positions = {}   # topic id -> position of its first mention, used for ordering
     for match in re.finditer(r"\bT\d{2}\b", text.upper()):
         if match.group(0) in valid:
             positions.setdefault(match.group(0), match.start())
@@ -285,7 +334,7 @@ def recent_learning_topics(
     turns: int = RECENT_TURNS_FOR_QUIZ,
     topics_filepath: str = TOPICS_FILEPATH,
 ) -> List[str]:
-    """Distinct topics of the student's last `turns` tutor conversations, oldest first."""
+    """Return the distinct topics of the student's last `turns` tutor messages, oldest first."""
     valid = load_catalog(topics_filepath)["topic_names"]
     recent = [
         turn.get("topic_id") for turn in (student_kb or {}).get("learning_conversations", [])
@@ -295,6 +344,7 @@ def recent_learning_topics(
 
 
 # ------------------------------------------------------------------ topic of a tutor request
+# The helpers below are used by orchestrator.py to guess the topic of a tutor question.
 # Concept, method and keyword names that point at a topic without naming it
 # ("difference between sort and count" -> lists). A word may belong to several topics
 # ("count", "slicing"); the conversation's current topic then breaks the tie.
@@ -320,14 +370,15 @@ TOPIC_HINTS = {
 
 # Everyday words that are also Python terms ("I don't GET it", "keep my DATA", "what does this
 # VALUE mean"). They never count as topic evidence on their own; the topic classifier and the
-# conversation's topic decide instead.
+# conversation's topic decide instead. Words are written in their stemmed form ("valu" = "value").
 GENERIC_WORDS = {"get", "data", "program", "valu", "key", "item", "updat", "check", "work", "run",
                  "mak", "new", "creat", "number", "word", "nam", "tim", "thing", "exampl", "cod", "keys"}
 
 
 @lru_cache(maxsize=4)
 def _topic_evidence_words(topics_filepath: str = TOPICS_FILEPATH) -> Dict[str, set]:
-    """Per topic: words from its subtopic names that no other topic uses, plus TOPIC_HINTS."""
+    """Build, for each topic, the set of words that point at it: words from its own name and
+    subtopic names that no other topic uses, plus its TOPIC_HINTS, minus GENERIC_WORDS. Cached."""
     catalog = load_catalog(topics_filepath)
     from_names = {
         tid: set().union(tokenize(catalog["topic_names"][tid]),
@@ -342,14 +393,16 @@ def _topic_evidence_words(topics_filepath: str = TOPICS_FILEPATH) -> Dict[str, s
 
 
 def topic_evidence(text: str, topics_filepath: str = TOPICS_FILEPATH) -> Dict[str, int]:
-    """How many words of the message point at each topic (topics with no evidence omitted)."""
+    """Count how many words of the message point at each topic.
+    Returns {topic_id: count}; topics with a count of 0 are left out."""
     tokens = tokenize(text)
     scores = {tid: len(tokens & words) for tid, words in _topic_evidence_words(topics_filepath).items()}
     return {tid: score for tid, score in scores.items() if score}
 
 
 def current_lesson_topic(student_kb: Optional[dict]) -> Optional[str]:
-    """Topic of the most recent tutor lesson, if the last thing the student did was learning."""
+    """Return the topic of the latest tutor lesson if the student's last recorded event was a
+    lesson (not a quiz); otherwise None. Lets a follow-up message stay on the same topic."""
     history = (student_kb or {}).get("pedagogy_history", [])
     if history and history[-1].get("event") == "lesson":
         return history[-1].get("topic_id")

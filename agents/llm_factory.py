@@ -1,3 +1,25 @@
+"""Load the local Qwen LLM and hand it out to the agents.
+
+Every agent that needs a language model (orchestrator, tutor, assessment, workflow, some
+scripts) calls `get_llm(profile)` from this file. It returns a LangChain runnable, so callers
+just do `llm.invoke(messages)` and get back an `AIMessage`.
+
+How it works:
+    - The model (MODEL_NAME, Qwen3-4B) is loaded once with Hugging Face `transformers`
+      onto the GPU (`device_map="auto"`) and cached, so every agent shares the same copy.
+    - A "profile" sets the generation settings for one kind of job (PROFILES):
+      router (routing decisions), tutor (long explanations), judge (short, deterministic
+      verdicts) and quiz (deterministic quiz generation).
+    - Qwen3 can "think" (write hidden reasoning inside <think>...</think>) before answering.
+      `enable_thinking` switches this on or off with the /think or /no_think directive, and
+      the reasoning is always removed from the text returned to the caller.
+    - If an answer is cut off at the token limit, the model is asked to continue, up to
+      MAX_CONTINUATIONS extra times, and the pieces are joined into one answer.
+
+Main parts: PROFILES, get_llm() (public entry point), _invoke_with_continuation() (the
+generation loop) and a few small message helpers.
+"""
+
 from functools import lru_cache
 
 import torch
@@ -17,6 +39,8 @@ from langchain_core.runnables import RunnableLambda
 
 MODEL_NAME = "Qwen/Qwen3-4B"
 
+# Generation settings per profile. max_tokens = new tokens per generation attempt;
+# temperature 0.0 means greedy (deterministic) decoding.
 PROFILES = {
     "router": {
         "max_tokens": 1024,
@@ -40,22 +64,27 @@ PROFILES = {
     },
 }
 
-# Number of additional generation requests allowed.
+# How many times the model may be asked to continue a cut-off answer.
 # Total generation attempts = 1 + MAX_CONTINUATIONS.
 MAX_CONTINUATIONS = 2
 
 
 # --------------------------------------------------
-# Model & Tokenizer Loader (Cached in NVIDIA GPU)
+# Model and tokenizer loader (loaded once, then cached)
 # --------------------------------------------------
 
 @lru_cache(maxsize=1)
 def _get_hf_model_and_tokenizer(model_path):
-    print(f"\n[LLM] Loading Hugging Face model directly onto NVIDIA GPU: {model_path}...")
-    
+    """Load the Hugging Face model and tokenizer once and reuse them on later calls.
+
+    `device_map="auto"` lets transformers place the model on the available GPU(s).
+    Returns (model, tokenizer).
+    """
+    print(f"\n[LLM] Loading Hugging Face model: {model_path}...")
+
     tokenizer = AutoTokenizer.from_pretrained(model_path)
-    
-    # Load model onto GPU with bfloat16/float16 for efficiency
+
+    # Half precision saves memory: bfloat16 when the GPU supports it, else float16.
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
@@ -71,7 +100,12 @@ def _get_hf_model_and_tokenizer(model_path):
 # --------------------------------------------------
 
 def _apply_thinking_mode(messages, enable_thinking=False):
-    """Apply Qwen3's thinking directive to the system message."""
+    """Add Qwen3's "/think" or "/no_think" directive to the conversation.
+
+    The directive is appended to the first system message (if not already there); when there
+    is no system message, a new one holding only the directive is inserted at the front.
+    Returns a new list; the input list is not changed.
+    """
 
     prepared_messages = list(messages)
     directive = "/think" if enable_thinking else "/no_think"
@@ -91,7 +125,11 @@ def _apply_thinking_mode(messages, enable_thinking=False):
 
 
 def _normalize_messages(inputs):
-    """Normalize supported LangChain inputs into messages."""
+    """Turn any supported LangChain input into a list of messages.
+
+    Accepts a prompt value (anything with `to_messages()`), a single message, a plain string
+    (becomes a HumanMessage) or a list/tuple of messages. Raises TypeError otherwise.
+    """
 
     if hasattr(inputs, "to_messages"):
         return list(inputs.to_messages())
@@ -111,7 +149,11 @@ def _normalize_messages(inputs):
 
 
 def _visible_text(chunk):
-    """Drop Qwen3 reasoning; return "" if the model was still thinking at the token limit."""
+    """Remove Qwen3's <think> reasoning and return only the answer text.
+
+    Keeps the text after the last "</think>". If "<think>" was opened but never closed, the
+    model was still thinking when it hit the token limit, so there is no answer yet: returns "".
+    """
     if "</think>" in chunk:
         return chunk.rsplit("</think>", 1)[1]
     if "<think>" in chunk:
@@ -120,7 +162,7 @@ def _visible_text(chunk):
 
 
 # --------------------------------------------------
-# Iterative response generation (Direct Transformers)
+# Response generation with automatic continuation
 # --------------------------------------------------
 
 def _invoke_with_continuation(
@@ -128,9 +170,22 @@ def _invoke_with_continuation(
     profile_config,
     enable_thinking=False,
 ):
-    """
-    Generate a response directly via Hugging Face and continue when 
-    token length hits max_tokens limit.
+    """Generate an answer with the local model, continuing it if it gets cut off.
+
+    Each attempt generates up to `max_tokens` new tokens. If the limit is hit, the visible
+    text so far is added to the conversation as an assistant message, followed by a user
+    message asking the model to continue (or, if it produced no answer text yet, to start
+    answering directly). This repeats at most MAX_CONTINUATIONS times.
+
+    Args:
+        inputs: messages in any form accepted by _normalize_messages().
+        profile_config: one entry of PROFILES (max_tokens, temperature, top_p).
+        enable_thinking: let Qwen3 reason in <think> tags before answering.
+
+    Returns:
+        An AIMessage with the joined answer text, `response_metadata` (continuation count,
+        whether it was still truncated or empty, last finish reason) and `usage_metadata`
+        (token counts summed over all attempts).
     """
     model, tokenizer = _get_hf_model_and_tokenizer(MODEL_NAME)
 
@@ -148,7 +203,8 @@ def _invoke_with_continuation(
     print(f"\n[LLM] Maximum generation attempts: {max_attempts}")
 
     for attempt in range(max_attempts):
-        # Convert LangChain messages to chat format dictionaries
+        # Convert LangChain messages to the {"role", "content"} dicts the chat template expects.
+        # Unknown message types are treated as user messages.
         chat_messages = []
         for msg in conversation:
             if isinstance(msg, SystemMessage):
@@ -161,20 +217,18 @@ def _invoke_with_continuation(
                 role = "user"
             chat_messages.append({"role": role, "content": msg.content})
 
-        # Apply chat template
+        # Build Qwen's prompt text; add_generation_prompt=True ends it with the assistant's turn.
         prompt = tokenizer.apply_chat_template(
             chat_messages,
             tokenize=False,
             add_generation_prompt=True,
         )
 
-        # Tokenize and move to GPU
         inputs_tensor = tokenizer([prompt], return_tensors="pt").to(model.device)
         input_len = inputs_tensor.input_ids.shape[1]
 
-        # Generate text directly using PyTorch/Transformers.
-        # Sampling settings are passed only when sampling; greedy decoding (temperature 0)
-        # would otherwise print a warning on every call.
+        # Sampling settings are passed only when sampling; with greedy decoding (temperature 0)
+        # transformers would otherwise print a warning on every call.
         generation_kwargs = {
             "max_new_tokens": max_tokens,
             "do_sample": temperature > 0,
@@ -186,7 +240,7 @@ def _invoke_with_continuation(
         with torch.no_grad():
             outputs = model.generate(**inputs_tensor, **generation_kwargs)
 
-        # Slice off the prompt tokens to get only the newly generated text
+        # The output starts with the prompt tokens; keep only the newly generated ones.
         generated_ids = outputs[0][input_len:]
         chunk = tokenizer.decode(generated_ids, skip_special_tokens=True)
         # Keep only user-visible answer text; Qwen3's <think> reasoning stays out of the
@@ -195,7 +249,7 @@ def _invoke_with_continuation(
 
         output_parts.append(visible)
 
-        # Determine finish reason based on whether max_new_tokens was hit
+        # "length" = cut off at the token limit, "stop" = the model finished by itself.
         generated_tokens = len(generated_ids)
         finish_reason = "length" if generated_tokens >= max_tokens else "stop"
         
@@ -212,16 +266,14 @@ def _invoke_with_continuation(
             f"| Visible tokens: {len(visible.split())} words"
         )
 
-        # Stop when the model finishes naturally
         if finish_reason != "length":
             break
 
-        # No more continuation attempts are available
         if generation_number >= max_attempts:
             print("[LLM] Maximum continuation limit reached.")
             break
 
-        # Append assistant chunk and continuation prompt for the next turn
+        # Show the model what it wrote so far, then ask it to continue from there.
         conversation.append(AIMessage(content=visible))
 
         if visible.strip():
@@ -289,7 +341,16 @@ def _invoke_with_continuation(
 
 @lru_cache(maxsize=None)
 def get_llm(profile="tutor", enable_thinking=False):
-    """Return a LangChain-compatible local NVIDIA-backed LLM with automatic continuation."""
+    """Return the local Qwen model as a LangChain runnable for one profile.
+
+    Args:
+        profile: a key of PROFILES ("router", "tutor", "judge" or "quiz").
+        enable_thinking: let Qwen3 reason before answering (the reasoning is not returned).
+
+    Returns a RunnableLambda: `.invoke(messages)` returns an AIMessage (see
+    _invoke_with_continuation). Results are cached, so each profile/thinking pair is built once.
+    Raises ValueError for an unknown profile.
+    """
 
     if profile not in PROFILES:
         raise ValueError(

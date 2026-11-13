@@ -370,7 +370,9 @@ topic and updates the student's topic mastery estimate. If the same strategy is 
 to at least two quizzes averaging below 60%, the next lesson switches strategy. A
 recurring signal across multiple quizzes prioritizes contrastive feedback. This uses
 assessment outcomes rather than asking students to rate the tutor; a new profile starts
-with a mastery-based strategy until enough evidence is available.
+with a mastery-based strategy until enough evidence is available. The console logs the
+selected strategy and reason for each explanation, and explicitly reports when a strategy
+changes or continues from the previous lesson on that topic.
 
 ### `agents/course_retriever.py`
 

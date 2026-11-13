@@ -25,7 +25,7 @@ PROFILES = {
         "top_p": 0.95,
     },
     "tutor": {
-        "max_tokens": 2048,
+        "max_tokens": 1024,
         "temperature": 0.7,
         "top_p": 0.8,
     },

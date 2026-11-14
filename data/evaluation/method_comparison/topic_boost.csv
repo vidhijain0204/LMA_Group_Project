@@ -1,0 +1,5 @@
+method,no topic,topic right (soft boost),topic wrong on 1 in 5
+tfidf,67%,93%,86%
+bm25,67%,91%,84%
+dense (Qwen3-Embedding-0.6B),89%,100%,85%
+hybrid (Qwen3-Embedding-0.6B),84%,100%,88%

@@ -16,10 +16,18 @@ HF_CACHE_DIR = "/home/.cache"
 
 PROFILES = {
     "router": dict(max_new_tokens=5000, do_sample=False, enable_thinking=True),
-    "tutor": dict(max_new_tokens=1024, do_sample=True, temperature=0.7, top_p=0.9),
+    "tutor": dict(max_new_tokens=2048, do_sample=True, temperature=0.7, top_p=0.9),
     "judge": dict(max_new_tokens=256, do_sample=False),
     "quiz": dict(max_new_tokens=512, do_sample=False),
 }
+
+# The keys of a profile that are settings of the text generation itself.
+GENERATION_KEYS = {"max_new_tokens", "do_sample", "temperature", "top_p", "top_k", "repetition_penalty"}
+
+# Profiles whose settings are given to the pipeline itself (see get_llm). The others (router, quiz,
+# judge) keep running exactly as they did before: applying their settings would change how the router
+# decodes (greedy, thinking mode, up to 5000 tokens), which has not been tested on the real model.
+SETTINGS_APPLIED_TO = {"tutor"}
 
 
 @lru_cache(maxsize=1)
@@ -64,19 +72,33 @@ def get_llm(profile: str = "tutor", enable_thinking: bool = False):
     model = load_base_model()
     tokenizer = load_tokenizer(enable_thinking=enable_thinking)
 
+    stored_kwargs = {
+        **PROFILES[profile],
+        "return_full_text": False,
+        "pad_token_id": tokenizer.eos_token_id,
+    }
+
+    # The generation settings must be given to the pipeline itself. LangChain's HuggingFacePipeline
+    # only stores `pipeline_kwargs` when it is built from an existing pipeline and never passes them
+    # on, so for the profiles in SETTINGS_APPLIED_TO they are given here instead.
+    pipeline_settings = {}
+    if profile in SETTINGS_APPLIED_TO:
+        pipeline_settings = {
+            **{key: value for key, value in PROFILES[profile].items() if key in GENERATION_KEYS},
+            "return_full_text": False,
+            "pad_token_id": tokenizer.eos_token_id,
+        }
+
     hf_pipe = pipeline(
         "text-generation",
         model=model,
         tokenizer=tokenizer,
+        **pipeline_settings,
     )
 
     pipe_llm = HuggingFacePipeline(
         pipeline=hf_pipe,
-        pipeline_kwargs={
-            **PROFILES[profile],
-            "return_full_text": False,
-            "pad_token_id": tokenizer.eos_token_id,
-        },
+        pipeline_kwargs=stored_kwargs,
     )
 
     return ChatHuggingFace(llm=pipe_llm, tokenizer=tokenizer)

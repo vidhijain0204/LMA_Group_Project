@@ -1,10 +1,18 @@
 import json
 import re
 from typing import List, Optional, Tuple
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 
 from agents.course_retriever import CourseRetriever
 from agents.llm_factory import get_llm
+
+try:
+    from agents.llm_factory import PROFILES
+except ImportError:  # a test double that only provides get_llm
+    PROFILES = {}
+
+# Length limit of one tutor reply, in tokens. A reply that reaches it was cut off.
+TUTOR_TOKEN_LIMIT = PROFILES.get("tutor", {}).get("max_new_tokens")
 
 
 def get_student_topic_context(student_kb: Optional[dict], topic_focus: List[str]) -> Tuple[str, float, list]:
@@ -94,6 +102,102 @@ def clean_tutor_output(raw_text: str) -> str:
     return "\n".join(filtered_lines).strip()
 
 
+# ---------------------------------------------------------------------------------------------
+# Complete answers: when a reply runs out of room, ask the model to continue instead of showing
+# it cut off in the middle of a sentence or a code block.
+# ---------------------------------------------------------------------------------------------
+MAX_CONTINUATIONS = 2   # extra model calls for one reply
+TOKEN_MARGIN = 24       # a reply this close to the limit counts as cut off
+CONTINUE_PROMPT = (
+    "Continue your previous answer exactly from where it stopped. Do not repeat anything you already "
+    "wrote and do not add an introduction. If you were in the middle of a code block, continue inside it. "
+    "If your previous answer was already complete, reply with exactly: DONE"
+)
+CUT_OFF_NOTE = "*(The answer was cut off. Ask me to continue and I will pick up from here.)*"
+
+
+def has_unclosed_fence(text: str) -> bool:
+    """True if a ``` code block was opened and never closed (the typical sign of a cut-off reply)."""
+    return text.count("```") % 2 == 1
+
+
+def _ends_cleanly(text: str) -> bool:
+    stripped = text.rstrip()
+    return bool(stripped) and stripped[-1] in ".!?)]}\"'`*_|"
+
+
+def segment_was_cut_off(segment: str, full_text: str, llm=None) -> bool:
+    """Did generation stop because it ran out of tokens, rather than because the answer was finished?
+
+    With the model's tokenizer the token count is exact: a finished reply is shorter than the limit.
+    Without it, fall back on how the text ends."""
+    if not segment.strip():
+        return False
+    if has_unclosed_fence(full_text):
+        return True
+    tokenizer = getattr(llm, "tokenizer", None)
+    if TUTOR_TOKEN_LIMIT and tokenizer is not None:
+        try:
+            return len(tokenizer.encode(segment, add_special_tokens=False)) >= TUTOR_TOKEN_LIMIT - TOKEN_MARGIN
+        except Exception:
+            pass
+    return not _ends_cleanly(segment)
+
+
+def _trim_repeated_start(text: str, more: str) -> Tuple[str, bool]:
+    """Drop the beginning of `more` if it repeats the end of `text` (models often restart the last line).
+
+    Returns (the rest of `more`, whether something was dropped)."""
+    tail = text[-200:]
+    for size in range(min(len(tail), len(more)), 7, -1):
+        if more.startswith(tail[-size:]):
+            return more[size:], True
+    return more, False
+
+
+def join_continuation(text: str, more: str) -> str:
+    """Append a continuation to the text so far."""
+    if has_unclosed_fence(text):
+        first_line, _, rest = more.partition("\n")
+        if first_line.lstrip().startswith("```"):  # the model opened the code block again
+            more = rest
+    more, repeated = _trim_repeated_start(text, more)
+    if not more:
+        return text
+    if repeated:  # it picked up in the middle of the line we already have: continue that line
+        return text + more
+    if text.endswith("\n") or more.startswith("\n"):
+        return text + more
+    if has_unclosed_fence(text) or more.lstrip()[:1] in "#-*`|>0123456789":
+        return text + "\n" + more
+    return text + " " + more
+
+
+def generate_complete_reply(llm, messages) -> Tuple[str, bool]:
+    """Get the tutor's answer and, if it hit the length limit, ask the model to continue.
+
+    Returns (answer, finished). A code block that is still open at the end is closed, and an answer
+    that is still cut off after MAX_CONTINUATIONS is marked as such."""
+    text = clean_tutor_output(llm.invoke(messages).content.strip())
+    segment, continuations = text, 0
+    while segment_was_cut_off(segment, text, llm) and continuations < MAX_CONTINUATIONS:
+        continuations += 1
+        print(f"[Tutor] Reply reached the length limit; asking the model to continue ({continuations}/{MAX_CONTINUATIONS})")
+        follow_up = messages + [AIMessage(content=text), HumanMessage(content=CONTINUE_PROMPT)]
+        segment = clean_tutor_output(llm.invoke(follow_up).content.strip())
+        if not segment or segment.strip().upper().rstrip(".") == "DONE":
+            segment = ""
+            break
+        text = join_continuation(text, segment)
+    finished = not segment_was_cut_off(segment, text, llm)
+    if has_unclosed_fence(text):
+        text += "\n```"
+    if not finished:
+        print("[Tutor] Reply is still cut off after the continuations")
+        text += "\n\n" + CUT_OFF_NOTE
+    return text, finished
+
+
 def create_tutor_node(
     enable_kb_context: bool = True,
     retriever: Optional[CourseRetriever] = None,
@@ -126,7 +230,7 @@ def create_tutor_node(
             preferred_topics=CourseRetriever.parse_topic_ids(topic_focus),
             mastery_scores=(student_kb or {}).get("topics"),
             limit=4,
-            method="bm25",
+            method="hybrid",
         )
         retrieved_context = (
             course_retriever.format_context(retrieved_chunks)
@@ -159,9 +263,7 @@ def create_tutor_node(
             )
         )
 
-        response = llm.invoke([sys_msg] + state["messages"])
-        raw_content = response.content.strip()
-        actual_content = clean_tutor_output(raw_content)
+        actual_content, _ = generate_complete_reply(llm, [sys_msg] + state["messages"])
         if retrieved_chunks:
             citations = []
             for chunk in retrieved_chunks:

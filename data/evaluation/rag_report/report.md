@@ -1,5 +1,5 @@
 # RAG evaluation report
-Generated 2026-11-14 17:13. Model sections not run (use --llm).
+Generated 2026-11-14 17:42. Model sections not run (use --llm).
 
 ## 1. Retrieval relevance
 
@@ -8,7 +8,7 @@ Generated 2026-11-14 17:13. Model sections not run (use --llm).
 | method | queries | Recall@5 | MRR | hit@5 | median ms |
 |---|---|---|---|---|---|
 | tfidf | 22 | 0.748 | 0.729 | 0.955 | 0.27 |
-| bm25 | 22 | 0.787 | 0.752 | 0.909 | 0.33 |
+| bm25 | 22 | 0.787 | 0.752 | 0.909 | 0.32 |
 
 Lexical ablation (BM25):
 

@@ -17,11 +17,14 @@ How a search works
        (needs_context) carry that background with them.
 
 No library is needed for the default method. Embeddings (dense/hybrid) need numpy and
-sentence-transformers and are only loaded when one of those methods is used.
+sentence-transformers and are only loaded when one of those methods is used. The default embedding
+model is Qwen3-Embedding-0.6B, which expects a short task instruction in front of the question (not in
+front of the course chunks); `embedding_query_prompt` sets it, and "auto" picks the right one per model.
 """
 
 import hashlib
 import heapq
+import inspect
 import json
 import math
 import re
@@ -31,6 +34,23 @@ from typing import Any, Dict, Iterable, List, Optional, Set
 
 DEFAULT_CORPUS_FILEPATH = "data/common/corpus.jsonl"
 METHODS = ("tfidf", "bm25", "dense", "hybrid")
+
+DEFAULT_EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-0.6B"
+# Qwen3-Embedding expects "Instruct: <task>\nQuery:<question>" on the question side only.
+TUTOR_QUERY_INSTRUCTION = (
+    "Instruct: Given a student's question about Python programming, "
+    "retrieve the course passages that help answer it\nQuery:"
+)
+
+
+def default_prompts(model_name: str):
+    """(question prompt, chunk prompt) a model expects. Models that need none get (None, None)."""
+    name = model_name.lower()
+    if "qwen3-embedding" in name:
+        return TUTOR_QUERY_INSTRUCTION, None
+    if re.search(r"(^|[/_-])e5([_-]|$)", name):          # e5-base-v2, multilingual-e5-large, ...
+        return "query: ", "passage: "
+    return None, None
 
 # A "word" is a run of lowercase letters, digits or underscores (so "list_append" stays one word).
 TOKEN_PATTERN = re.compile(r"[a-z0-9_]+")
@@ -68,9 +88,15 @@ class CourseRetriever:
     def __init__(
         self,
         corpus_filepath: str = DEFAULT_CORPUS_FILEPATH,
-        embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+        embedding_model_name: str = DEFAULT_EMBEDDING_MODEL,
         embedding_cache_dir: str = ".cache/course_retriever",
         *,
+        embedding_query_prompt: Optional[str] = "auto",
+        embedding_query_prompt_name: Optional[str] = None,
+        embedding_document_prompt: Optional[str] = "auto",
+        embedding_device: Optional[str] = None,
+        embedding_max_seq_length: Optional[int] = 1024,
+        embedding_batch_size: Optional[int] = None,
         k1: float = 1.5,
         b: float = 0.75,
         use_stemming: bool = False,
@@ -93,10 +119,19 @@ class CourseRetriever:
         self._build_index()
 
         # Dense retrieval: the model and the embeddings are loaded lazily.
+        # Prompts: "auto" = what the model expects (see default_prompts); None or "" = no prompt.
+        auto_query, auto_document = default_prompts(embedding_model_name)
         self.embedding_model_name = embedding_model_name
         self.embedding_cache_dir = Path(embedding_cache_dir)
+        self.embedding_query_prompt = auto_query if embedding_query_prompt == "auto" else (embedding_query_prompt or None)
+        self.embedding_query_prompt_name = embedding_query_prompt_name
+        self.embedding_document_prompt = auto_document if embedding_document_prompt == "auto" else (embedding_document_prompt or None)
+        self.embedding_device = embedding_device
+        self.embedding_max_seq_length = embedding_max_seq_length
+        self.embedding_batch_size = embedding_batch_size
         self._embedding_model = None
         self._dense_embeddings = None
+        self._query_embeddings: Dict[str, Any] = {}
 
     # ------------------------------------------------------------------ loading and indexing
     @staticmethod
@@ -195,7 +230,11 @@ class CourseRetriever:
         if self._embedding_model is None:
             from sentence_transformers import SentenceTransformer
 
-            self._embedding_model = SentenceTransformer(self.embedding_model_name)
+            model_kwargs = {"device": self.embedding_device} if self.embedding_device else {}
+            model = SentenceTransformer(self.embedding_model_name, **model_kwargs)
+            if self.embedding_max_seq_length and hasattr(model, "max_seq_length"):
+                model.max_seq_length = self.embedding_max_seq_length   # long enough for every chunk, bounded memory
+            self._embedding_model = model
         return self._embedding_model
 
     def _get_dense_embeddings(self):
@@ -207,7 +246,9 @@ class CourseRetriever:
 
         self.embedding_cache_dir.mkdir(parents=True, exist_ok=True)
         corpus_hash = hashlib.sha256(Path(self.corpus_filepath).read_bytes()).hexdigest()[:16]
-        model_hash = hashlib.sha256(self.embedding_model_name.encode("utf-8")).hexdigest()[:12]
+        model_hash = hashlib.sha256(
+            f"{self.embedding_model_name}|{self.embedding_document_prompt or ''}".encode("utf-8")
+        ).hexdigest()[:12]
         cache_file = self.embedding_cache_dir / f"embeddings_{model_hash}_{corpus_hash}.npy"
 
         if cache_file.exists():
@@ -216,16 +257,66 @@ class CourseRetriever:
                 self._dense_embeddings = embeddings
                 return embeddings
 
-        embeddings = self._get_embedding_model().encode(
+        encode_kwargs = {}
+        if self.embedding_document_prompt:
+            encode_kwargs["prompt"] = self.embedding_document_prompt
+        if self.embedding_batch_size:
+            encode_kwargs["batch_size"] = self.embedding_batch_size
+        model = self._get_embedding_model()
+        embeddings = model.encode(
             [d["text"] for d in self.documents],
             convert_to_numpy=True,
             normalize_embeddings=True,
             show_progress_bar=True,
+            **self._accepted_encode_kwargs(model, encode_kwargs),
         )
         embeddings = np.asarray(embeddings, dtype=np.float32)
         np.save(cache_file, embeddings)
         self._dense_embeddings = embeddings
         return embeddings
+
+    @staticmethod
+    def _accepted_encode_kwargs(model, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """Keep only the encode() arguments this model accepts, and say so once if a prompt had to be dropped."""
+        try:
+            parameters = inspect.signature(model.encode).parameters
+        except (TypeError, ValueError):
+            return kwargs
+        if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+            return kwargs
+        accepted = {key: value for key, value in kwargs.items() if key in parameters}
+        dropped = set(kwargs) - set(accepted)
+        if dropped and not getattr(model, "_retriever_warned", False):
+            print(f"[CourseRetriever] this embedding model's encode() does not accept {sorted(dropped)}; ignoring it")
+            try:
+                model._retriever_warned = True
+            except AttributeError:
+                pass
+        return accepted
+
+    def _query_embedding(self, query: str):
+        """Embedding of one question, with the model's question prompt; repeated questions are cached."""
+        cached = self._query_embeddings.get(query)
+        if cached is not None:
+            return cached
+        encode_kwargs = {}
+        if self.embedding_query_prompt:
+            encode_kwargs["prompt"] = self.embedding_query_prompt
+        elif self.embedding_query_prompt_name:
+            encode_kwargs["prompt_name"] = self.embedding_query_prompt_name
+        model = self._get_embedding_model()
+        embedding = model.encode(
+            [query], convert_to_numpy=True, normalize_embeddings=True, show_progress_bar=False,
+            **self._accepted_encode_kwargs(model, encode_kwargs),
+        )[0]
+        if len(self._query_embeddings) >= 2048:           # keep the cache small
+            self._query_embeddings.pop(next(iter(self._query_embeddings)))
+        self._query_embeddings[query] = embedding
+        return embedding
+
+    def clear_query_cache(self) -> None:
+        """Forget cached question embeddings (used when timing searches)."""
+        self._query_embeddings.clear()
 
     def _dense_scores(self, query: str, candidates: List[int]) -> Dict[int, float]:
         """Cosine similarity between the question and each candidate chunk, mapped to 0..1."""
@@ -233,11 +324,8 @@ class CourseRetriever:
 
         if not candidates:
             return {}
-        model = self._get_embedding_model()
         corpus_embeddings = self._get_dense_embeddings()
-        query_embedding = model.encode(
-            [query], convert_to_numpy=True, normalize_embeddings=True, show_progress_bar=False
-        )[0]
+        query_embedding = self._query_embedding(query)
         similarities = np.dot(corpus_embeddings[candidates], query_embedding)
         return {index: float((s + 1.0) / 2.0) for index, s in zip(candidates, similarities)}
 
@@ -319,7 +407,7 @@ class CourseRetriever:
         topic_ids: Optional[List[str]] = None,
         mastery_scores: Optional[Dict[str, float]] = None,
         limit: int = 4,
-        method: str = "bm25",
+        method: str = "hybrid",
         *,
         preferred_topics: Optional[List[str]] = None,
         topic_boost: float = 1.0,
@@ -339,7 +427,8 @@ class CourseRetriever:
             method: "bm25" (default), "tfidf", "dense" or "hybrid".
             preferred_topics: a softer alternative to topic_ids: chunks of these topics get their
                 score raised by `topic_boost` (doubled by default) but nothing is excluded, so a wrong
-                guess of the topic cannot hide the right chunks.
+                guess of the topic cannot hide the right chunks. The boost is applied on a comparable
+                scale for every method (dense and hybrid scores are stretched to 0..1 first).
             topic_fallback: if the topics have no relevant chunk, search the whole corpus
                 (results then carry "outside_topic": True).
         """
@@ -359,6 +448,13 @@ class CourseRetriever:
         raw = {p: s for p, s in raw.items() if s > 0}
         if not raw:
             return []
+        original = dict(raw)  # the method's own scores, reported as "relevance"
+        if method in ("dense", "hybrid"):
+            # Embedding and fused scores sit in a narrow band (e.g. 0.55-0.95), so a multiplicative topic
+            # boost would act like a hard filter. Stretch them to 0..1 first, as BM25 scores already are
+            # relative to the best one, so that the boost means the same for every method.
+            low_score, high_score = min(raw.values()), max(raw.values())
+            raw = {p: ((s - low_score) / (high_score - low_score) if high_score > low_score else 1.0) for p, s in raw.items()}
         preferred = set(self.parse_topic_ids(preferred_topics))
         if preferred:
             raw = {
@@ -409,7 +505,7 @@ class CourseRetriever:
                 "text": document["text"],
                 "source": self._source_details(document),
                 "score": adjusted,
-                "relevance": score,
+                "relevance": original[position],
             }
             if outside_topic:
                 result["outside_topic"] = True

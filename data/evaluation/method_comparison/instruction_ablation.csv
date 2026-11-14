@@ -1,0 +1,7 @@
+instruction,method,A recall,B rr,C precision
+tutoring instruction (used above),dense (Qwen3-Embedding-0.6B),0.562,0.709,0.893
+tutoring instruction (used above),hybrid (Qwen3-Embedding-0.6B),0.802,0.661,0.843
+built-in 'query' prompt,dense (Qwen3-Embedding-0.6B),0.582,0.653,0.886
+built-in 'query' prompt,hybrid (Qwen3-Embedding-0.6B),0.810,0.626,0.829
+no instruction,dense (Qwen3-Embedding-0.6B),0.573,0.648,0.879
+no instruction,hybrid (Qwen3-Embedding-0.6B),0.791,0.636,0.843

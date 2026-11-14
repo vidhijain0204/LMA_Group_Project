@@ -1,0 +1,5 @@
+how the topic is used,on-topic (topic right),questions with an on-topic chunk,on-topic (topic wrong on 1 in 5),questions with an on-topic chunk (1 in 5 wrong)
+no topic information,67%,32/35,67%,32/35
+topic name added to the query,85%,34/35,81%,33/35
+hard filter (topic_ids),100%,35/35,80%,28/35
+"soft boost, x2 (preferred_topics)",91%,35/35,84%,34/35

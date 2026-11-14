@@ -1,0 +1,4 @@
+difficulty weight,"mean difficulty, weak 0.2","on-topic, weak 0.2","mean difficulty, developing 0.55","on-topic, developing 0.55","mean difficulty, strong 0.9","on-topic, strong 0.9",gap strong-weak
+0.0,2.01,91%,2.01,91%,2.01,91%,+0.00
+0.5,1.81,91%,1.96,91%,2.22,89%,+0.41
+1.0,1.76,90%,1.99,90%,2.33,86%,+0.56

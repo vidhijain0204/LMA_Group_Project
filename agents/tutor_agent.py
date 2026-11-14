@@ -118,11 +118,13 @@ def create_tutor_node(
             ),
             "",
         )
-        retrieval_query = " ".join(
-            part for part in [question, *topic_focus] if part
-        )
+        # Search with the student's own words. The orchestrator's topic is passed as a preference
+        # (not appended to the query, where e.g. "Tuples" in "Lists, Tuples, and Sets" pulled in
+        # tuple chunks), and the student's mastery selects a suitable difficulty.
         retrieved_chunks = course_retriever.search(
-            retrieval_query,
+            question or " ".join(topic_focus),
+            preferred_topics=CourseRetriever.parse_topic_ids(topic_focus),
+            mastery_scores=(student_kb or {}).get("topics"),
             limit=4,
             method="bm25",
         )

@@ -1,0 +1,36 @@
+question,topic_ids
+who created python and when,T01
+what is the difference between the python interpreter and a script,T01
+how do i create a variable,T02
+what is the difference between int and float,T02
+why does 3/2 give 1.5,T02|T04
+how do i get input from the user,T03
+how do i print two things on the same line,T03
+why is input() always a string,T02|T03
+what does the modulo operator do,T04
+difference between == and is,T04|T05
+how does if elif else work,T05
+can i put an if inside another if,T05
+how do while loops work,T06
+why does my loop never stop,T06
+what does range do in a for loop,T06
+how do i exit a loop early with break,T06
+how do i slice a string,T07
+are strings mutable,T07
+how do i split a string into words,T07
+how do i add an item to a list,T08
+difference between a list and a tuple,T08
+how do i remove duplicates with a set,T08
+explain me list,T08
+how do i loop over a dictionary,T09
+what happens if a dictionary key does not exist,T09
+how do i define a function,T10
+what is the difference between return and print,T10
+what is a default argument,T10
+how do i write a list comprehension,T11
+list comprehension with an if condition,T11
+how do i catch an error with try except,T12
+what does finally do,T12
+how do i read a file line by line,T13
+what does the with statement do when opening a file,T13
+how do i write text to a file,T13

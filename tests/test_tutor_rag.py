@@ -11,8 +11,9 @@ class FakeRetriever:
         self.results = results
         self.search_call = None
 
-    def search(self, query, limit, method):
+    def search(self, query, limit, method, **kwargs):
         self.search_call = (query, limit, method)
+        self.search_kwargs = kwargs
         return self.results
 
     @staticmethod
@@ -60,8 +61,9 @@ class TutorRagTests(unittest.TestCase):
 
         self.assertEqual(
             retriever.search_call,
-            ("How does a for loop work? Control Flow", 4, "bm25"),
+            ("How does a for loop work?", 4, "bm25"),
         )
+        self.assertEqual(retriever.search_kwargs["preferred_topics"], ["Control Flow"])
         system_prompt = next(
             message.content
             for message in llm.messages

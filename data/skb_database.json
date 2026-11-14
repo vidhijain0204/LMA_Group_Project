@@ -1,275 +1,54 @@
 [
   {
-    "student_id": "S003",
+    "student_id": "S001",
     "topics": {
-      "T01": 0.75,
-      "T02": 0.6,
-      "T03": 0.5,
-      "T04": 0.4,
-      "T05": 0.3,
-      "T06": 0.2,
-      "T07": 0.5,
-      "T08": 0.4,
-      "T09": 0.3,
-      "T10": 0.2,
-      "T11": 0.4,
-      "T12": 0.3,
-      "T13": 0.2
-    },
-    "strengths": [
-      "T01"
-    ],
-    "weaknesses": [
-      "T02",
-      "T03",
-      "T04",
-      "T05",
-      "T06",
-      "T07",
-      "T08",
-      "T09",
-      "T10",
-      "T11",
-      "T12",
-      "T13"
-    ],
-    "first_entry_time": "2026-06-01 12:30:10",
-    "latest_update_time": "2026-06-01 12:30:10"
-  },
-  {
-    "student_id": "S004",
-    "topics": {
-      "T01": 0.8,
-      "T02": 0.7,
-      "T03": 0.6,
-      "T04": 0.5,
-      "T05": 0.4,
-      "T06": 0.3,
-      "T07": 0.4,
-      "T08": 0.3,
-      "T09": 0.2,
-      "T10": 0.3,
-      "T11": 0.2,
-      "T12": 0.4,
-      "T13": 0.3
-    },
-    "strengths": [
-      "T01",
-      "T02"
-    ],
-    "weaknesses": [
-      "T03",
-      "T04",
-      "T05",
-      "T06",
-      "T07",
-      "T08",
-      "T09",
-      "T10",
-      "T11",
-      "T12",
-      "T13"
-    ],
-    "first_entry_time": "2026-06-01 13:45:00",
-    "latest_update_time": "2026-06-01 13:45:00"
-  },
-  {
-    "student_id": "S005",
-    "topics": {
-      "T01": 0.4,
-      "T02": 0.3,
-      "T03": 0.3,
-      "T04": 0.2,
-      "T05": 0.2,
-      "T06": 0.1,
-      "T07": 0.3,
-      "T08": 0.2,
-      "T09": 0.1,
-      "T10": 0.1,
-      "T11": 0.1,
-      "T12": 0.2,
-      "T13": 0.1
-    },
-    "strengths": [],
-    "weaknesses": [
-      "T01",
-      "T02",
-      "T03",
-      "T04",
-      "T05",
-      "T06",
-      "T07",
-      "T08",
-      "T09",
-      "T10",
-      "T11",
-      "T12",
-      "T13"
-    ],
-    "first_entry_time": "2026-06-01 14:20:45",
-    "latest_update_time": "2026-06-01 14:20:45"
-  },
-  {
-    "student_id": "S010",
-    "topics": {
-      "T01": 0.0,
+      "T01": 0.18,
       "T02": 0.14,
       "T03": 0.0,
       "T04": 0.0,
       "T05": 0.2,
       "T06": 0.2,
-      "T07": 0.25,
-      "T08": 0.22,
-      "T09": 0.0,
-      "T10": 0.0,
-      "T11": 0.5,
-      "T12": 0.0,
-      "T13": 0.0
-    },
-    "strengths": [],
-    "weaknesses": [
-      "T01",
-      "T02",
-      "T03",
-      "T04",
-      "T05",
-      "T06",
-      "T07",
-      "T08",
-      "T09",
-      "T10",
-      "T11",
-      "T12",
-      "T13"
-    ],
-    "first_entry_time": "2026-10-29 22:08:16",
-    "latest_update_time": "2026-10-29 22:08:16"
-  },
-  {
-    "student_id": "S012",
-    "topics": {
-      "T01": 0.0,
-      "T02": 0.14,
-      "T03": 0.0,
-      "T04": 0.33,
-      "T05": 0.2,
-      "T06": 0.4,
-      "T07": 0.5,
-      "T08": 0.22,
-      "T09": 0.0,
-      "T10": 0.0,
-      "T11": 1.0,
-      "T12": 0.0,
-      "T13": 0.0
-    },
-    "strengths": [
-      "T11"
-    ],
-    "weaknesses": [
-      "T01",
-      "T02",
-      "T03",
-      "T04",
-      "T05",
-      "T06",
-      "T07",
-      "T08",
-      "T09",
-      "T10",
-      "T12",
-      "T13"
-    ],
-    "first_entry_time": "2026-10-29 22:45:30",
-    "latest_update_time": "2026-10-29 22:45:30"
-  },
-  {
-    "student_id": "S019",
-    "topics": {
-      "T01": 0.0,
-      "T02": 0.14,
-      "T03": 0.0,
-      "T04": 0.0,
-      "T05": 0.2,
-      "T06": 0.2,
-      "T07": 0.25,
-      "T08": 0.22,
-      "T09": 0.0,
-      "T10": 0.0,
-      "T11": 0.5,
-      "T12": 0.0,
-      "T13": 0.0
-    },
-    "strengths": [],
-    "weaknesses": [
-      "T01",
-      "T02",
-      "T03",
-      "T04",
-      "T05",
-      "T06",
-      "T07",
-      "T08",
-      "T09",
-      "T10",
-      "T11",
-      "T12",
-      "T13"
-    ],
-    "first_entry_time": "2026-10-29 23:00:13",
-    "latest_update_time": "2026-10-29 23:00:13"
-  },
-  {
-    "student_id": "S051",
-    "topics": {
-      "T01": 0.0,
-      "T02": 0.14,
-      "T03": 0.0,
-      "T04": 0.0,
-      "T05": 0.2,
-      "T06": 0.2,
-      "T07": 0.25,
-      "T08": 0.22,
-      "T09": 0.0,
-      "T10": 0.0,
-      "T11": 0.5,
-      "T12": 0.0,
-      "T13": 0.0
-    },
-    "strengths": [],
-    "weaknesses": [
-      "T01",
-      "T02",
-      "T03",
-      "T04",
-      "T05",
-      "T06",
-      "T07",
-      "T08",
-      "T09",
-      "T10",
-      "T11",
-      "T12",
-      "T13"
-    ],
-    "first_entry_time": "2026-10-29 23:21:54",
-    "latest_update_time": "2026-10-29 23:21:54"
-  },
-  {
-    "student_id": "S013",
-    "topics": {
-      "T01": 0.0,
-      "T02": 0.0,
-      "T03": 0.0,
-      "T04": 0.0,
-      "T05": 0.0,
-      "T06": 0.0,
       "T07": 0.0,
-      "T08": 0.0,
+      "T08": 0.11,
       "T09": 0.0,
       "T10": 0.0,
-      "T11": 0.0,
+      "T11": 0.5,
       "T12": 0.0,
       "T13": 0.0
+    },
+    "skills": {
+      "T01.1": 0.0,
+      "T02.2": 0.0,
+      "T04.1": 0.0,
+      "T08.3": 0.0,
+      "T03.3": 0.0,
+      "T03.1": 0.0,
+      "T04.5": 0.0,
+      "T04.6": 0.0,
+      "T05.3": 0.0,
+      "T05.2": 1.0,
+      "T06.1": 0.0,
+      "T06.4": 0.0,
+      "T07.2": 0.0,
+      "T07.4": 0.0,
+      "T08.4": 0.0,
+      "T08.5": 0.0,
+      "T08.2": 0.0,
+      "T09.3": 0.0,
+      "T09.4": 0.0,
+      "T10.4": 0.0,
+      "T08.6": 0.0,
+      "T10.2": 0.0,
+      "T11.2": 0.0,
+      "T11.4": 1.0,
+      "T12.4": 0.0,
+      "T13.2": 0.0,
+      "T13.1": 0.0,
+      "T01.5": 0.719,
+      "T02.1": 0.925,
+      "T01.2": 0.509,
+      "T01.3": 0.598,
+      "T01.4": 0.598
     },
     "strengths": [],
     "weaknesses": [
@@ -280,44 +59,6 @@
       "T05",
       "T06",
       "T07",
-      "T08",
-      "T09",
-      "T10",
-      "T11",
-      "T12",
-      "T13"
-    ],
-    "first_entry_time": "2026-10-30 11:50:03",
-    "latest_update_time": "2026-10-30 11:50:03"
-  },
-  {
-    "student_id": "S099",
-    "topics": {
-      "T01": 0.0,
-      "T02": 0.0,
-      "T03": 0.33,
-      "T04": 0.33,
-      "T05": 0.4,
-      "T06": 0.2,
-      "T07": 0.75,
-      "T08": 0.22,
-      "T09": 0.0,
-      "T10": 0.0,
-      "T11": 0.5,
-      "T12": 0.25,
-      "T13": 0.33
-    },
-    "skills": {},
-    "strengths": [
-      "T07"
-    ],
-    "weaknesses": [
-      "T01",
-      "T02",
-      "T03",
-      "T04",
-      "T05",
-      "T06",
       "T08",
       "T09",
       "T10",
@@ -326,169 +67,581 @@
       "T13"
     ],
     "active_misconceptions": {},
-    "first_entry_time": "2026-10-30 22:33:44",
-    "latest_update_time": "2026-10-30 22:33:44"
-  },
-  {
-    "student_id": "S002",
-    "topics": {
-      "T01": 1.0,
-      "T02": 0.9,
-      "T03": 0.9,
-      "T04": 0.8,
-      "T05": 0.54,
-      "T06": 0.8,
-      "T07": 0.9,
-      "T08": 0.7,
-      "T09": 0.8,
-      "T10": 0.65,
-      "T11": 0.8,
-      "T12": 0.9,
-      "T13": 0.85
-    },
-    "strengths": [
-      "T01",
-      "T02",
-      "T03",
-      "T04",
-      "T06",
-      "T07",
-      "T08",
-      "T09",
-      "T11",
-      "T12",
-      "T13"
-    ],
-    "weaknesses": [
-      "T05",
-      "T10"
-    ],
-    "first_entry_time": "2026-06-01 11:00:00",
-    "latest_update_time": "2026-11-11 16:40:14",
     "pedagogy_history": [
       {
         "event": "lesson",
-        "topic_id": "T05",
+        "topic_id": "T01",
         "strategy": "step_scaffolding",
         "reason": "Low mastery calls for guided, incremental steps.",
-        "created_at": "2026-11-11T16:00:52",
-        "assessment_accuracy": 1.0,
-        "error_signals": []
+        "created_at": "2026-11-14T00:02:44",
+        "turns": 1,
+        "assessment_accuracy": 0.9,
+        "error_signals": [
+          "T01.2"
+        ]
       },
       {
         "event": "assessment",
         "topic_id": "T01",
-        "strategy": null,
-        "accuracy": 1.0,
-        "error_signals": [],
-        "created_at": "2026-11-11T16:15:00"
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T05",
         "strategy": "step_scaffolding",
-        "accuracy": 1.0,
-        "error_signals": [],
-        "created_at": "2026-11-11T16:18:01"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T05",
-        "strategy": "step_scaffolding",
-        "reason": "Continue the current strategy; evidence does not justify a switch.",
-        "created_at": "2026-11-11T16:19:08",
-        "assessment_accuracy": 1.0,
-        "error_signals": []
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T05",
-        "strategy": "step_scaffolding",
-        "accuracy": 1.0,
-        "error_signals": [],
-        "created_at": "2026-11-11T16:35:01"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T05",
-        "strategy": "step_scaffolding",
-        "reason": "Continue the current strategy; evidence does not justify a switch.",
-        "created_at": "2026-11-11T16:37:06",
-        "assessment_accuracy": 0.2,
+        "accuracy": 0.9,
         "error_signals": [
-          "T05.5",
-          "T05.6"
-        ]
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T05",
-        "strategy": "step_scaffolding",
-        "accuracy": 0.2,
-        "error_signals": [
-          "T05.5",
-          "T05.6"
+          "T01.2"
         ],
-        "created_at": "2026-11-11T16:37:49"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T05",
-        "strategy": "step_scaffolding",
-        "reason": "Continue the current strategy; evidence does not justify a switch.",
-        "created_at": "2026-11-11T16:38:38",
-        "assessment_accuracy": 0.2,
-        "error_signals": [
-          "T05.5",
-          "T05.6"
-        ]
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T05",
-        "strategy": "step_scaffolding",
-        "accuracy": 0.2,
-        "error_signals": [
-          "T05.5",
-          "T05.6"
+        "created_at": "2026-11-14T00:05:15",
+        "responses": [
+          {
+            "prob_id": "PY0012",
+            "chosen": "B",
+            "correct": "B",
+            "is_correct": true,
+            "subtopics": [
+              "T01.5",
+              "T02.1"
+            ],
+            "misconception": null
+          },
+          {
+            "prob_id": "PY0010",
+            "chosen": "B",
+            "correct": "B",
+            "is_correct": true,
+            "subtopics": [
+              "T01.5",
+              "T02.1"
+            ],
+            "misconception": null
+          },
+          {
+            "prob_id": "PY0015",
+            "chosen": "B",
+            "correct": "B",
+            "is_correct": true,
+            "subtopics": [
+              "T01.5",
+              "T02.1"
+            ],
+            "misconception": null
+          },
+          {
+            "prob_id": "PY0008",
+            "chosen": "B",
+            "correct": "B",
+            "is_correct": true,
+            "subtopics": [
+              "T01.2",
+              "T02.1"
+            ],
+            "misconception": null
+          },
+          {
+            "prob_id": "PY0011",
+            "chosen": "B",
+            "correct": "A",
+            "is_correct": false,
+            "subtopics": [
+              "T01.2",
+              "T02.1"
+            ],
+            "misconception": null
+          },
+          {
+            "prob_id": "PY0002",
+            "chosen": "C",
+            "correct": "C",
+            "is_correct": true,
+            "subtopics": [
+              "T01.2",
+              "T02.1"
+            ],
+            "misconception": null
+          },
+          {
+            "prob_id": "PY0007",
+            "chosen": "A",
+            "correct": "A",
+            "is_correct": true,
+            "subtopics": [
+              "T01.3",
+              "T02.1"
+            ],
+            "misconception": null
+          },
+          {
+            "prob_id": "PY0005",
+            "chosen": "C",
+            "correct": "C",
+            "is_correct": true,
+            "subtopics": [
+              "T01.3",
+              "T02.1"
+            ],
+            "misconception": null
+          },
+          {
+            "prob_id": "PY0009",
+            "chosen": "D",
+            "correct": "D",
+            "is_correct": true,
+            "subtopics": [
+              "T01.4",
+              "T02.1"
+            ],
+            "misconception": null
+          },
+          {
+            "prob_id": "PY0017",
+            "chosen": "D",
+            "correct": "D",
+            "is_correct": true,
+            "subtopics": [
+              "T01.4",
+              "T02.1"
+            ],
+            "misconception": null
+          }
         ],
-        "created_at": "2026-11-11T16:39:35"
+        "root_cause": {
+          "subtopic_id": "T02.1",
+          "name": "Variable assignment and naming rules",
+          "topic_id": "T02",
+          "topic_name": "Variables and Data Types",
+          "probability": 0.68,
+          "reason": "prior mastery is low or fragile (PM' 0.86); a prerequisite topic is weak (PW 1.00)",
+          "method": "hypothesis",
+          "preset": "balanced",
+          "weights": {
+            "LS": 0.25,
+            "CE": 0.2,
+            "RP": 0.2,
+            "PW": 0.15,
+            "PM": 0.2
+          },
+          "summary": "T02 Variables and Data Types \u2192 T02.1 Variable assignment and naming rules \u2192 prior mastery is low or fragile (PM' 0.86); a prerequisite topic is weak (PW 1.00)",
+          "misconception": null
+        },
+        "quiz_topics": [
+          "T01"
+        ],
+        "quiz_id": "S001-20261114-000515-91fe",
+        "root_cause_comparison": {
+          "methods": {
+            "no_kb": "T01.2",
+            "kb_low_score": "T01.2",
+            "hypothesis": "T02.1"
+          },
+          "presets": {
+            "balanced": "T02.1",
+            "equal": "T02.1",
+            "struggle_first": "T02.1",
+            "history_first": "T02.1",
+            "mastery_first": "T02.1"
+          },
+          "ablations": {
+            "balanced-without-LS": "T02.1",
+            "balanced-without-CE": "T02.1",
+            "balanced-without-RP": "T02.1",
+            "balanced-without-PW": "T01.2",
+            "balanced-without-PM": "T02.1"
+          }
+        },
+        "hypothesis_candidates": [
+          {
+            "subtopic_id": "T01.2",
+            "params": {
+              "LS": 0.0,
+              "CE": 0.67,
+              "RP": 0.0,
+              "PW": 0.0,
+              "PM": 1.0
+            }
+          },
+          {
+            "subtopic_id": "T02.1",
+            "params": {
+              "LS": 0.0,
+              "CE": 0.9,
+              "RP": 0.0,
+              "PW": 1.0,
+              "PM": 0.86
+            }
+          }
+        ],
+        "root_cause_settings": {
+          "method": "hypothesis",
+          "preset": "balanced",
+          "weights": {
+            "LS": 0.25,
+            "CE": 0.2,
+            "RP": 0.2,
+            "PW": 0.15,
+            "PM": 0.2
+          }
+        }
       },
       {
         "event": "lesson",
-        "topic_id": "T05",
-        "strategy": "contrastive_feedback",
-        "reason": "Recurring errors on this topic call for a direct comparison.",
-        "created_at": "2026-11-11T16:40:14"
+        "topic_id": "T02",
+        "strategy": "step_scaffolding",
+        "reason": "Low mastery calls for guided, incremental steps.",
+        "created_at": "2026-11-14T00:06:03",
+        "remediation_for": "S001-20261114-000515-91fe",
+        "turns": 1
       }
     ],
     "learning_signals": {
-      "T05.5": 2,
-      "T05.6": 2
+      "T01.2": 1
     },
     "learning_signal_descriptions": {
-      "T05.5": "Combining conditions with and/or/not",
-      "T05.6": "Truthy and falsy values"
-    }
+      "T01.2": "Running code: interactive shell vs script file"
+    },
+    "learning_conversations": [
+      {
+        "topic_id": "T01",
+        "subtopic_ids": [
+          "T01.5"
+        ],
+        "subtopic_source": "classifier",
+        "text": "teach me about all my weaknesses",
+        "confusion": false,
+        "hint_request": false,
+        "signal_source": "llm",
+        "rule_flags": {
+          "confusion": false,
+          "hint_request": false
+        },
+        "after_strategy": null,
+        "reply_to_tutor": false,
+        "answer_verdict": null,
+        "created_at": "2026-11-14T00:02:44"
+      }
+    ],
+    "root_cause_history": [
+      {
+        "subtopic_id": "T02.1",
+        "name": "Variable assignment and naming rules",
+        "topic_id": "T02",
+        "topic_name": "Variables and Data Types",
+        "probability": 0.68,
+        "reason": "prior mastery is low or fragile (PM' 0.86); a prerequisite topic is weak (PW 1.00)",
+        "method": "hypothesis",
+        "preset": "balanced",
+        "weights": {
+          "LS": 0.25,
+          "CE": 0.2,
+          "RP": 0.2,
+          "PW": 0.15,
+          "PM": 0.2
+        },
+        "summary": "T02 Variables and Data Types \u2192 T02.1 Variable assignment and naming rules \u2192 prior mastery is low or fragile (PM' 0.86); a prerequisite topic is weak (PW 1.00)",
+        "misconception": null,
+        "quiz_topic_id": "T01",
+        "created_at": "2026-11-14T00:05:15"
+      }
+    ],
+    "retests": [],
+    "diagnosis_responses": [
+      {
+        "prob_id": "P01",
+        "chosen": "Dennis Ritchie, 1972",
+        "is_correct": false,
+        "subtopics": [
+          "T01.1"
+        ]
+      },
+      {
+        "prob_id": "P02",
+        "chosen": "Python source code is directly converted to machine code without any intermediate representation.",
+        "is_correct": false,
+        "subtopics": [
+          "T01.1"
+        ]
+      },
+      {
+        "prob_id": "P03",
+        "chosen": "<class 'int'>",
+        "is_correct": false,
+        "subtopics": [
+          "T02.2",
+          "T04.1"
+        ]
+      },
+      {
+        "prob_id": "P04",
+        "chosen": "x = [1, 2, 3]",
+        "is_correct": false,
+        "subtopics": [
+          "T02.2",
+          "T08.3"
+        ]
+      },
+      {
+        "prob_id": "P05",
+        "chosen": "int",
+        "is_correct": false,
+        "subtopics": [
+          "T03.3",
+          "T02.2"
+        ]
+      },
+      {
+        "prob_id": "P06",
+        "chosen": "Python 3-!",
+        "is_correct": false,
+        "subtopics": [
+          "T03.1"
+        ]
+      },
+      {
+        "prob_id": "P07",
+        "chosen": "64",
+        "is_correct": false,
+        "subtopics": [
+          "T04.1",
+          "T04.5"
+        ]
+      },
+      {
+        "prob_id": "P08",
+        "chosen": "`is` checks for value equality; `==` checks for identity/memory location.",
+        "is_correct": false,
+        "subtopics": [
+          "T04.6"
+        ]
+      },
+      {
+        "prob_id": "P09",
+        "chosen": "A",
+        "is_correct": false,
+        "subtopics": [
+          "T05.3"
+        ]
+      },
+      {
+        "prob_id": "P10",
+        "chosen": "'Pass'",
+        "is_correct": true,
+        "subtopics": [
+          "T05.2"
+        ]
+      },
+      {
+        "prob_id": "P11",
+        "chosen": "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
+        "is_correct": false,
+        "subtopics": [
+          "T06.1"
+        ]
+      },
+      {
+        "prob_id": "P12",
+        "chosen": "When the loop encounters a `break` statement.",
+        "is_correct": false,
+        "subtopics": [
+          "T06.4"
+        ]
+      },
+      {
+        "prob_id": "P13",
+        "chosen": "'hello'",
+        "is_correct": false,
+        "subtopics": [
+          "T07.2"
+        ]
+      },
+      {
+        "prob_id": "P14",
+        "chosen": "['a', '-', 'b', '-', 'c']",
+        "is_correct": false,
+        "subtopics": [
+          "T07.4"
+        ]
+      },
+      {
+        "prob_id": "P15",
+        "chosen": "6",
+        "is_correct": false,
+        "subtopics": [
+          "T08.4",
+          "T08.5"
+        ]
+      },
+      {
+        "prob_id": "P16",
+        "chosen": "a.add(b)",
+        "is_correct": false,
+        "subtopics": [
+          "T08.2"
+        ]
+      },
+      {
+        "prob_id": "P17",
+        "chosen": "KeyError",
+        "is_correct": false,
+        "subtopics": [
+          "T09.3"
+        ]
+      },
+      {
+        "prob_id": "P18",
+        "chosen": "d.keys()",
+        "is_correct": false,
+        "subtopics": [
+          "T09.4"
+        ]
+      },
+      {
+        "prob_id": "P19",
+        "chosen": "[1]\n[2]",
+        "is_correct": false,
+        "subtopics": [
+          "T10.4",
+          "T08.6"
+        ]
+      },
+      {
+        "prob_id": "P20",
+        "chosen": "Required arguments and optional arguments",
+        "is_correct": false,
+        "subtopics": [
+          "T10.2"
+        ]
+      },
+      {
+        "prob_id": "P21",
+        "chosen": "[0, 1, 4, 9, 16]",
+        "is_correct": false,
+        "subtopics": [
+          "T11.2"
+        ]
+      },
+      {
+        "prob_id": "P22",
+        "chosen": "[item for row in matrix for item in row]",
+        "is_correct": true,
+        "subtopics": [
+          "T11.4"
+        ]
+      },
+      {
+        "prob_id": "P23",
+        "chosen": "finally",
+        "is_correct": false,
+        "subtopics": [
+          "T12.4"
+        ]
+      },
+      {
+        "prob_id": "P24",
+        "chosen": "else",
+        "is_correct": false,
+        "subtopics": [
+          "T12.4"
+        ]
+      },
+      {
+        "prob_id": "P25",
+        "chosen": "It makes file read and write operations 10x faster.",
+        "is_correct": false,
+        "subtopics": [
+          "T13.2"
+        ]
+      },
+      {
+        "prob_id": "P26",
+        "chosen": "Overwrites the entire file from the beginning.",
+        "is_correct": false,
+        "subtopics": [
+          "T13.1"
+        ]
+      }
+    ],
+    "first_entry_time": "2026-11-14 00:00:49",
+    "latest_update_time": "2026-11-14 00:06:03",
+    "chat_memory": [
+      {
+        "type": "lesson",
+        "time": "2026-11-14T00:02:44",
+        "topic_id": "T01",
+        "strategy": "step_scaffolding",
+        "mode": "new_request",
+        "verdict": null,
+        "student": "teach me about all my weaknesses",
+        "covered": "Step 1: Understanding the Basics of Python; Step 2: Practice with Basic Syntax; Step 3: Control Structures; Step 4: Functions; Step 5: Data Structures; Step 6: Practice and Application; Step 7: Review and Feedback (with code example)",
+        "question": ""
+      },
+      {
+        "type": "quiz",
+        "time": "2026-11-14T00:05:15",
+        "topics": [
+          "T01"
+        ],
+        "score": "9/10",
+        "reason": "T02 Variables and Data Types \u2192 T02.1 Variable assignment and naming rules \u2192 prior mastery is low or fragile (PM' 0.86); a prerequisite topic is weak (PW 1.00)",
+        "student": "im ready for assesment"
+      },
+      {
+        "type": "lesson",
+        "time": "2026-11-14T00:06:03",
+        "topic_id": "T02",
+        "strategy": "step_scaffolding",
+        "mode": "remediation",
+        "verdict": null,
+        "student": "Help me understand T02.1 Variable assignment and naming rules.",
+        "covered": "\ud83e\udde9 **What is a variable in Python; \ud83d\udccc **Rule 1: Variable Names Are Case-sensitive; \ud83d\udccc **Rule 2: Variable Names Cannot Start with a Number; \ud83d\udccc **Rule 3: Variable Names Cannot Contain Special Characters; \ud83d\udccc **Rule 4: Variable Names Cannot Be Reserved Words\u2026",
+        "question": ""
+      }
+    ]
   },
   {
-    "student_id": "S001",
+    "student_id": "S100",
     "topics": {
-      "T01": 0.6,
-      "T02": 0.85,
-      "T03": 0.95,
-      "T04": 0.8,
-      "T05": 0.75,
-      "T06": 0.8,
-      "T07": 0.9,
-      "T08": 0.85,
-      "T09": 0.8,
-      "T10": 0.75,
-      "T11": 0.8,
-      "T12": 0.85,
-      "T13": 0.53
+      "T01": 0.0,
+      "T02": 0.14,
+      "T03": 0.0,
+      "T04": 0.0,
+      "T05": 0.2,
+      "T06": 0.2,
+      "T07": 0.25,
+      "T08": 0.22,
+      "T09": 0.0,
+      "T10": 0.0,
+      "T11": 0.5,
+      "T12": 0.0,
+      "T13": 0.0
     },
-    "strengths": [
+    "skills": {
+      "T01.1": 0.0,
+      "T02.2": 0.0,
+      "T04.1": 0.0,
+      "T08.3": 0.0,
+      "T03.3": 0.0,
+      "T03.1": 0.0,
+      "T04.5": 0.0,
+      "T04.6": 0.0,
+      "T05.3": 0.0,
+      "T05.2": 1.0,
+      "T06.1": 0.0,
+      "T06.4": 0.0,
+      "T07.2": 0.0,
+      "T07.4": 1.0,
+      "T08.4": 0.0,
+      "T08.5": 0.0,
+      "T08.2": 0.0,
+      "T09.3": 0.0,
+      "T09.4": 0.0,
+      "T10.4": 0.0,
+      "T08.6": 0.0,
+      "T10.2": 0.0,
+      "T11.2": 0.0,
+      "T11.4": 1.0,
+      "T12.4": 0.0,
+      "T13.2": 0.0,
+      "T13.1": 0.0
+    },
+    "strengths": [],
+    "weaknesses": [
+      "T01",
       "T02",
       "T03",
       "T04",
@@ -499,287 +652,302 @@
       "T09",
       "T10",
       "T11",
-      "T12"
-    ],
-    "weaknesses": [
-      "T01",
+      "T12",
       "T13"
     ],
-    "first_entry_time": "2026-06-01 10:15:30",
-    "latest_update_time": "2026-11-11 18:53:30",
+    "active_misconceptions": {},
     "pedagogy_history": [
       {
-        "event": "assessment",
-        "topic_id": "T13",
-        "strategy": null,
-        "accuracy": 0.5,
-        "error_signals": [
-          "T13.3",
-          "T13.6",
-          "T13.2",
-          "T13.5"
-        ],
-        "created_at": "2026-11-07T22:36:45"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "self_explanation",
-        "reason": "Strong mastery calls for retrieval and explanation practice.",
-        "created_at": "2026-11-07T22:46:36",
-        "assessment_accuracy": 0.1,
-        "error_signals": [
-          "T13.1",
-          "T13.2",
-          "T13.6",
-          "T13.5",
-          "T13.3"
-        ]
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T13",
-        "strategy": "self_explanation",
-        "accuracy": 0.1,
-        "error_signals": [
-          "T13.1",
-          "T13.2",
-          "T13.6",
-          "T13.5",
-          "T13.3"
-        ],
-        "created_at": "2026-11-07T22:56:49"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "contrastive_feedback",
-        "reason": "Recurring errors on this topic call for a direct comparison.",
-        "created_at": "2026-11-07T22:57:50"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "contrastive_feedback",
-        "reason": "Continue the current strategy; evidence does not justify a switch.",
-        "created_at": "2026-11-07T23:01:57"
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T01",
-        "strategy": null,
-        "accuracy": 0.0,
-        "error_signals": [
-          "T01.2",
-          "T01.3",
-          "T01.5",
-          "T01.4"
-        ],
-        "created_at": "2026-11-07T23:10:30"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "contrastive_feedback",
-        "reason": "Continue the current strategy; evidence does not justify a switch.",
-        "created_at": "2026-11-07T23:12:47",
-        "assessment_accuracy": 0.3,
-        "error_signals": [
-          "T13.2",
-          "T13.1",
-          "T13.3",
-          "T13.4",
-          "T13.5",
-          "T13.6"
-        ]
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T01",
-        "strategy": null,
-        "accuracy": 0.1,
-        "error_signals": [
-          "T01.3",
-          "T01.5",
-          "T01.2"
-        ],
-        "created_at": "2026-11-07T23:17:39"
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T13",
-        "strategy": "contrastive_feedback",
-        "accuracy": 0.3,
-        "error_signals": [
-          "T13.2",
-          "T13.1",
-          "T13.3",
-          "T13.4",
-          "T13.5",
-          "T13.6"
-        ],
-        "created_at": "2026-11-07T23:18:27"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "contrastive_feedback",
-        "reason": "Continue the current strategy; evidence does not justify a switch.",
-        "created_at": "2026-11-07T23:19:21",
-        "assessment_accuracy": 0.3,
-        "error_signals": [
-          "T13.2",
-          "T13.4",
-          "T13.3",
-          "T13.1"
-        ]
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T13",
-        "strategy": "contrastive_feedback",
-        "accuracy": 0.3,
-        "error_signals": [
-          "T13.2",
-          "T13.4",
-          "T13.3",
-          "T13.1"
-        ],
-        "created_at": "2026-11-07T23:19:58"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "hints",
-        "reason": "Assessment accuracy stayed below 60% across 2 checks.",
-        "created_at": "2026-11-07T23:20:42",
-        "assessment_accuracy": 0.5,
-        "error_signals": [
-          "T13.2",
-          "T13.3",
-          "T13.6"
-        ]
-      },
-      {
-        "event": "assessment",
-        "topic_id": "T13",
-        "strategy": "hints",
-        "accuracy": 0.5,
-        "error_signals": [
-          "T13.2",
-          "T13.3",
-          "T13.6"
-        ],
-        "created_at": "2026-11-08T10:26:20"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "contrastive_feedback",
-        "reason": "Recurring errors on this topic call for a direct comparison.",
-        "created_at": "2026-11-08T10:34:41"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "hints",
-        "reason": "Assessment accuracy stayed below 60% across 2 checks.",
-        "created_at": "2026-11-10T16:35:57"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "contrastive_feedback",
-        "reason": "Recurring errors on this topic call for a direct comparison.",
-        "created_at": "2026-11-10T16:46:14"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "hints",
-        "reason": "Assessment accuracy stayed below 60% across 2 checks.",
-        "created_at": "2026-11-10T16:53:56"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T02",
-        "strategy": "self_explanation",
-        "reason": "Strong mastery calls for retrieval and explanation practice.",
-        "created_at": "2026-11-10T16:56:10"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T08",
-        "strategy": "self_explanation",
-        "reason": "Strong mastery calls for retrieval and explanation practice.",
-        "created_at": "2026-11-10T16:57:08"
-      },
-      {
         "event": "lesson",
         "topic_id": "T01",
-        "strategy": "contrastive_feedback",
-        "reason": "Recurring errors on this topic call for a direct comparison.",
-        "created_at": "2026-11-10T18:45:18"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "contrastive_feedback",
-        "reason": "Recurring errors on this topic call for a direct comparison.",
-        "created_at": "2026-11-10T18:50:49"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T02",
-        "strategy": "self_explanation",
+        "strategy": "step_scaffolding",
         "reason": "Continue the current strategy; evidence does not justify a switch.",
-        "created_at": "2026-11-11T15:52:51"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T02",
-        "strategy": "self_explanation",
-        "reason": "Continue the current strategy; evidence does not justify a switch.",
-        "created_at": "2026-11-11T18:51:01"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T01",
-        "strategy": "contrastive_feedback",
-        "reason": "Continue the current strategy; evidence does not justify a switch.",
-        "created_at": "2026-11-11T18:51:47"
-      },
-      {
-        "event": "lesson",
-        "topic_id": "T13",
-        "strategy": "hints",
-        "reason": "Assessment accuracy stayed below 60% across 2 checks.",
-        "created_at": "2026-11-11T18:53:30"
+        "created_at": "2026-11-14T14:22:46",
+        "turns": 2,
+        "last_at": "2026-11-14T14:23:19"
       }
     ],
-    "learning_signals": {
-      "T13.6": 4,
-      "T13.5": 3,
-      "T13.3": 5,
-      "T13.2": 5,
-      "T13.1": 3,
-      "T01.3": 2,
-      "T01.4": 1,
-      "T01.2": 2,
-      "T01.5": 2,
-      "T13.4": 2
-    },
-    "learning_signal_descriptions": {
-      "T13.6": "Processing file contents line by line",
-      "T13.5": "File paths and FileNotFoundError",
-      "T13.3": "Reading files (read, readline, readlines, iteration)",
-      "T13.2": "The with statement",
-      "T13.1": "Opening and closing files; file modes",
-      "T01.3": "Statements, indentation, and basic syntax",
-      "T01.4": "Comments",
-      "T01.2": "Running code: interactive shell vs script file",
-      "T01.5": "Reading error messages and tracebacks",
-      "T13.4": "Writing and appending"
-    }
+    "learning_signals": {},
+    "learning_signal_descriptions": {},
+    "learning_conversations": [
+      {
+        "topic_id": "T01",
+        "subtopic_ids": [],
+        "subtopic_source": null,
+        "text": "can you teach me about all the topics i am weak on",
+        "confusion": false,
+        "hint_request": false,
+        "signal_source": "llm",
+        "rule_flags": {
+          "confusion": false,
+          "hint_request": false
+        },
+        "after_strategy": null,
+        "reply_to_tutor": false,
+        "answer_verdict": null,
+        "created_at": "2026-11-14T14:22:46"
+      },
+      {
+        "topic_id": "T01",
+        "subtopic_ids": [],
+        "subtopic_source": null,
+        "text": "im ready to move to the next topic",
+        "confusion": false,
+        "hint_request": false,
+        "signal_source": "llm",
+        "rule_flags": {
+          "confusion": false,
+          "hint_request": false
+        },
+        "after_strategy": "step_scaffolding",
+        "reply_to_tutor": false,
+        "answer_verdict": null,
+        "created_at": "2026-11-14T14:23:19"
+      }
+    ],
+    "root_cause_history": [],
+    "retests": [],
+    "diagnosis_responses": [
+      {
+        "prob_id": "P01",
+        "chosen": "Dennis Ritchie, 1972",
+        "is_correct": false,
+        "subtopics": [
+          "T01.1"
+        ]
+      },
+      {
+        "prob_id": "P02",
+        "chosen": "Python source code is directly converted to machine code without any intermediate representation.",
+        "is_correct": false,
+        "subtopics": [
+          "T01.1"
+        ]
+      },
+      {
+        "prob_id": "P03",
+        "chosen": "<class 'int'>",
+        "is_correct": false,
+        "subtopics": [
+          "T02.2",
+          "T04.1"
+        ]
+      },
+      {
+        "prob_id": "P04",
+        "chosen": "x = [1, 2, 3]",
+        "is_correct": false,
+        "subtopics": [
+          "T02.2",
+          "T08.3"
+        ]
+      },
+      {
+        "prob_id": "P05",
+        "chosen": "int",
+        "is_correct": false,
+        "subtopics": [
+          "T03.3",
+          "T02.2"
+        ]
+      },
+      {
+        "prob_id": "P06",
+        "chosen": "Python 3-!",
+        "is_correct": false,
+        "subtopics": [
+          "T03.1"
+        ]
+      },
+      {
+        "prob_id": "P07",
+        "chosen": "64",
+        "is_correct": false,
+        "subtopics": [
+          "T04.1",
+          "T04.5"
+        ]
+      },
+      {
+        "prob_id": "P08",
+        "chosen": "`is` checks for value equality; `==` checks for identity/memory location.",
+        "is_correct": false,
+        "subtopics": [
+          "T04.6"
+        ]
+      },
+      {
+        "prob_id": "P09",
+        "chosen": "A",
+        "is_correct": false,
+        "subtopics": [
+          "T05.3"
+        ]
+      },
+      {
+        "prob_id": "P10",
+        "chosen": "'Pass'",
+        "is_correct": true,
+        "subtopics": [
+          "T05.2"
+        ]
+      },
+      {
+        "prob_id": "P11",
+        "chosen": "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
+        "is_correct": false,
+        "subtopics": [
+          "T06.1"
+        ]
+      },
+      {
+        "prob_id": "P12",
+        "chosen": "When the loop encounters a `break` statement.",
+        "is_correct": false,
+        "subtopics": [
+          "T06.4"
+        ]
+      },
+      {
+        "prob_id": "P13",
+        "chosen": "'hello'",
+        "is_correct": false,
+        "subtopics": [
+          "T07.2"
+        ]
+      },
+      {
+        "prob_id": "P14",
+        "chosen": "'a-b-c'",
+        "is_correct": true,
+        "subtopics": [
+          "T07.4"
+        ]
+      },
+      {
+        "prob_id": "P15",
+        "chosen": "6",
+        "is_correct": false,
+        "subtopics": [
+          "T08.4",
+          "T08.5"
+        ]
+      },
+      {
+        "prob_id": "P16",
+        "chosen": "a.add(b)",
+        "is_correct": false,
+        "subtopics": [
+          "T08.2"
+        ]
+      },
+      {
+        "prob_id": "P17",
+        "chosen": "KeyError",
+        "is_correct": false,
+        "subtopics": [
+          "T09.3"
+        ]
+      },
+      {
+        "prob_id": "P18",
+        "chosen": "d.keys()",
+        "is_correct": false,
+        "subtopics": [
+          "T09.4"
+        ]
+      },
+      {
+        "prob_id": "P19",
+        "chosen": "[1]\n[2]",
+        "is_correct": false,
+        "subtopics": [
+          "T10.4",
+          "T08.6"
+        ]
+      },
+      {
+        "prob_id": "P20",
+        "chosen": "Required arguments and optional arguments",
+        "is_correct": false,
+        "subtopics": [
+          "T10.2"
+        ]
+      },
+      {
+        "prob_id": "P21",
+        "chosen": "[0, 1, 4, 9, 16]",
+        "is_correct": false,
+        "subtopics": [
+          "T11.2"
+        ]
+      },
+      {
+        "prob_id": "P22",
+        "chosen": "[item for row in matrix for item in row]",
+        "is_correct": true,
+        "subtopics": [
+          "T11.4"
+        ]
+      },
+      {
+        "prob_id": "P23",
+        "chosen": "finally",
+        "is_correct": false,
+        "subtopics": [
+          "T12.4"
+        ]
+      },
+      {
+        "prob_id": "P24",
+        "chosen": "except",
+        "is_correct": false,
+        "subtopics": [
+          "T12.4"
+        ]
+      },
+      {
+        "prob_id": "P25",
+        "chosen": "It makes file read and write operations 10x faster.",
+        "is_correct": false,
+        "subtopics": [
+          "T13.2"
+        ]
+      },
+      {
+        "prob_id": "P26",
+        "chosen": "Opens the file for read-only access in ASCII format.",
+        "is_correct": false,
+        "subtopics": [
+          "T13.1"
+        ]
+      }
+    ],
+    "first_entry_time": "2026-11-14 14:22:06",
+    "latest_update_time": "2026-11-14 14:23:19",
+    "chat_memory": [
+      {
+        "type": "lesson",
+        "time": "2026-11-14T14:22:46",
+        "topic_id": "T01",
+        "strategy": "step_scaffolding",
+        "mode": "new_request",
+        "verdict": null,
+        "student": "can you teach me about all the topics i am weak on",
+        "covered": "Topic T01: Variables and Data Types (with code example)",
+        "question": ""
+      },
+      {
+        "type": "lesson",
+        "time": "2026-11-14T14:23:19",
+        "topic_id": "T01",
+        "strategy": "step_scaffolding",
+        "mode": "new_request",
+        "verdict": null,
+        "student": "im ready to move to the next topic",
+        "covered": "Great!",
+        "question": "Great! I'm glad to hear that. Let's continue building on your foundation in Python programming. Before we move to the next topic, let me just make sure I understand where you're at and what you're in\u2026"
+      }
+    ]
   }
 ]

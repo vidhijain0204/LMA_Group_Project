@@ -1,7 +1,6 @@
-
+import os
 from functools import lru_cache
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -9,14 +8,12 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_core.runnables import RunnableLambda
+from langchain_openai import ChatOpenAI
 
 
-# --------------------------------------------------
-# Model configuration
-# --------------------------------------------------
-
-MODEL_NAME = "Qwen/Qwen3-4B-MLX-4bit"
-BASE_URL = "http://127.0.0.1:8080/v1"
+MODEL_NAME = os.getenv("TUTOR_MODEL_NAME", "Qwen/Qwen3-4B-MLX-4bit")
+BASE_URL = os.getenv("TUTOR_LLM_BASE_URL", "http://127.0.0.1:8080/v1")
+API_KEY = os.getenv("TUTOR_LLM_API_KEY", "local")
 
 PROFILES = {
     "router": {
@@ -41,281 +38,131 @@ PROFILES = {
     },
 }
 
-# Number of additional generation requests allowed.
-# Total generation attempts = 1 + MAX_CONTINUATIONS.
 MAX_CONTINUATIONS = 2
 
 
-# --------------------------------------------------
-# Message preparation
-# --------------------------------------------------
+@lru_cache(maxsize=None)
+def _get_chat_model(profile):
+    config = PROFILES[profile]
+    return ChatOpenAI(
+        model=MODEL_NAME,
+        base_url=BASE_URL,
+        api_key=API_KEY,
+        temperature=config["temperature"],
+        top_p=config["top_p"],
+        extra_body={"max_tokens": config["max_tokens"]},
+        timeout=120,
+        max_retries=0,
+    )
+
 
 def _apply_thinking_mode(messages, enable_thinking=False):
-    """Apply Qwen3's thinking directive to the system message."""
-
     prepared_messages = list(messages)
-
     directive = "/think" if enable_thinking else "/no_think"
 
     for index, message in enumerate(prepared_messages):
-
         if isinstance(message, SystemMessage):
-
             content = message.content
+            if isinstance(content, str) and directive not in content:
+                prepared_messages[index] = SystemMessage(
+                    content=f"{content.rstrip()}\n\n{directive}"
+                )
+            return prepared_messages
 
-            if isinstance(content, str):
-
-                if directive not in content:
-                    prepared_messages[index] = SystemMessage(
-                        content=f"{content.rstrip()}\n\n{directive}"
-                    )
-
-                return prepared_messages
-
-    prepared_messages.insert(
-        0,
-        SystemMessage(content=directive)
-    )
-
+    prepared_messages.insert(0, SystemMessage(content=directive))
     return prepared_messages
 
 
 def _normalize_messages(inputs):
-    """Normalize supported LangChain inputs into messages."""
-
     if hasattr(inputs, "to_messages"):
         return list(inputs.to_messages())
-
     if isinstance(inputs, BaseMessage):
         return [inputs]
-
     if isinstance(inputs, str):
         return [HumanMessage(content=inputs)]
-
     if isinstance(inputs, (list, tuple)):
         return list(inputs)
-
-    raise TypeError(
-        f"Unsupported LLM input type: {type(inputs).__name__}"
-    )
+    raise TypeError(f"Unsupported LLM input type: {type(inputs).__name__}")
 
 
-def _extract_text(content):
-    """Extract readable text from a LangChain message."""
-
-    if isinstance(content, str):
-        return content
-
-    if isinstance(content, list):
-
-        parts = []
-
-        for block in content:
-
-            if isinstance(block, str):
-                parts.append(block)
-
-            elif isinstance(block, dict):
-                if block.get("type") in ("text", "output_text"):
-                    parts.append(block.get("text", ""))
-
-        return "".join(parts)
-
-    return ""
+def _visible_text(chunk):
+    if "</think>" in chunk:
+        return chunk.rsplit("</think>", 1)[1]
+    if "<think>" in chunk:
+        return ""
+    return chunk
 
 
-# --------------------------------------------------
-# Iterative response generation
-# --------------------------------------------------
-
-
-def _invoke_with_continuation(
-    inputs,
-    chat_model,
-    enable_thinking=False,
-):
-    """
-    Generate a response and continue when MLX reports
-    finish_reason == 'length'.
-
-    Also handles reasoning-only responses where the model
-    has not yet produced user-visible answer text.
-    """
-
-    conversation = _normalize_messages(inputs)
-
+def _invoke_with_continuation(inputs, profile, enable_thinking=False):
     conversation = _apply_thinking_mode(
-        conversation,
-        enable_thinking,
+        _normalize_messages(inputs), enable_thinking
     )
-
+    model = _get_chat_model(profile)
     output_parts = []
     responses = []
 
-    max_attempts = 1 + MAX_CONTINUATIONS
+    for attempt in range(1 + MAX_CONTINUATIONS):
+        response = model.invoke(conversation)
+        if not isinstance(response.content, str):
+            raise TypeError("The local LLM returned non-text message content")
 
-    print(f"\n[LLM] Maximum generation attempts: {max_attempts}")
-
-    for attempt in range(max_attempts):
-
-        response = chat_model.invoke(conversation)
+        visible = _visible_text(response.content)
+        output_parts.append(visible)
         responses.append(response)
 
-        chunk = _extract_text(response.content)
-
-        if chunk:
-            output_parts.append(chunk)
-
-        finish_reason = response.response_metadata.get(
-            "finish_reason"
-        )
-
-        generation_number = attempt + 1
-
-        print(
-            f"[LLM] Generation {generation_number}/{max_attempts} "
-            f"| Finish reason: {finish_reason} "
-            f"| Visible tokens: {len(chunk.split())} words"
-        )
-
-        # Stop when the model finishes naturally.
-        if finish_reason != "length":
+        if response.response_metadata.get("finish_reason") != "length":
             break
-
-        # No more continuation attempts are available.
-        if generation_number >= max_attempts:
+        if attempt + 1 >= 1 + MAX_CONTINUATIONS:
             print("[LLM] Maximum continuation limit reached.")
             break
 
-        # Preserve only user-visible assistant content.
-        # Do not feed hidden reasoning back as answer text.
+        conversation.append(AIMessage(content=visible))
+        continuation_prompt = (
+            "Continue exactly where your previous response ended. Do not repeat, "
+            "restart, or summarize it. Continue the unfinished explanation naturally."
+            if visible.strip()
+            else "Begin writing the requested answer directly; the previous response "
+            "did not contain user-facing text."
+        )
         conversation.append(
-            AIMessage(content=chunk)
+            HumanMessage(content=f"/no_think\n{continuation_prompt}")
         )
 
-        if chunk:
-            continuation_prompt = (
-                "/no_think\n"
-                "Continue exactly where your previous response "
-                "ended. Do not repeat, restart, or summarize "
-                "previous content. Continue the unfinished "
-                "explanation naturally. Maintain the same "
-                "structure, formatting, and level of detail."
-            )
-        else:
-            # Recover when the previous generation produced
-            # reasoning but no user-visible answer text.
-            print(
-                "[LLM] No visible answer text in this chunk. "
-                "Retrying in non-thinking mode."
-            )
-
-            continuation_prompt = (
-                "/no_think\n"
-                "Your previous generation reached its token limit "
-                "before producing user-facing answer text. "
-                "Do not generate or explain internal reasoning. "
-                "Begin writing the requested answer directly. "
-                "Provide the actual explanation or content requested."
-            )
-
-        conversation.append(
-            HumanMessage(content=continuation_prompt)
-        )
-
-    # Combine all user-visible response chunks.
     final_content = "".join(output_parts)
-
+    usage = [response.usage_metadata or {} for response in responses]
+    input_tokens = sum(item.get("input_tokens", 0) for item in usage)
+    output_tokens = sum(item.get("output_tokens", 0) for item in usage)
     last_response = responses[-1]
-
-    metadata = dict(
-        last_response.response_metadata or {}
-    )
-
-    continuation_count = len(responses) - 1
-
-    metadata["continuation_count"] = continuation_count
-
-    metadata["continuation_truncated"] = (
-        metadata.get("finish_reason") == "length"
-    )
-
-    metadata["empty_final_response"] = (
-        not bool(final_content.strip())
-    )
-
-    # Aggregate token usage across all requests.
-    total_usage = {
-        "input_tokens": 0,
-        "output_tokens": 0,
-        "total_tokens": 0,
+    metadata = {
+        **last_response.response_metadata,
+        "continuation_count": len(responses) - 1,
+        "continuation_truncated": (
+            last_response.response_metadata.get("finish_reason") == "length"
+        ),
+        "empty_final_response": not bool(final_content.strip()),
     }
 
-    has_usage = False
-
-    for item in responses:
-
-        usage = item.usage_metadata or {}
-
-        for key in total_usage:
-
-            value = usage.get(key)
-
-            if isinstance(value, (int, float)):
-                total_usage[key] += value
-                has_usage = True
-
-    result_kwargs = {
-        "content": final_content,
-        "response_metadata": metadata,
-    }
-
-    if has_usage:
-        result_kwargs["usage_metadata"] = total_usage
-
-    final_response = AIMessage(**result_kwargs)
-
-    print(
-        f"\n[LLM] Completed | "
-        f"Continuations: {continuation_count} | "
-        f"Truncated: {metadata['continuation_truncated']} | "
-        f"Empty response: {metadata['empty_final_response']}"
+    return AIMessage(
+        content=final_content,
+        response_metadata=metadata,
+        usage_metadata={
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": input_tokens + output_tokens,
+        },
     )
 
-    return final_response
-
-
-# --------------------------------------------------
-# LLM factory
-# --------------------------------------------------
 
 @lru_cache(maxsize=None)
 def get_llm(profile="tutor", enable_thinking=False):
-    """Return a LangChain-compatible LLM with automatic continuation."""
-
+    """Return a LangChain runnable backed by the local MLX-LM server."""
     if profile not in PROFILES:
         raise ValueError(
-            f"Unknown LLM profile '{profile}'. "
-            f"Available profiles: {list(PROFILES)}"
+            f"Unknown LLM profile '{profile}'. Available profiles: {list(PROFILES)}"
         )
-
-    config = PROFILES[profile]
-
-    chat_model = ChatOpenAI(
-        model=MODEL_NAME,
-        base_url=BASE_URL,
-        api_key="mlx",
-        max_tokens=config["max_tokens"],
-        temperature=config["temperature"],
-        top_p=config["top_p"],
-        timeout=300,
-        max_retries=1,
-    )
 
     return RunnableLambda(
         lambda messages: _invoke_with_continuation(
-            messages,
-            chat_model,
-            enable_thinking,
+            messages, profile, enable_thinking
         )
     )

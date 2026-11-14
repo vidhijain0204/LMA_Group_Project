@@ -30,8 +30,6 @@ The newly added implementation files are:
 - `agents/error_analysis_agent.py` — analyzes quiz answers, limits error signals and
   topic accuracy to the requested topic where question metadata permits, and maps
   incorrect answers to misconception tags or related subtopics.
-- `tests/test_pedagogy_controller.py` — tests initial strategy selection, low-score
-  switching, recurring error signals, and topic-aware error analysis.
 
 Existing files updated for this implementation include:
 
@@ -102,34 +100,31 @@ separate local server; the application sends requests to `http://127.0.0.1:8080/
 It does not load the model into the application process. The client uses separate
 generation profiles for routing, tutoring, judging, and quiz introductions.
 
-Install the backend packages:
+The app connects to the server through LangChain's OpenAI-compatible client. Both
+packages are included in `requirements.txt`.
 
 ```bash
-python -m pip install mlx-lm langchain-openai
+python -m pip install -r requirements.txt
 ```
 
-In another terminal, start the model server:
+If the model weights are missing from the cache, download them once while online:
 
 ```bash
-mlx_lm.server --model "Qwen/Qwen3-4B-MLX-4bit" --host 127.0.0.1
+hf download Qwen/Qwen3-4B-MLX-4bit
 ```
 
-Then launch the app as described below. Note that the current `requirements.txt` still
-lists the previous Transformers/Hugging Face dependencies and does not yet include
-`mlx-lm` or `langchain-openai`; install the backend packages explicitly as above.
+Then start the server in a separate terminal, using the same model name as the app.
+Offline mode prevents an unexpected network download:
 
-### Verification and Experimental Results
+```bash
+export TUTOR_MODEL_NAME="Qwen/Qwen3-4B-MLX-4bit"
+HF_HUB_OFFLINE=1 mlx_lm.server --model "$TUTOR_MODEL_NAME" --host 127.0.0.1 --port 8080
+```
 
-The five isolated controller/error-analysis tests passed in the current environment.
-They cover mastery-based initialization, waiting for two low assessments before
-switching, recurring-error prioritization, and topic-aware error analysis. A full
-`unittest discover` run could not complete here because `langchain_openai` is not
-installed, which prevents importing the model-backed tutor and workflow tests.
+Set `TUTOR_MODEL_NAME` to a different local model directory in both terminals to use
+another model. The app endpoint can be changed with `TUTOR_LLM_BASE_URL` (default
+`http://127.0.0.1:8080/v1`).
 
-These are implementation and rule-level tests, not a model-backed classroom trial:
-no simulated student study, comparative learning-gain measurement, or fine-tuning
-experiment has been run. Strategy adaptation therefore describes the implemented
-rules, not a measured improvement in student outcomes.
 
 # AI Python Tutoring System
 
@@ -141,16 +136,14 @@ The project is designed to:
 - route requests to the right agent,
 - explain Python topics with personalization,
 - generate adaptive MCQ quizzes based on student ability,
-- run as a Streamlit web app or as standalone Python scripts.
+- run as a Streamlit web app.
 
 ## What is in this directory?
 
 - `app.py` — main Streamlit app for the student-facing tutor experience.
-- `main.py` — lightweight sample script that runs the tutor agent directly on a few example questions.
 - `agents/` — all agent logic and orchestration.
 - `data/` — JSON course data, question banks, and student knowledge base.
 - `models/` — model/schema definitions for the student knowledge base.
-- `tests/` — unit tests for retriever and orchestrator behavior.
 - `requirements.txt` — Python dependencies.
 - `mid_report.pdf` and `part1_flow.jpeg` — project report and architecture diagram.
 
@@ -192,13 +185,7 @@ The system is built around a LangGraph workflow:
 │   └── skb_database.json        # Student knowledge base records
 ├── models/
 │   └── skb_schema.py            # Pydantic schema for student KB
-├── tests/
-│   ├── test_course_retriever.py
-│   ├── test_orchestrator.py
-│   ├── test_tutor.py
-│   └── test_pedagogy_controller.py
 ├── app.py                       # Streamlit tutor UI
-├── main.py                      # Quick example runner
 ├── requirements.txt             # Python deps
 ├── mid_report.pdf               # Project report PDF
 ├── part1_flow.jpeg              # Architecture diagram
@@ -208,17 +195,16 @@ The system is built around a LangGraph workflow:
 
 ## Requirements
 
-This project recommends Python 3.11 or 3.12 (see `requirements.txt`) and requires a
-running local MLX-LM server for `Qwen/Qwen3-4B-MLX-4bit`. MLX-LM is intended for
-supported Apple Silicon systems.
+This project requires Python 3.11 or 3.12 and a running local MLX-LM server for
+`Qwen/Qwen3-4B-MLX-4bit`. MLX-LM is intended for supported Apple Silicon systems.
 
-The current dependency manifest has not yet been migrated from the Transformers
-backend. In addition to the repository dependencies, install the MLX model server and
-OpenAI-compatible LangChain client:
+Create the environment and install all dependencies from the repository root:
 
 ```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python -m pip install mlx-lm langchain-openai
 ```
 
 See [Local MLX LLM Backend](#local-mlx-llm-backend) above for how to start the
@@ -230,29 +216,34 @@ From the project root:
 
 ```bash
 cd /path/to/LMA_Group_Project
-python3 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install --upgrade pip
-python3 -m pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-Then verify the project entry points work:
-
-```bash
-python3 -m unittest discover -s tests -q
-```
-
-This repository uses the standard library `unittest` runner rather than `pytest`.
 
 ## How to run the app
 
-### 1) Launch the student web app
+### 1) Start the local model server
+
+In a terminal with the project environment active, run:
+
+```bash
+HF_HUB_OFFLINE=1 mlx_lm.server --model "Qwen/Qwen3-4B-MLX-4bit" --host 127.0.0.1 --port 8080
+```
+
+Keep this terminal open. The app connects to this local server; it does not load the
+model into the Streamlit process.
+
+### 2) Launch the student web app
 
 This is the main usage path for the tutoring system.
 
 ```bash
 cd /path/to/LMA_Group_Project
-python3 -m streamlit run app.py
+source .venv/bin/activate
+python -m streamlit run app.py
 ```
 
 Then open the local URL shown by Streamlit, usually:
@@ -293,17 +284,6 @@ When a student already exists:
 - the orchestrator examines the user message,
 - chooses whether to tutor or quiz,
 - uses topic score information to personalize explanations and challenge level.
-
-## How to run the example script
-
-The repository includes a quick sample runner:
-
-```bash
-cd /path/to/LMA_Group_Project
-python3 main.py
-```
-
-This script creates a `TutorAgent`, runs several example questions, and prints responses. It is a simple way to validate that the tutoring pipeline is working without launching the Streamlit UI.
 
 ## How the components work
 
@@ -433,20 +413,38 @@ and inspect entries like:
 
 If you want to reset a student profile, remove the matching record from this file or create a new student ID.
 
-## Testing
+## Running the study and evaluating it
 
-The project includes a few lightweight checks for the major components.
+**Before the study (once, on the GPU machine):**
+1. Tag the wrong options of the quiz bank with misconceptions:
+   `python scripts/tag_mcq_misconceptions.py --limit 10 --dry-run` (check), then
+   `python scripts/tag_mcq_misconceptions.py`. Review a sample in
+   `data/evaluation/mcq_misconception_review.csv` and fix wrong tags in `data/common/mcqs_list.json`.
+2. Download the topic-classifier model once: `TOPIC_EMBED_DOWNLOAD=1 python -c "from agents.topic_classifier import get_classifier; print(get_classifier().backend)"`
+   (prints `embedding`; without it the app uses the weaker TF-IDF backend).
 
-Run:
+**Per student** (`streamlit run app.py`, Study mode on):
+1. Click **🆕 New anonymous student** (S101, S102, ...), the student accepts the consent screen.
+2. Diagnosis → learn with the tutor → "ready for assessment" → quiz.
+3. After the quiz: the student fills **🧾 why did you get these wrong?**, clicks **📘 Review**,
+   learns, then **🔁 Re-test** (this measures the learning gain).
+4. At the end: **📝 Session feedback** in the sidebar.
+5. For an A/B comparison of the root-cause methods, turn on *Assign method by student id* in
+   **🔎 Root-cause settings** before the student starts.
 
-```bash
-cd /path/to/LMA_Group_Project
-python3 -m unittest discover -s tests -q
-```
+Each app start backs up the KB, traces and evaluation files to `data/backups/`.
 
-The suite includes course retriever, orchestrator, tutor, pedagogy-controller, and
-error-analysis checks. The current backend also requires `langchain-openai` to import
-the model-backed tutor and workflow.
+**After the study:**
+- `python scripts/evaluate.py` → `data/evaluation/report/report.md` (+ CSVs): root-cause accuracy
+  per method/preset/ablation, agreement, misconception check, learning gain, judge vs rules,
+  latency, feedback.
+- Optional expert labels: `python scripts/evaluate.py --export-labeling`, fill
+  `data/evaluation/labeling_sheet.csv`, then `python scripts/evaluate.py --import-labels <file>`.
+- `python scripts/fit_weights.py --save` learns the weights (report its leave-one-student-out
+  accuracy) and adds them as the `learned` preset.
+
+Environment switches: `TUTOR_LLM_JUDGE=0` (rules instead of the LLM turn judge),
+`TOPIC_EMBED_MODEL=none` (TF-IDF topic classifier).
 
 ## Common issues and fixes
 
@@ -454,18 +452,13 @@ the model-backed tutor and workflow.
 
 Start the MLX-LM server in a separate terminal using the command in
 [Local MLX LLM Backend](#local-mlx-llm-backend). The client expects it at
-`http://127.0.0.1:8080/v1`; model-backed requests fail while that server is stopped or
-unavailable.
+`http://127.0.0.1:8080/v1`. If it cannot start offline, download the model using the
+`hf download` command above, then restart the server.
 
-### `python` command not found
+### `python3.11` command not found
 
-Use:
-
-```bash
-python3
-```
-
-instead of `python` if your system only exposes the Python 3 binary.
+Install Python 3.11 or 3.12 for macOS and recreate the virtual environment with that
+interpreter. The system Python on this computer is too old for the MLX backend.
 
 ### Streamlit does not open
 
@@ -519,19 +512,8 @@ This directory contains a full educational AI tutoring system with:
 The primary entry point for users is:
 
 ```bash
-python3 -m streamlit run app.py
-```
-
-The most direct offline validation is:
-
-```bash
-python3 main.py
-```
-
-and the code-level validation is:
-
-```bash
-python3 -m unittest discover -s tests -q
+source .venv/bin/activate
+python -m streamlit run app.py
 ```
 
 If you want to customize the system, start by editing the files in the `agents/` folder and the JSON datasets in `data/`.

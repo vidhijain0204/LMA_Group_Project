@@ -6,3 +6,7 @@ __pycache__/
 
 .venv/
 .venv312/
+# Per-session agent traces written by agents/workflow.py
+data/traces/
+data/evaluation/
+data/backups/

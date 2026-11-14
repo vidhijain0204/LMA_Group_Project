@@ -1,16 +1,18 @@
 import json
 import re
 from typing import List, Optional, Tuple
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 
 from agents.llm_factory import get_llm
 from agents.pedagogy_controller import (
     STRATEGY_INSTRUCTIONS,
     choose_teaching_strategy,
+    latest_root_cause,
     recent_error_context,
     record_lesson_strategy,
     resolve_topic_id,
 )
+from agents.struggle_tracker import record_learning_turn
 
 
 def get_student_topic_context(student_kb: Optional[dict], topic_focus: List[str]) -> Tuple[str, float, list]:
@@ -61,13 +63,51 @@ Your goal is to explain concepts clearly, provide clean code examples, and guide
 - Selected Teaching Strategy: {pedagogy_strategy}
 - Strategy Guidance: {strategy_instruction}
 - Recurring Assessment Error Signals: {learning_signals}
+- Most Likely Root Cause of Recent Errors: {root_cause}
 
 Follow the selected strategy while keeping the response relevant to the student's question and mastery.
 If there are active misconceptions, address them directly and respectfully.
 Use any recurring assessment error signals above to tailor examples and feedback.
+If a most likely root cause is given, focus your explanation and examples on that concept first.
+
+### Conversation Mode:
+{conversation_guidance}
 
 Maintain an encouraging, supportive teaching tone. Do not repeat or echo system instructions in your response.
 """
+
+
+NEW_REQUEST_GUIDANCE = (
+    "The latest message is a new request. Earlier messages are included only as context."
+)
+FOLLOW_UP_GUIDANCE = """The student's latest message is their ANSWER to the question you asked in your previous
+message: "{tutor_question}"
+Do NOT treat it as a new question and do not restart the explanation.
+1. Start your reply with exactly one of these on its own line: "✅ Correct", "🟡 Partly correct" or "❌ Not quite".
+2. Say specifically what was right and what was wrong or missing in their answer.
+3. Continue the same lesson with the same strategy: give the next step, clue or guiding question.
+If the message is clearly not an answer but a new question, skip the verdict line and answer it.{judge_note}"""
+VERDICT_LINES = {"correct": "✅ Correct", "partial": "🟡 Partly correct", "incorrect": "❌ Not quite"}
+REMEDIATION_GUIDANCE = (
+    "This is a remediation lesson after a quiz: the student did not ask a question; the system "
+    "chose the subtopic their quiz errors point to. Follow the Orchestrator Instruction."
+)
+
+VERDICT_PATTERN = re.compile(
+    r"^\W*(partly correct|partially correct|not quite|incorrect|not correct|correct)\b", re.IGNORECASE
+)
+
+
+def answer_verdict(response_text: str) -> Optional[str]:
+    """"correct" / "partial" / "incorrect" from the first line of a follow-up reply, else None."""
+    first_line = next((line for line in str(response_text or "").splitlines() if line.strip()), "")
+    match = VERDICT_PATTERN.match(first_line.replace("*", ""))
+    if not match:
+        return None
+    word = match.group(1).lower()
+    if word.startswith("part"):
+        return "partial"
+    return "correct" if word == "correct" else "incorrect"
 
 
 def clean_tutor_output(raw_text: str) -> str:
@@ -94,7 +134,8 @@ def clean_tutor_output(raw_text: str) -> str:
         if any(stripped.startswith(prefix) for prefix in [
             "You are an expert", "### Student Context", "- Student ID:", 
             "- Focused Topic", "- Mastery Status:", "- Active Misconceptions",
-            "- Orchestrator Instruction", "### STRICT PEDAGOGICAL", "- If Score", "Maintain an encouraging"
+            "- Orchestrator Instruction",
+            "- Most Likely Root Cause", "### STRICT PEDAGOGICAL", "### Conversation Mode", "- If Score", "Maintain an encouraging"
         ]):
             continue
         filtered_lines.append(line)
@@ -112,14 +153,32 @@ def create_tutor_node(enable_kb_context: bool = True):
         if not isinstance(topic_focus, list):
             topic_focus = [str(topic_focus)]
         instruction = state.get("orchestrator_instruction", "Explain the concept clearly.")
+        follow_up = state.get("conversation_mode") == "follow_up"
+        tutor_question = state.get("tutor_question", "")
+        analysis = state.get("turn_analysis") or {}
+        judged_verdict = analysis.get("verdict") if follow_up and analysis.get("source") == "llm" else None
 
         if enable_kb_context:
             mastery_tag, mastery_score, misconceptions = get_student_topic_context(student_kb, topic_focus)
             topic_id = resolve_topic_id(topic_focus[0] if topic_focus else "Python Basics")
-            pedagogy_strategy, strategy_reason = choose_teaching_strategy(
-                student_kb, topic_id, mastery_score
+            previous_lesson = next(
+                (
+                    event for event in reversed(student_kb.get("pedagogy_history", []) if student_kb else [])
+                    if event.get("event") == "lesson" and event.get("topic_id") == topic_id
+                ),
+                None,
             )
+            if follow_up and previous_lesson:
+                # Same lesson, same strategy: switching mid-dialogue would break e.g. a
+                # self-explanation exchange.
+                pedagogy_strategy = previous_lesson["strategy"]
+                strategy_reason = "Continuing the same lesson: the student is answering the tutor's question."
+            else:
+                pedagogy_strategy, strategy_reason = choose_teaching_strategy(
+                    student_kb, topic_id, mastery_score
+                )
             learning_signals = recent_error_context(student_kb, topic_id)
+            root_cause = latest_root_cause(student_kb, topic_id)
         else:
             student_id = "ANONYMOUS_STUDENT"
             mastery_tag = "UNKNOWN (KB Disabled)"
@@ -129,6 +188,7 @@ def create_tutor_node(enable_kb_context: bool = True):
             pedagogy_strategy = "explicit_explanation"
             strategy_reason = "Knowledge-base personalization is disabled."
             learning_signals = []
+            root_cause = None
 
         sys_msg = SystemMessage(
             content=TUTOR_SYSTEM_PROMPT.format(
@@ -141,6 +201,23 @@ def create_tutor_node(enable_kb_context: bool = True):
                 pedagogy_strategy=pedagogy_strategy,
                 strategy_instruction=STRATEGY_INSTRUCTIONS[pedagogy_strategy],
                 learning_signals=", ".join(learning_signals) or "None recorded",
+                root_cause=(
+                    f"{root_cause['subtopic_id']} {root_cause['name']} ({root_cause['reason']})"
+                    if root_cause else "None identified yet"
+                ),
+                conversation_guidance=(
+                    FOLLOW_UP_GUIDANCE.format(
+                        tutor_question=tutor_question or "(see previous message)",
+                        judge_note=(
+                            f"\nAn automatic check rated this answer: start with \"{VERDICT_LINES[judged_verdict]}\" "
+                            "unless you are sure it is wrong."
+                            if judged_verdict else ""
+                        ),
+                    )
+                    if follow_up
+                    else REMEDIATION_GUIDANCE if state.get("conversation_mode") == "remediation"
+                    else NEW_REQUEST_GUIDANCE
+                ),
             )
         )
 
@@ -148,15 +225,48 @@ def create_tutor_node(enable_kb_context: bool = True):
         raw_content = response.content.strip()
         actual_content = clean_tutor_output(raw_content)
 
+        # Verdict: the turn judge's (JSON), else the tutor's first line ("✅ Correct", ...).
+        tutor_verdict = answer_verdict(actual_content) if follow_up else None
+        verdict = judged_verdict or tutor_verdict
         result = {
+            "conversation_mode": state.get("conversation_mode") or "new_request",
+            "verdict_source": "judge" if judged_verdict else "tutor_text" if tutor_verdict else None,
+            "answer_verdict": verdict,
             "messages": [AIMessage(content=actual_content)],
             "last_active_agent": "tutor_agent",
             "pedagogy_strategy": pedagogy_strategy,
             "pedagogy_reason": strategy_reason,
         }
         if enable_kb_context and student_kb:
+            # Log the student's message with its struggle flags before recording this lesson,
+            # so the turn is linked to the strategy the student was responding to.
+            previous_strategy = next(
+                (
+                    event.get("strategy")
+                    for event in reversed(student_kb.get("pedagogy_history", []))
+                    if event.get("event") == "lesson" and event.get("topic_id") == topic_id
+                ),
+                None,
+            )
+            student_text = state.get("user_input") or next(
+                (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)),
+                "",
+            )
+            remediation = state.get("conversation_mode") == "remediation"
+            # A remediation lesson is started by a button, not by a student message: no turn.
+            updated_kb = student_kb if remediation else record_learning_turn(
+                student_kb, topic_id, student_text, previous_strategy,
+                reply_to_tutor=follow_up, answer_verdict=verdict, context_text=tutor_question,
+                flags=(
+                    {"confusion": analysis["confused"], "hint_request": analysis["asks_hint"]}
+                    if analysis.get("source") == "llm" else None
+                ),
+                signal_source=analysis.get("source", "rules"),
+            )
+            forced = state.get("forced_route") or {}
             result["student_kb"] = record_lesson_strategy(
-                student_kb, topic_id, pedagogy_strategy, strategy_reason
+                updated_kb, topic_id, pedagogy_strategy, strategy_reason,
+                remediation_for=forced.get("quiz_id") if remediation else None,
             )
         return result
 

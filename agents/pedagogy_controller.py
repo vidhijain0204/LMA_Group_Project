@@ -95,6 +95,14 @@ def recent_error_context(student_kb: Optional[dict], topic_id: str) -> List[str]
     ]
 
 
+def latest_root_cause(student_kb: Optional[dict], topic_id: str) -> Optional[dict]:
+    """The most recent root cause found for a quiz on this topic (or located in this topic)."""
+    for entry in reversed((student_kb or {}).get("root_cause_history", [])):
+        if topic_id in (entry.get("quiz_topic_id"), entry.get("topic_id")):
+            return entry
+    return None
+
+
 def choose_teaching_strategy(
     student_kb: Optional[dict],
     topic_id: str,
@@ -142,21 +150,50 @@ def choose_teaching_strategy(
     return "explicit_explanation", "Use a direct explanation while initial evidence is collected."
 
 
+def _same_lesson(previous: dict, event: dict) -> bool:
+    return (
+        previous.get("event") == "lesson" and event.get("event") == "lesson"
+        and previous.get("topic_id") == event.get("topic_id")
+        and previous.get("strategy") == event.get("strategy")
+        and "assessment_accuracy" not in previous
+    )
+
+
+def compact_pedagogy_history(history: List[dict]) -> List[dict]:
+    """Merge back-to-back lesson events with the same topic and strategy into one event
+    with a "turns" count (older KBs stored one lesson event per tutor message)."""
+    compacted: List[dict] = []
+    for event in history:
+        if compacted and _same_lesson(compacted[-1], event):
+            merged = {**compacted[-1], **event}
+            merged["created_at"] = compacted[-1].get("created_at", event.get("created_at"))
+            merged["last_at"] = event.get("last_at") or event.get("created_at")
+            merged["turns"] = compacted[-1].get("turns", 1) + event.get("turns", 1)
+            compacted[-1] = merged
+        else:
+            compacted.append(dict(event))
+    return compacted
+
+
 def record_lesson_strategy(
     student_kb: dict,
     topic_id: str,
     strategy: str,
     reason: str,
+    remediation_for: Optional[str] = None,
 ) -> dict:
+    """One lesson event per teaching block: further messages on the same topic with the same
+    strategy (and no quiz in between) only increase its "turns" count."""
     updated = deepcopy(student_kb)
-    history = updated.setdefault("pedagogy_history", [])
-    history.append({
-        "event": "lesson",
-        "topic_id": topic_id,
-        "strategy": strategy,
-        "reason": reason,
-        "created_at": datetime.now().isoformat(timespec="seconds"),
-    })
+    history = compact_pedagogy_history(updated.get("pedagogy_history", []))
+    now = datetime.now().isoformat(timespec="seconds")
+    event = {"event": "lesson", "topic_id": topic_id, "strategy": strategy, "reason": reason, "created_at": now}
+    if remediation_for:
+        event["remediation_for"] = remediation_for      # a lesson started by the remediation button
+    if history and _same_lesson(history[-1], event) and not remediation_for:
+        history[-1].update(reason=reason, last_at=now, turns=history[-1].get("turns", 1) + 1)
+    else:
+        history.append({**event, "turns": 1})
     updated["pedagogy_history"] = history[-100:]
     updated["latest_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return updated
@@ -168,32 +205,56 @@ def record_assessment_outcome(
     accuracy: Optional[float],
     error_signals: List[str],
     error_descriptions: Optional[Dict[str, str]] = None,
+    question_results: Optional[List[dict]] = None,
+    root_cause: Optional[dict] = None,
 ) -> dict:
+    """Record a quiz outcome. `question_results` keeps the option chosen for every question
+    (needed for counter-evidence and repeat checks later); `root_cause` is the hypothesis the
+    RootCauseAgent selected for this quiz."""
     updated = deepcopy(student_kb)
     history = updated.setdefault("pedagogy_history", [])
-    matched_lesson = next(
-        (
-            event
-            for event in reversed(history)
-            if event.get("event") == "lesson"
-            and event.get("topic_id") == topic_id
-            and "assessment_accuracy" not in event
-        ),
-        None,
-    )
-    strategy = matched_lesson.get("strategy") if matched_lesson else None
-    if matched_lesson:
-        matched_lesson["assessment_accuracy"] = accuracy
-        matched_lesson["error_signals"] = list(dict.fromkeys(error_signals))
+    # Every lesson on this topic since the last quiz is evaluated by this quiz.
+    pending_lessons = [
+        event for event in history
+        if event.get("event") == "lesson"
+        and event.get("topic_id") == topic_id
+        and "assessment_accuracy" not in event
+    ]
+    strategy = pending_lessons[-1].get("strategy") if pending_lessons else None
+    for lesson in pending_lessons:
+        lesson["assessment_accuracy"] = accuracy
+        lesson["error_signals"] = list(dict.fromkeys(error_signals))
 
-    history.append({
+    assessment_event = {
         "event": "assessment",
         "topic_id": topic_id,
         "strategy": strategy,
         "accuracy": accuracy,
         "error_signals": list(dict.fromkeys(error_signals)),
         "created_at": datetime.now().isoformat(timespec="seconds"),
-    })
+    }
+    if question_results is not None:
+        assessment_event["responses"] = [
+            {
+                "prob_id": result.get("prob_id"),
+                "chosen": result.get("chosen"),
+                "correct": result.get("correct"),
+                "is_correct": bool(result.get("is_correct")),
+                "subtopics": list(result.get("subtopics", [])),
+                "misconception": result.get("misconception"),
+            }
+            for result in question_results
+        ]
+    if root_cause:
+        assessment_event["root_cause"] = root_cause
+        root_causes = updated.setdefault("root_cause_history", [])
+        root_causes.append({
+            **root_cause,
+            "quiz_topic_id": topic_id,
+            "created_at": assessment_event["created_at"],
+        })
+        updated["root_cause_history"] = root_causes[-50:]
+    history.append(assessment_event)
     updated["pedagogy_history"] = history[-100:]
 
     signal_counts = updated.setdefault("learning_signals", {})
@@ -217,3 +278,30 @@ def record_assessment_outcome(
         ]
     updated["latest_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return updated
+
+
+# --------------------------------------------------------------- subtopic mastery
+# Each quiz answer moves the mastery of every subtopic the question tests towards 1 (correct)
+# or 0 (wrong): m <- m + RATE * (outcome - m). This is an exponential moving average, the
+# simplest form of knowledge tracing; it keeps mastery per subtopic instead of per topic, so the
+# root-cause agent (PM', lowest-mastery method) can tell the subtopics of one topic apart.
+SUBTOPIC_LEARNING_RATE = 0.3
+DEFAULT_SUBTOPIC_MASTERY = 0.5
+
+
+def update_subtopic_mastery(
+    student_kb: dict, responses: List[dict], rate: float = SUBTOPIC_LEARNING_RATE
+) -> Tuple[dict, Dict[str, Dict[str, float]]]:
+    """Returns the updated KB and {subtopic: {"before", "after"}} for the subtopics touched."""
+    updated = deepcopy(student_kb)
+    skills = updated.setdefault("skills", {})
+    topics = updated.get("topics", {})
+    changes: Dict[str, Dict[str, float]] = {}
+    for response in responses:
+        outcome = 1.0 if response.get("is_correct") else 0.0
+        for sid in response.get("subtopics", []):
+            start = skills.get(sid, topics.get(str(sid).split(".")[0], DEFAULT_SUBTOPIC_MASTERY))
+            changes.setdefault(sid, {"before": round(float(start), 2)})
+            skills[sid] = round(float(start) + rate * (outcome - float(start)), 3)
+            changes[sid]["after"] = round(skills[sid], 2)
+    return updated, changes

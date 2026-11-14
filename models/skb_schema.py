@@ -28,6 +28,17 @@ class StudentKnowledgeBase(BaseModel):
     pedagogy_history: List[Dict[str, Any]] = Field(default_factory=list)
     learning_signals: Dict[str, int] = Field(default_factory=dict)
     learning_signal_descriptions: Dict[str, str] = Field(default_factory=dict)
+
+    # Student messages sent to the tutor, tagged with topic, subtopics and struggle flags
+    # (see agents/struggle_tracker.py), and the root cause selected after each quiz.
+    learning_conversations: List[Dict[str, Any]] = Field(default_factory=list)
+    root_cause_history: List[Dict[str, Any]] = Field(default_factory=list)
+    # Re-tests after a remediation lesson: accuracy on the root-cause subtopic before and after.
+    retests: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # One record per diagnosis question ({prob_id, is_correct, subtopics}); the root-cause agent
+    # treats the diagnosis as the student's first quiz (counter-evidence and repeats).
+    diagnosis_responses: List[Dict[str, Any]] = Field(default_factory=list)
     
     # Timestamps
     first_entry_time: str = Field(default_factory=get_current_time, description="Time when the SKB was first created")

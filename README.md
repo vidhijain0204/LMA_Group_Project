@@ -1,499 +1,307 @@
-## New Changes and Results
-
-### Adaptive Pedagogy Framework
-
-The tutor now selects from six teaching strategies based on the student's topic mastery
-and saved assessment history:
-
-1. **Hint** — give a targeted clue and guiding question without immediately revealing
-   the full solution.
-2. **Step Scaffold** — break the task into ordered, manageable steps.
-3. **Explicit Explanation** — explain the rule and rationale directly, with a concise
-   example.
-4. **Worked Example** — demonstrate a complete solution step by step, then invite the
-   student to try a similar problem.
-5. **Self-Explanation** — prompt the student to predict or explain a step, with a
-   focused clue instead of the full answer.
-6. **Contrastive Feedback** — compare a correct example with a plausible error and
-   explain the difference.
-
-The first strategy is selected from mastery: below 0.4 uses Step Scaffold, 0.8 or
-higher uses Self-Explanation, and other scores use Explicit Explanation. The remaining
-strategies can be selected as the controller adapts.
-
-### New Components and File Changes
-
-The newly added implementation files are:
-
-- `agents/pedagogy_controller.py` — rule-based strategy selection, lesson and assessment
-  history updates, learning-signal tracking, and mastery-based strategy reasons.
-- `agents/error_analysis_agent.py` — analyzes quiz answers, limits error signals and
-  topic accuracy to the requested topic where question metadata permits, and maps
-  incorrect answers to misconception tags or related subtopics.
-
-Existing files updated for this implementation include:
-
-- `agents/tutor_agent.py` — adds the chosen strategy, reason, and recurring error
-  context to the tutor prompt; returns a lesson record for the workflow to save.
-- `agents/workflow.py` — connects tutor and assessment outcomes to the SKB, persists
-  updates, and reports quiz error signals.
-- `agents/llm_factory.py` — configures the local MLX model client described below.
-- `models/skb_schema.py` — adds fields for pedagogy and learning-signal history.
-- `app.py` — displays recent teaching history and quiz areas to revisit.
-
-`agents/assessment_agent.py` was not changed for this feature: it continues selecting
-and introducing adaptive MCQs. The workflow performs the grading follow-up, analysis,
-and persistence after quiz submission.
-
-### Adaptive Strategy Selection
-
-`agents/pedagogy_controller.py` records each tutor lesson's topic, strategy, selection
-reason, and timestamp. When a quiz is submitted, `agents/error_analysis_agent.py`
-analyzes the questions and answers. The workflow associates the result with the most
-recent lesson for the same topic that has not yet been assessed, and records the
-strategy used for that lesson.
-
-Two rules can change the next lesson's strategy:
-
-1. If an error signal repeats across at least two of the latest three assessments for a
-   topic, the controller prioritizes Contrastive Feedback (unless the latest lesson
-   already used it). The quiz bank currently has no `misconception_tags`, so errors
-   normally use related subtopic IDs and names as learning-signal proxies.
-2. If at least two assessments are associated with the current strategy and their
-   average accuracy is below 60%, the controller chooses the next strategy in its
-   six-strategy cycle.
-
-Assessment accuracy used for these decisions is topic-aligned accuracy, not necessarily
-the overall quiz score: questions tied to other topics are excluded when their metadata
-identifies that mismatch. The current topic mastery estimate is updated using 80% of
-its previous value and 20% of the topic-aligned assessment accuracy. If the quiz has no
-questions that can be aligned to the requested topic, no topic mastery value is changed.
-
-### SKB Persistence
-
-Student records in `data/skb_database.json` gain these fields:
-
-- `pedagogy_history` — a bounded history (up to 100 events) of lesson strategy choices
-  and assessment outcomes. Lesson entries include the strategy, topic, reason, and,
-  after a matched quiz, its accuracy and error signals. Assessment entries include
-  topic, accuracy, associated strategy, and error signals.
-- `learning_signals` — counts of observed misconception or subtopic error IDs.
-- `learning_signal_descriptions` — human-readable descriptions for those IDs, used to
-  inform future tutor responses.
-
-Assessment events are matched to the latest unassessed lesson with the same topic ID;
-the quiz's associated strategy is copied onto the assessment entry. Existing SKB
-records remain readable because these fields have empty defaults in the schema and are
-initialized when needed.
-
-`active_misconceptions` remains the diagnosis-time field for misconception descriptions
-and counts. Quiz errors are currently recorded in `learning_signals` and
-`learning_signal_descriptions`; the quiz workflow does not update
-`active_misconceptions`. Since the current quiz bank has no misconception tags, those
-quiz signals are generally related subtopics rather than confirmed misconceptions.
-
-### Local MLX LLM Backend
-
-`agents/llm_factory.py` now configures `Qwen/Qwen3-4B-MLX-4bit` through MLX-LM's
-OpenAI-compatible HTTP server and LangChain's `ChatOpenAI` client. The model runs as a
-separate local server; the application sends requests to `http://127.0.0.1:8080/v1`.
-It does not load the model into the application process. The client uses separate
-generation profiles for routing, tutoring, judging, and quiz introductions.
-
-Install the backend packages:
-
-```bash
-python -m pip install mlx-lm langchain-openai
-```
-
-In another terminal, start the model server:
-
-```bash
-mlx_lm.server --model "Qwen/Qwen3-4B-MLX-4bit" --host 127.0.0.1
-```
-
-Then launch the app as described below. Note that the current `requirements.txt` still
-lists the previous Transformers/Hugging Face dependencies and does not yet include
-`mlx-lm` or `langchain-openai`; install the backend packages explicitly as above.
-
-
 # AI Python Tutoring System
 
-This repository contains a multi-agent Python tutoring application that personalizes instruction using a student knowledge base (SKB), a diagnostic onboarding flow, adaptive quizzes, and a tutor connected to a locally served MLX model.
+An adaptive, multi-agent tutoring system for Python programming. It uses a **Student Knowledge Base (SKB)** to personalize every interaction — routing new students through a diagnostic test, fielding concept questions with a RAG-backed tutor, and serving adaptive quizzes calibrated to each student's current mastery level.
 
-The project is designed to:
-- onboard a new student with a diagnostic test,
-- store topic-level mastery data in a JSON knowledge base,
-- route requests to the right agent,
-- explain Python topics with personalization,
-- generate adaptive MCQ quizzes based on student ability,
-- run as a Streamlit web app.
+---
 
-## What is in this directory?
+## Table of Contents
 
-- `app.py` — main Streamlit app for the student-facing tutor experience.
-- `agents/` — all agent logic and orchestration.
-- `data/` — JSON course data, question banks, and student knowledge base.
-- `models/` — model/schema definitions for the student knowledge base.
-- `requirements.txt` — Python dependencies.
-- `scripts/` — offline tools: misconception tagging, weight fitting and the evaluation report.
-- `docs/` — `mid_report.pdf` (project report) and `part1_flow.jpeg` (architecture diagram).
+- [Architecture](#architecture)
+- [Models](#models)
+- [Requirements](#requirements)
+- [Setup](#setup)
+- [Running the App](#running-the-app)
+- [Project Structure](#project-structure)
+- [Data](#data)
+- [Retrieval (RAG)](#retrieval-rag)
+- [Evaluation Results](#evaluation-results)
+- [Reproducibility Notes](#reproducibility-notes)
 
-## High-level architecture
+---
 
-The system is built around a LangGraph workflow:
+## Architecture
 
-1. The orchestrator decides whether the request should go to:
-   - `diagnosis` for new students,
-   - `tutor_agent` for explanations,
-   - `assessment_agent` for quizzes.
-2. The `DiagnosisAgent` asks a diagnostic set of MCQs and stores a student knowledge base.
-3. The `TutorAgent` uses the student's mastery profile and topic focus to explain concepts adaptively.
-4. The `AssessmentAgent` selects a quiz tailored to the student's current performance.
-5. After each quiz, the `ErrorAnalysisAgent` grades it and the `RootCauseAgent` finds the subtopic
-   (and, when tagged, the misconception) that most likely caused the wrong answers.
+The system is built on **LangGraph** as a stateful agent graph. Every student message flows through the following pipeline:
 
-## Project structure
-
-```text
-.
-├── agents/
-│   ├── assessment_agent.py      # Picks adaptive quiz questions
-│   ├── chat_memory.py           # Short summaries of the last 3 exchanges
-│   ├── course_retriever.py      # TF-IDF search over course text (not connected yet)
-│   ├── diagnosis_agent.py       # Diagnostic onboarding test and SKB creation
-│   ├── error_analysis_agent.py  # Grades a quiz and lists error signals per topic
-│   ├── evaluation_store.py      # Saves the students' "why was this wrong?" answers
-│   ├── llm_factory.py           # Loads the local Qwen model
-│   ├── orchestrator.py          # Routes each message to the right agent
-│   ├── pedagogy_controller.py   # Teaching strategy choice and mastery updates
-│   ├── root_cause_agent.py      # Finds the root cause of quiz errors (3 methods)
-│   ├── struggle_tracker.py      # Logs learning turns and computes Learning Struggle
-│   ├── topic_classifier.py      # Detects the topic of a student message
-│   ├── turn_judge.py            # Classifies a message (answer / new question, confusion)
-│   ├── tutor_agent.py           # Writes the lesson with the chosen strategy
-│   └── workflow.py              # LangGraph graph that connects all agents
-├── data/
-│   ├── common/
-│   │   ├── corpus.jsonl         # Course material chunks (topic_classifier, course_retriever)
-│   │   ├── mcqs_list.json       # Quiz bank
-│   │   └── topics.json          # Topics, subtopics, prerequisites, misconceptions
-│   ├── diagnosis/
-│   │   └── static_diagnosis_mcq_list.json
-│   └── skb_database.json        # Student knowledge base records
-├── models/
-│   └── skb_schema.py            # Pydantic schema for a student record
-├── scripts/
-│   ├── tag_mcq_misconceptions.py  # Tags wrong quiz options with misconceptions (run once)
-│   ├── fit_weights.py             # Learns the 5 hypothesis weights from labelled quizzes
-│   ├── evaluate.py                # Builds the evaluation report
-│   └── eval_data.py               # Shared data loader for the two scripts above
-├── docs/
-│   ├── mid_report.pdf           # Project report
-│   └── part1_flow.jpeg          # Architecture diagram
-├── app.py                       # Streamlit tutor UI
-├── requirements.txt
-└── README.md
 ```
+User Message
+     │
+     ▼
+ Orchestrator  (Qwen3-8B, thinking mode, greedy)
+     │
+     ├──► Diagnosis Agent   — one-time onboarding MCQ test → builds SKB
+     ├──► Tutor Agent       — hybrid RAG + Qwen3-8B → personalized explanation
+     └──► Assessment Agent  — adaptive MCQ quiz → updates SKB mastery
+```
+
+**Orchestrator** (`agents/orchestrator.py`): Uses Qwen3-8B with chain-of-thought (`enable_thinking=True`) to parse the student's intent and route to the correct sub-agent. New students (no SKB record) are always sent to diagnosis first.
+
+**Diagnosis Agent** (`agents/diagnosis_agent.py`): Administers a static MCQ battery. Scores are recorded per topic and sub-topic; wrong answers update the student's misconception map. Run exactly once per student.
+
+**Tutor Agent** (`agents/tutor_agent.py`): Retrieves the top-4 course chunks using hybrid BM25 + dense search (Qwen3-Embedding-0.6B), injects them into a system prompt alongside the student's mastery profile, and generates a personalized explanation. If the reply hits the token limit it automatically continues up to two times.
+
+**Assessment Agent** (`agents/assessment_agent.py`): Selects up to 10 MCQs from the 455-question bank, targeting the difficulty level that matches the student's current mastery. Grading updates `score_history`; wrong answers feed back into the SKB.
+
+**Student Knowledge Base** (`models/skb_schema.py`, `data/skb_database.json`): A per-student record that holds topic mastery probabilities (0–1), strengths/weaknesses lists, and active misconceptions. It drives retrieval personalization and tutor pedagogy rules.
+
+---
+
+## Models
+
+| Role | Model | Mode | Max New Tokens |
+|---|---|---|---|
+| Orchestrator / Router | `Qwen/Qwen3-8B` | Greedy, thinking enabled | 5 000 |
+| Tutor | `Qwen/Qwen3-8B` | Sampling (T=0.7, top-p=0.9) | 2 048 |
+| Assessment intro | `Qwen/Qwen3-8B` | Greedy | 512 |
+| Embeddings (RAG) | `Qwen/Qwen3-Embedding-0.6B` | — | — |
+
+Both models are loaded locally from the HuggingFace cache using `transformers`. The base LLM is shared across all roles through `llm_factory.py` to avoid loading it twice.
+
+---
 
 ## Requirements
 
-This project recommends Python 3.11 or 3.12 (see `requirements.txt`) and requires a
-running local MLX-LM server for `Qwen/Qwen3-4B-MLX-4bit`. MLX-LM is intended for
-supported Apple Silicon systems.
+### Hardware
 
-The current dependency manifest has not yet been migrated from the Transformers
-backend. In addition to the repository dependencies, install the MLX model server and
-OpenAI-compatible LangChain client:
+| Component | Minimum | Recommended |
+|---|---|---|
+| GPU VRAM | 20 GB (Qwen3-8B in bf16 ≈ 16 GB + embedding model ≈ 1.5 GB) | 24 GB (e.g. RTX 3090 / A10G) |
+| RAM | 16 GB | 32 GB |
+| Disk | 20 GB (models + embeddings cache) | — |
+| CUDA | 11.8+ | 12.x |
 
-```bash
-python -m pip install -r requirements.txt
-python -m pip install mlx-lm langchain-openai
+> **CPU-only**: Not recommended for the LLM. The embedding model (0.6 B parameters) can run on CPU but will be slow at build time (embedding the full corpus once).
+
+### Software
+
+- Python 3.11 or 3.12
+- CUDA toolkit matching your PyTorch build
+
+### Python Dependencies
+
+```
+torch>=2.6.0
+transformers>=4.51.0
+accelerate>=1.0.0
+safetensors>=0.4.5
+langchain-core>=0.3.0
+langchain-huggingface>=0.1.0
+langgraph>=0.2.0
+streamlit>=1.40.0
+pydantic>=2.7.0
+sentence-transformers>=2.7.0
+numpy>=1.26
 ```
 
-See [Local MLX LLM Backend](#local-mlx-llm-backend) above for how to start the
-separate inference server.
+---
 
 ## Setup
 
-From the project root:
+### 1. Clone the repository
 
 ```bash
-cd /path/to/LMA_Group_Project
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install --upgrade pip
-python3 -m pip install -r requirements.txt
+git clone https://github.com/vidhijain0204/LMA_Group_Project.git
+cd LMA_Group_Project
+git checkout dev
 ```
 
-
-## How to run the app
-
-### 1) Launch the student web app
-
-This is the main usage path for the tutoring system.
+### 2. Create and activate a virtual environment
 
 ```bash
-cd /path/to/LMA_Group_Project
-python3 -m streamlit run app.py
+python -m venv .venv
+source .venv/bin/activate        # Linux / macOS
+# .venv\Scripts\activate         # Windows
 ```
 
-Then open the local URL shown by Streamlit, usually:
-
-```text
-http://localhost:8501
-```
-
-### What the UI does
-
-In the sidebar:
-- enter a `Student ID`
-- load or switch student profiles
-- see topic strengths/weaknesses
-- start a diagnostic test for a new student
-- reset the session
-
-In the main chat:
-- ask Python questions,
-- ask for explanations,
-- request a quiz,
-- answer diagnostic or quiz interrupts.
-
-The app automatically routes the request through the workflow.
-
-### New student flow
-
-A new student sees the onboarding diagnostic flow:
-1. The workflow notices there is no SKB entry.
-2. It goes to the diagnosis node.
-3. The student answers diagnostic MCQs.
-4. The system computes topic mastery and saves a record in `data/skb_database.json`.
-5. The student can then ask questions or take quizzes.
-
-### Existing student flow
-
-When a student already exists:
-- the orchestrator examines the user message,
-- chooses whether to tutor or quiz,
-- uses topic score information to personalize explanations and challenge level.
-
-## How the components work
-
-### `agents/orchestrator.py`
-
-The orchestrator decides routing using the message, current student status, and a topic catalog. It supports:
-- `diagnosis`
-- `tutor_agent`
-- `assessment_quiz`
-
-It also handles fallback logic and JSON parsing when the model returns imperfect output.
-
-Example behavior:
-- no SKB record for student => route to `diagnosis`
-- concept explanation request => route to tutor
-- request for a quiz/test => route to assessment
-
-### `agents/diagnosis_agent.py`
-
-This agent loads:
-- topic definitions from `data/common/topics.json`
-- diagnosis questions from `data/diagnosis/static_diagnosis_mcq_list.json`
-
-It:
-- presents MCQs,
-- grades the student's answers,
-- computes topic-wise mastery scores,
-- records weakness and misconception information,
-- saves a new student record to `data/skb_database.json`.
-
-### `agents/tutor_agent.py`
-
-This is the educational explanation model.
-
-It uses:
-- the student KB,
-- topic focus,
-- mastery level,
-- recorded misconceptions,
-- system prompts for teaching style.
-
-It responds with more basic explanations for low-mastery topics and more advanced answers for strong students.
-
-### `agents/assessment_agent.py`
-
-This agent:
-- reads the quiz bank from `data/common/mcqs_list.json`,
-- picks questions based on the current topic and mastery,
-- adjusts difficulty: easy/foundation vs. intermediate vs. advanced,
-- collects student answers,
-- calculates accuracy and stores result information.
-
-### Adaptive pedagogy and error analysis
-
-For each explanation, the tutor selects one of six teaching strategies: hints, step
-scaffolding, explicit explanation, worked example, self-explanation, or contrastive
-feedback. The selected strategy and its reason are saved in that student's
-`pedagogy_history` in `data/skb_database.json`.
-
-When a student completes a quiz, the error-analysis component records accuracy and
-incorrect-answer signals from misconception tags (when available) or the question's
-related subtopics. It pairs the outcome with the most recent unassessed lesson on that
-topic and updates the student's topic mastery estimate. If the same strategy is linked
-to at least two quizzes averaging below 60%, the next lesson switches strategy. A
-recurring signal across multiple quizzes prioritizes contrastive feedback. This uses
-assessment outcomes rather than asking students to rate the tutor; a new profile starts
-with a mastery-based strategy until enough evidence is available.
-
-### `models/skb_schema.py`
-
-Defines the student knowledge base schema using Pydantic.
-
-Key fields:
-- `student_id`
-- `topics`: topic mastery probabilities
-- `skills`: subtopic mastery probabilities
-- `strengths`: above-threshold topics
-- `weaknesses`: below-threshold topics
-- `active_misconceptions`: issue counts
-- `pedagogy_history`: lesson strategies paired with quiz outcomes
-- `learning_signals`: recurring misconception/subtopic error counts
-- `learning_signal_descriptions`: human-readable learning-signal descriptions
-- timestamps
-
-### `data/`
-
-The data directory is the data layer.
-
-- `common/topics.json` — topic definitions, prerequisites, and common misconceptions
-- `common/mcqs_list.json` — quiz bank with multiple-choice question data
-- `common/corpus.jsonl` — course content chunks for retrieval
-- `diagnosis/static_diagnosis_mcq_list.json` — onboarding questions
-- `skb_database.json` — saved student profiles
-
-## How to inspect or modify student data
-
-The SKB is stored in JSON. You can open:
-
-```text
-data/skb_database.json
-```
-
-and inspect entries like:
-
-```json
-{
-  "student_id": "S001",
-  "topics": {"T01": 0.9, "T02": 0.85},
-  "strengths": ["T01", "T02"],
-  "weaknesses": []
-}
-```
-
-If you want to reset a student profile, remove the matching record from this file or create a new student ID.
-
-## Running the study and evaluating it
-
-**Before the study (once, on the GPU machine):**
-1. Tag the wrong options of the quiz bank with misconceptions:
-   `python scripts/tag_mcq_misconceptions.py --limit 10 --dry-run` (check), then
-   `python scripts/tag_mcq_misconceptions.py`. Review a sample in
-   `data/evaluation/mcq_misconception_review.csv` and fix wrong tags in `data/common/mcqs_list.json`.
-2. Download the topic-classifier model once: `TOPIC_EMBED_DOWNLOAD=1 python -c "from agents.topic_classifier import get_classifier; print(get_classifier().backend)"`
-   (prints `embedding`; without it the app uses the weaker TF-IDF backend).
-
-**Per student** (`streamlit run app.py`):
-1. Click **🆕 New anonymous student** (S101, S102, ...).
-2. Diagnosis → learn with the tutor → "ready for assessment" → quiz.
-3. After the quiz: the student fills **🧾 why did you get these wrong?**, clicks **📘 Review**,
-   learns, then **🔁 Re-test** (this measures the learning gain).
-4. For an A/B comparison of the root-cause methods, turn on *Assign method by student id* in
-   **🔎 Root-cause settings** before the student starts.
-
-**After the study:**
-- `python scripts/evaluate.py` → `data/evaluation/report/report.md` (+ CSVs): root-cause accuracy
-  per method/weight set/ablation, agreement, misconception check, learning gain, judge vs rules,
-  latency.
-- Optional expert labels: `python scripts/evaluate.py --export-labeling`, fill
-  `data/evaluation/labeling_sheet.csv`, then `python scripts/evaluate.py --import-labels <file>`.
-- `python scripts/fit_weights.py --save` learns the weights (report its leave-one-student-out
-  accuracy). The app's **Custom weights** sliders then start from these values; with custom
-  weights off, all five parameters get the same weight (plain average).
-
-Environment switches: `TUTOR_LLM_JUDGE=0` (rules instead of the LLM turn judge),
-`TOPIC_EMBED_MODEL=none` (TF-IDF topic classifier).
-
-## Common issues and fixes
-
-### Cannot connect to the local model
-
-Start the MLX-LM server in a separate terminal using the command in
-[Local MLX LLM Backend](#local-mlx-llm-backend). The client expects it at
-`http://127.0.0.1:8080/v1`; model-backed requests fail while that server is stopped or
-unavailable.
-
-### `python` command not found
-
-Use:
+### 3. Install dependencies
 
 ```bash
-python3
+pip install -r requirements.txt
 ```
 
-instead of `python` if your system only exposes the Python 3 binary.
+### 4. Download the models
 
-### Streamlit does not open
-
-Make sure the app dependencies are installed and the local MLX-LM model server is
-running.
-
-### A student cannot be diagnosed twice
-
-The workflow intentionally prevents multiple diagnosis runs for the same student ID. This is enforced in `DiagnosisAgent.administer_test()`.
-
-## Typical usage examples
-
-### Ask for an explanation
-
-In the app:
-
-```text
-Why does my file get erased when I open it?
-```
-
-The orchestrator will choose the tutoring path and answer using the student's assessment profile.
-
-### Request a quiz
-
-In the app:
-
-```text
-Give me a quiz on loops.
-```
-
-The system will generate a topic-specific adaptive quiz.
-
-### Run the diagnostic flow
-
-For a new student ID in the sidebar, press:
-- `Start Diagnostic Test`
-
-The app gives the onboarding assessment and then saves the new KB.
-
-## Summary
-
-This directory contains a full educational AI tutoring system with:
-- a student diagnostic engine,
-- adaptive explanations,
-- quiz generation,
-- course retrieval,
-- local LLM integration,
-- Streamlit UI,
-- saved student knowledge state.
-
-The primary entry point for users is:
+#### LLM — Qwen3-8B
 
 ```bash
-python3 -m streamlit run app.py
+huggingface-cli download Qwen/Qwen3-8B \
+    --local-dir ~/.cache/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46
 ```
 
-If you want to customize the system, start by editing the files in the `agents/` folder and the JSON datasets in `data/`.
+Or via Python:
+
+```python
+from huggingface_hub import snapshot_download
+snapshot_download("Qwen/Qwen3-8B")
+```
+
+#### Embedding model — Qwen3-Embedding-0.6B
+
+Downloaded automatically by `sentence-transformers` on first use. To pre-fetch:
+
+```bash
+huggingface-cli download Qwen/Qwen3-Embedding-0.6B
+```
+
+### 5. Update the model path
+
+Open `agents/llm_factory.py` and set `SLM_MODEL_PATH` to the snapshot directory on your machine:
+
+```python
+SLM_MODEL_PATH = "/your/path/.cache/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/<snapshot-hash>"
+```
+
+If you want to load directly by model name (requires internet or a pre-populated HF cache), you can also just set:
+
+```python
+SLM_MODEL_PATH = "Qwen/Qwen3-8B"
+```
+
+### 6. Verify the setup (optional)
+
+```bash
+python scripts/preflight.py
+```
+
+---
+
+## Running the App
+
+```bash
+streamlit run app.py
+```
+
+The app opens at `http://localhost:8501`.
+
+**First-time flow:**
+1. Enter a student ID in the sidebar (e.g. `S001`).
+2. Click **Start Diagnostic Test** — the system shows a one-time MCQ battery that builds the Student Knowledge Base.
+3. After submitting, the student can chat freely, ask for explanations, or request a quiz.
+
+**Switching students:** Type a different ID in the sidebar and click **Load / Switch Student**.
+
+**CLI / scripted usage:** See `main.py` for a minimal example that calls the tutor directly without the Streamlit UI.
+
+---
+
+## Project Structure
+
+```
+.
+├── agents/
+│   ├── orchestrator.py        # Intent parsing and routing (LangGraph Command)
+│   ├── diagnosis_agent.py     # One-time onboarding diagnostic test
+│   ├── tutor_agent.py         # RAG-augmented explanation agent
+│   ├── assessment_agent.py    # Adaptive MCQ quiz generator and grader
+│   ├── course_retriever.py    # BM25 / TF-IDF / dense / hybrid retrieval engine
+│   ├── llm_factory.py         # Shared LLM loader (cached, one model in memory)
+│   └── workflow.py            # LangGraph StateGraph wiring
+├── models/
+│   └── skb_schema.py          # Pydantic schema for Student Knowledge Base
+├── data/
+│   ├── common/
+│   │   ├── corpus.jsonl       # Course material chunks (the retrieval corpus)
+│   │   ├── mcqs_list.json     # 455-question assessment bank (13 topics)
+│   │   ├── topics.json        # Topic catalogue with misconception maps
+│   │   └── retrieval_eval.csv # 22 annotated queries for retrieval evaluation
+│   ├── diagnosis/
+│   │   └── static_diagnosis_mcq_list.json   # Onboarding test questions
+│   ├── evaluation/            # RAG and method-comparison reports + CSVs
+│   ├── traces/                # Sample student session traces (JSONL)
+│   └── skb_database.json      # Persistent Student Knowledge Base store
+├── scripts/
+│   ├── preflight.py           # Quick environment / path sanity check
+│   ├── evaluate_rag.py        # RAG retrieval evaluation (Recall@5, MRR, hit@5)
+│   ├── compare_methods.py     # Compare BM25 / TF-IDF / dense / hybrid
+│   └── ...                    # Other analysis and report scripts
+├── reports/                   # Retrieval comparison CSVs
+├── app.py                     # Streamlit entry point
+├── main.py                    # CLI entry point (tutor only)
+└── requirements.txt
+```
+
+---
+
+## Data
+
+| File | Description |
+|---|---|
+| `data/common/corpus.jsonl` | Course material in JSON-Lines format. Each line is a chunk with `chunk_id`, `topic_id`, `type`, `difficulty` (1–3), and optional `uses_later_topics`, `duplicate_group`, `needs_context` safety flags. |
+| `data/common/mcqs_list.json` | 455 multiple-choice questions used by the Assessment Agent. Fields: `prob_id`, `prob_body`, `options` (dict A–D), `correct_option`, `difficulty`, `related_topics`. |
+| `data/common/topics.json` | 13 Python topics (`T01`–`T13`) with names, subtopics, and common misconception tags. |
+| `data/diagnosis/static_diagnosis_mcq_list.json` | Questions used exclusively for the one-time onboarding diagnostic. |
+| `data/skb_database.json` | Live database of Student Knowledge Bases. Each entry is the JSON serialization of a `StudentKnowledgeBase` Pydantic model. |
+
+---
+
+## Retrieval (RAG)
+
+The `CourseRetriever` (`agents/course_retriever.py`) supports four methods:
+
+| Method | Description |
+|---|---|
+| `bm25` | BM25 over an in-memory inverted index. Default. |
+| `tfidf` | TF-IDF cosine similarity. |
+| `dense` | Qwen3-Embedding-0.6B cosine similarity. Corpus embeddings are computed once and cached under `.cache/course_retriever/`. |
+| `hybrid` | Reciprocal Rank Fusion of BM25 + dense scores. Used by the Tutor Agent. |
+
+The tutor always calls `method="hybrid"` and passes the student's mastery scores so that chunk difficulty is weighted toward what the student is ready for (`difficulty_weight=0.5`). Safety checks (later-topic avoidance, deduplication, context injection) are enabled by default.
+
+The embedding model uses an instruction prefix on the query side only:
+
+```
+Instruct: Given a student's question about Python programming,
+retrieve the course passages that help answer it
+Query: <student question>
+```
+
+Corpus embeddings are saved as a `.npy` file keyed by a hash of the corpus and the model name, so rebuilding on a different machine or after a corpus update is automatic.
+
+---
+
+## Evaluation Results
+
+### Retrieval (22 annotated queries)
+
+| Method | Recall@5 | MRR | hit@5 | Median latency |
+|---|---|---|---|---|
+| TF-IDF | 0.748 | 0.729 | 0.955 | 0.27 ms |
+| BM25 | 0.787 | 0.752 | 0.909 | 0.32 ms |
+
+### Topic handling (35 student-style questions, top 4 chunks)
+
+| Topic usage strategy | On-topic chunks | Queries with ≥1 on-topic chunk |
+|---|---|---|
+| No topic info | 67 % | 32 / 35 |
+| Topic name appended to query | 85 % | 34 / 35 |
+| Hard filter (`topic_ids`) | 100 % | 35 / 35 |
+| Soft boost ×2 (`preferred_topics`) | 91 % | 35 / 35 |
+
+### Corpus safety checks (57 queries, beginner mastery 0.3)
+
+| Checks | Later-topic chunks | Duplicates | Context-less fragments |
+|---|---|---|---|
+| Off | 16 | 3 | 37 |
+| On | **0** | **0** | **0** |
+
+### Personalisation by mastery (`difficulty_weight=0.5`)
+
+| Student profile | Mean chunk difficulty | On-topic |
+|---|---|---|
+| Weak (mastery 0.2) | 1.81 | 91 % |
+| Developing (mastery 0.55) | 1.96 | 91 % |
+| Strong (mastery 0.9) | 2.22 | 89 % |
+
+Full reports are in `data/evaluation/`.
+
+---
+
+## Reproducibility Notes
+
+- **Model snapshot**: The repo was developed against `Qwen/Qwen3-8B` snapshot `b968826d9c46`. Pinning to that snapshot ensures identical tokenization and generation behaviour.
+- **Random seeds**: The Assessment Agent shuffles MCQs with Python's built-in `random`; no global seed is set, so quiz question order will vary across runs. Set `random.seed(<int>)` before calling `select_adaptive_mcqs` if you need a fixed order.
+- **Embedding cache**: On first run with dense/hybrid retrieval, the full corpus is embedded and saved to `.cache/course_retriever/`. Delete that directory and re-run `evaluate_rag.py` to rebuild it from scratch.
+- **SKB database**: `data/skb_database.json` ships with sample student records (`S001`, `S201`, `S211`). To start from a clean state, delete or empty this file — the app will re-run the diagnostic test for any student ID not found in it.
+- **Evaluation scripts**: All evaluation scripts in `scripts/` read from `data/common/retrieval_eval.csv` and `data/common/corpus.jsonl`. Running `python scripts/evaluate_rag.py` reproduces the retrieval numbers in the table above without needing the LLM.
+- **Python version**: Tested on Python 3.11 and 3.12. Python 3.10 is not supported (uses `match` statement patterns internally via LangGraph).
+- **`device_map="auto"`**: The LLM is loaded with `device_map="auto"`, so PyTorch distributes layers across all available GPUs automatically. On a single-GPU machine this fills that GPU; on CPU-only it falls back to CPU (slow).
